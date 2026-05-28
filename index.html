@@ -391,6 +391,10 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 }
 
 /* Borrowers log */
+.log-tabs { display: flex; border-bottom: 1px solid var(--border); margin: -20px -20px 16px; }
+.log-tab { flex: 1; padding: 12px 8px; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text3); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; transition: color 0.15s, border-bottom-color 0.15s; }
+.log-tab:active { opacity: 0.7; }
+.log-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 .borrower-log-item {
   background: var(--surface2);
   border: 1px solid var(--border);
@@ -946,6 +950,11 @@ All columns other than Author, Title, Series and Genres should be left empty or 
 
       <!-- TAB: Borrowers log -->
       <div class="settings-panel" id="spanel-borrowers">
+        <div class="log-tabs">
+          <button class="log-tab active" id="ltab-all" onclick="switchBorrowerTab('all')">All</button>
+          <button class="log-tab" id="ltab-out" onclick="switchBorrowerTab('out')">Out</button>
+          <button class="log-tab" id="ltab-in" onclick="switchBorrowerTab('in')">In</button>
+        </div>
         <div id="borrowerLogList">
           <div class="empty" style="padding:40px 0;">
             <div class="empty-icon">📋</div>
@@ -1012,6 +1021,7 @@ let addSelectedGenres = [], editSelectedGenres = [];
 let editingId = null;
 let checkoutTargetId = null;
 let returnTargetId = null;
+let borrowerLogTab = 'all';
 
 // ── SETTINGS DOC HELPERS ─────────────────────────────────────────────────────
 function userSettingsDoc() {
@@ -1041,14 +1051,20 @@ async function saveSettings() {
 
 async function loadBorrowLog() {
   try {
-    const snap = await getDocs(query(userBorrowLogCol(), orderBy('checkoutTimestamp','desc')));
-    borrowerLog = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const snap = await getDocs(userBorrowLogCol());
+    borrowerLog = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => {
+        const ta = a.sortKey ?? (a.checkoutTimestamp?.seconds ? a.checkoutTimestamp.seconds * 1000 : 0);
+        const tb = b.sortKey ?? (b.checkoutTimestamp?.seconds ? b.checkoutTimestamp.seconds * 1000 : 0);
+        return tb - ta;
+      });
   } catch(e) { borrowerLog = []; }
 }
 
 async function addBorrowLogEntry(entry) {
   try {
-    await addDoc(userBorrowLogCol(), { ...entry, checkoutTimestamp: serverTimestamp() });
+    await addDoc(userBorrowLogCol(), { ...entry, sortKey: Date.now(), checkoutTimestamp: serverTimestamp() });
   } catch(e) {}
 }
 
@@ -1921,6 +1937,9 @@ document.addEventListener('change', e => {
 
 window.openSettings = () => {
   buildManageLists();
+  borrowerLogTab = 'all';
+  document.querySelectorAll('.log-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('ltab-all').classList.add('active');
   buildBorrowerLog();
   document.getElementById('settingsOverlay').classList.add('open');
 };
@@ -2301,18 +2320,32 @@ window.dragDrop = (e, type, targetIndex) => {
 })();
 
 // ── BORROWER LOG ──────────────────────────────────────────────────────────────
+window.switchBorrowerTab = tab => {
+  borrowerLogTab = tab;
+  document.querySelectorAll('.log-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('ltab-' + tab).classList.add('active');
+  buildBorrowerLog();
+};
+
 function buildBorrowerLog() {
   const container = document.getElementById('borrowerLogList');
-  if (!borrowerLog.length) {
+  const filtered = borrowerLogTab === 'out' ? borrowerLog.filter(e => !e.returnDate)
+                 : borrowerLogTab === 'in'  ? borrowerLog.filter(e =>  e.returnDate)
+                 : borrowerLog;
+
+  if (!filtered.length) {
+    const emptyMsg = borrowerLogTab === 'out' ? 'No books currently checked out'
+                   : borrowerLogTab === 'in'  ? 'No returned books yet'
+                   : 'No borrowing history yet';
     container.innerHTML = `
       <div class="empty" style="padding:40px 0;">
         <div class="empty-icon">📋</div>
-        <div class="empty-title">No borrowing history yet</div>
+        <div class="empty-title">${emptyMsg}</div>
         <div class="empty-sub">Check out a book to start the log</div>
       </div>`;
     return;
   }
-  container.innerHTML = borrowerLog.map(entry => {
+  container.innerHTML = filtered.map(entry => {
     const statusCls  = entry.returnDate ? 'in' : 'out';
     const statusText = entry.returnDate ? 'Returned' : 'Out';
     return `
