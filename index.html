@@ -54,7 +54,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   cursor: pointer; transition: opacity 0.2s;
   box-shadow: 0 4px 24px rgba(201,169,110,0.3);
 }
-.login-btn:active { opacity: 0.85; }
+.login-btn:active { opacity: 0.7; transform: scale(0.97); }
 .login-btn svg { width: 20px; height: 20px; }
 .login-error { margin-top: 20px; color: var(--danger); font-size: 15px; font-weight: 500; text-align: center; min-height: 24px; }
 
@@ -992,12 +992,18 @@ All columns other than Author, Title, Series and Genres should be left empty or 
     var main = document.getElementById('mainApp');
     if (ls && ls.style.display !== 'none') {
       ls.style.display = 'none';
-      if (main && main.style.display === 'block') return; // auth already succeeded
+      if (main && main.style.display === 'block') return;
       if (login) login.style.display = 'flex';
     }
   }
   setTimeout(hideLoadingFallback, 3000);
   window._hideLoadingFallback = hideLoadingFallback;
+
+  // Stub so onclick="signIn()" never throws ReferenceError before module loads
+  window.signIn = function() {
+    var err = document.getElementById('loginError');
+    if (err) err.textContent = 'Still loading — please wait a moment and try again.';
+  };
 })();
 </script>
 
