@@ -1010,7 +1010,7 @@ All columns other than Author, Title, Series and Genres should be left empty or 
 <!-- FIREBASE SDKs -->
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getAuth, GoogleAuthProvider, signInWithRedirect, signInWithPopup, getRedirectResult, signOut as fbSignOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as fbSignOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, getDocsFromCache, query, orderBy, serverTimestamp, increment } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 // ── CONFIG ───────────────────────────────────────────────────────────────────
@@ -1108,22 +1108,15 @@ function showLoginError(e) {
 window.signIn = () => {
   document.getElementById('loginError').textContent = '';
   const provider = new GoogleAuthProvider();
-  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-  if (isMobile) {
-    signInWithRedirect(auth, provider).catch(showLoginError);
-  } else {
-    signInWithPopup(auth, provider).catch(e => {
-      if (e.code === 'auth/popup-blocked' || e.code === 'auth/popup-closed-by-user') {
-        signInWithRedirect(auth, provider).catch(showLoginError);
-      } else {
-        showLoginError(e);
-      }
-    });
-  }
+  signInWithPopup(auth, provider).catch(e => {
+    if (e.code === 'auth/popup-blocked') {
+      document.getElementById('loginError').textContent = 'Popup was blocked — please allow popups for this site and try again.';
+    } else if (e.code !== 'auth/popup-closed-by-user') {
+      showLoginError(e);
+    }
+  });
 };
 
-// Handle return from Google redirect
-getRedirectResult(auth).catch(showLoginError);
 
 window.signOut = async () => {
   closeSettings();
