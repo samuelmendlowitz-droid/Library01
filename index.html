@@ -56,7 +56,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 }
 .login-btn:active { opacity: 0.85; }
 .login-btn svg { width: 20px; height: 20px; }
-.login-error { margin-top: 16px; color: var(--danger); font-size: 13px; text-align: center; }
+.login-error { margin-top: 20px; color: var(--danger); font-size: 15px; font-weight: 500; text-align: center; min-height: 24px; }
 
 /* HEADER */
 .header {
@@ -1094,29 +1094,32 @@ async function updateBorrowLogEntry(id, data) {
 }
 
 // ── AUTH ─────────────────────────────────────────────────────────────────────
+function showLoginError(e) {
+  const msg = (e && e.code === 'auth/unauthorized-domain')
+    ? 'This domain is not authorized. Add it in Firebase Auth settings.'
+    : 'Sign-in failed. Please try again.';
+  document.getElementById('loginError').textContent = msg;
+}
+
 window.signIn = () => {
+  document.getElementById('loginError').textContent = '';
   const provider = new GoogleAuthProvider();
-  // Use redirect on mobile (popup blocked by Safari); popup on desktop
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
   if (isMobile) {
-    signInWithRedirect(auth, provider).catch(() => {
-      document.getElementById('loginError').textContent = 'Sign-in failed. Please try again.';
-    });
+    signInWithRedirect(auth, provider).catch(showLoginError);
   } else {
     signInWithPopup(auth, provider).catch(e => {
       if (e.code === 'auth/popup-blocked' || e.code === 'auth/popup-closed-by-user') {
-        signInWithRedirect(auth, provider);
+        signInWithRedirect(auth, provider).catch(showLoginError);
       } else {
-        document.getElementById('loginError').textContent = 'Sign-in failed. Please try again.';
+        showLoginError(e);
       }
     });
   }
 };
 
 // Handle return from Google redirect
-getRedirectResult(auth).catch(() => {
-  document.getElementById('loginError').textContent = 'Sign-in failed. Please try again.';
-});
+getRedirectResult(auth).catch(showLoginError);
 
 window.signOut = async () => {
   closeSettings();
