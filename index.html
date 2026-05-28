@@ -1125,7 +1125,7 @@ window.handleGlobalTitleSearch = function() {
 
   const raw = input.value.trim();
 
-  const meaningfulLength = normalizeSearchTitle(raw).length;
+  const meaningfulLength = normalizeBookText(raw).length;
 
   if (meaningfulLength < 3) {
     dropdown.style.display = 'none';
@@ -1133,11 +1133,11 @@ window.handleGlobalTitleSearch = function() {
     return;
   }
 
-  const normalized = normalizeSearchTitle(raw);
+  const normalized = normalizeBookText(raw);
 
   const matches = globalBookCache
     .filter(book => {
-      const title = book.normalizedTitle || normalizeSearchTitle(book.title || '');
+      const title = book.normalizedTitle || normalizeBookText(book.title || '');
       return title.startsWith(normalized);
     })
     .slice(0, 8);
