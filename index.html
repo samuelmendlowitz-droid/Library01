@@ -1027,8 +1027,8 @@ let borrowerLogTab = 'all';
 function userSettingsDoc() {
   return doc(db, 'users', currentUser.uid, 'meta', 'settings');
 }
-function userBorrowLogCol() {
-  return collection(db, 'users', currentUser.uid, 'borrowLog');
+function userBorrowLogDoc() {
+  return doc(db, 'users', currentUser.uid, 'meta', 'borrowLog');
 }
 
 async function loadSettings() {
@@ -1051,26 +1051,31 @@ async function saveSettings() {
 
 async function loadBorrowLog() {
   try {
-    const snap = await getDocs(userBorrowLogCol());
-    borrowerLog = snap.docs
-      .map(d => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => {
-        const ta = a.sortKey ?? (a.checkoutTimestamp?.seconds ? a.checkoutTimestamp.seconds * 1000 : 0);
-        const tb = b.sortKey ?? (b.checkoutTimestamp?.seconds ? b.checkoutTimestamp.seconds * 1000 : 0);
-        return tb - ta;
-      });
+    const snap = await getDoc(userBorrowLogDoc());
+    const entries = snap.exists() ? (snap.data().entries || []) : [];
+    borrowerLog = [...entries].sort((a, b) => (b.sortKey || 0) - (a.sortKey || 0));
   } catch(e) { borrowerLog = []; }
 }
 
 async function addBorrowLogEntry(entry) {
   try {
-    await addDoc(userBorrowLogCol(), { ...entry, sortKey: Date.now(), checkoutTimestamp: serverTimestamp() });
+    const ref = userBorrowLogDoc();
+    const snap = await getDoc(ref);
+    const existing = snap.exists() ? (snap.data().entries || []) : [];
+    const newEntry = { ...entry, sortKey: Date.now(), id: String(Date.now()) };
+    await setDoc(ref, { entries: [...existing, newEntry] });
   } catch(e) {}
 }
 
 async function updateBorrowLogEntry(id, data) {
   try {
-    await updateDoc(doc(db, 'users', currentUser.uid, 'borrowLog', id), data);
+    const ref = userBorrowLogDoc();
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return;
+    const entries = (snap.data().entries || []).map(e =>
+      e.id === id ? { ...e, ...data } : e
+    );
+    await setDoc(ref, { entries });
   } catch(e) {}
 }
 
