@@ -1004,7 +1004,7 @@ All columns other than Author, Title, Series and Genres should be left empty or 
 <!-- FIREBASE SDKs -->
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as fbSignOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getAuth, GoogleAuthProvider, signInWithRedirect, signInWithPopup, getRedirectResult, signOut as fbSignOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, getDocsFromCache, query, orderBy, serverTimestamp, increment } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 // ── CONFIG ───────────────────────────────────────────────────────────────────
@@ -1094,14 +1094,29 @@ async function updateBorrowLogEntry(id, data) {
 }
 
 // ── AUTH ─────────────────────────────────────────────────────────────────────
-window.signIn = async () => {
-  try {
-    const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
-  } catch(e) {
-    document.getElementById('loginError').textContent = 'Sign-in failed. Please try again.';
+window.signIn = () => {
+  const provider = new GoogleAuthProvider();
+  // Use redirect on mobile (popup blocked by Safari); popup on desktop
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  if (isMobile) {
+    signInWithRedirect(auth, provider).catch(() => {
+      document.getElementById('loginError').textContent = 'Sign-in failed. Please try again.';
+    });
+  } else {
+    signInWithPopup(auth, provider).catch(e => {
+      if (e.code === 'auth/popup-blocked' || e.code === 'auth/popup-closed-by-user') {
+        signInWithRedirect(auth, provider);
+      } else {
+        document.getElementById('loginError').textContent = 'Sign-in failed. Please try again.';
+      }
+    });
   }
 };
+
+// Handle return from Google redirect
+getRedirectResult(auth).catch(() => {
+  document.getElementById('loginError').textContent = 'Sign-in failed. Please try again.';
+});
 
 window.signOut = async () => {
   closeSettings();
