@@ -170,9 +170,17 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 /* MODALS */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 300; display: flex; align-items: flex-end; backdrop-filter: blur(4px); opacity: 0; pointer-events: none; transition: opacity 0.25s; }
 .modal-overlay.open { opacity: 1; pointer-events: all; }
-.modal { background: var(--surface); border-radius: 24px 24px 0 0; padding: 24px 20px 44px; width: 100%; border-top: 1px solid var(--border); transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.32,0.72,0,1); max-height: 92vh; overflow-y: auto; position: relative; }
+.modal { background: var(--surface); border-radius: 20px 20px 0 0; padding: 24px 20px 44px; width: 100%; border-top: 1px solid var(--border); transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.32,0.72,0,1); max-height: calc(100dvh - 48px); overflow-y: auto; position: relative; }
 .modal-overlay.open .modal { transform: translateY(0); }
-.modal-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 20px; }
+.modal.full-sheet { height: calc(100dvh - 48px); max-height: none; padding: 0; display: flex; flex-direction: column; overflow: hidden; will-change: transform; }
+.modal.full-sheet.dragging { transition: none; }
+.modal-header { padding: 12px 20px 0; flex-shrink: 0; background: var(--surface); border-radius: 20px 20px 0 0; cursor: grab; user-select: none; }
+.modal-header:active { cursor: grabbing; }
+.modal-header-row { display: flex; align-items: center; justify-content: space-between; padding-top: 4px; margin-bottom: 16px; }
+.modal-header .modal-title { margin-bottom: 0; }
+.modal-header .modal-close { position: static; flex-shrink: 0; }
+.modal-body { flex: 1; overflow-y: auto; padding: 0 20px 44px; }
+.modal-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 14px; }
 .modal-title { font-family: 'Playfair Display', serif; font-size: 22px; color: var(--accent2); margin-bottom: 20px; }
 .modal-close { position: absolute; top: 20px; right: 20px; width: 32px; height: 32px; border-radius: 50%; background: var(--surface2); border: 1px solid var(--border); color: var(--text2); font-size: 16px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 .form-group { margin-bottom: 16px; }
@@ -669,11 +677,6 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     <div>
       <div class="filter-section-label">Filter by Location</div>
       <div class="filter-row" id="statusFilters"></div>
-      <div class="mode-row" id="statusModeRow">
-        <span style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;">Match:</span>
-        <button class="filter-btn active" id="statusModeOR" onclick="setStatusMode('OR')">OR</button>
-        <button class="filter-btn" id="statusModeAND" onclick="setStatusMode('AND')">AND</button>
-      </div>
     </div>
     <div class="sort-row">
       <span class="sort-label">Sort</span>
@@ -699,79 +702,89 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 
 <!-- ADD MODAL -->
 <div class="modal-overlay" id="addModal" onclick="closeOnOverlay(event,'addModal')">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <button class="modal-close" onclick="closeModal('addModal')">✕</button>
-    <div class="modal-title">Add New Book</div>
-    
-<div class="form-group">
-<label class="form-label">Book Title *</label>
-<div class="autocomplete-wrap">
-<input class="form-input" id="newTitle" placeholder="e.g. The Great Gatsby" oninput="handleGlobalTitleSearch()">
-<div class="autocomplete-dropdown" id="titleAutocomplete"></div>
-</div>
-</div>
-
-    <div class="form-group"><label class="form-label">Author *</label><input class="form-input" id="newAuthor" placeholder="e.g. F. Scott Fitzgerald"></div>
-    <div class="form-group"><label class="form-label">Series <span style="font-weight:300;text-transform:none;letter-spacing:0">(optional)</span></label><input class="form-input" id="newSeries" placeholder="e.g. Throne of Glass"></div>
-    <div class="form-group">
-      <label class="form-label">Genre(s) — select up to 3</label>
-      <div class="genre-grid" id="addGenreGrid"></div>
-      <div style="display:flex;gap:8px;margin-top:10px;">
-        <input class="form-input" id="customGenreInput" placeholder="Add custom genre…" style="flex:1;padding:9px 12px;font-size:13px;" onkeydown="if(event.key==='Enter')addCustomGenre('add')">
-        <button onclick="addCustomGenre('add')" style="padding:9px 14px;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--accent);font-size:13px;cursor:pointer;white-space:nowrap;font-family:'DM Sans',sans-serif;">+ Add</button>
-      </div>
-      <div class="genre-hint" id="genreHint"></div>
-    </div>
-    <div class="form-group" id="addLocationGroup"><label class="form-label">Location</label>
-      <select class="form-select" id="newLocation"></select>
-    </div>
-    <div class="form-group" style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;">
-      <div style="display:flex;align-items:center;gap:10px;">
-      <label class="form-label" style="margin:0">Wishlist Item?</label>
-      <input type="checkbox" id="newWishlist" style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent)">
-      </div>
-      <div style="display:flex;align-items:center;gap:10px;">
-      <label class="form-label" style="margin:0">Already Read?</label>
-      <input type="checkbox" id="newRead" style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent)">
+  <div class="modal full-sheet" id="addSheet">
+    <div class="modal-header" id="addModalHeader">
+      <div class="modal-handle"></div>
+      <div class="modal-header-row">
+        <div class="modal-title">Add New Book</div>
+        <button class="modal-close" onclick="closeModal('addModal')">✕</button>
       </div>
     </div>
-    <button class="btn-submit" id="addBtn" onclick="addBook()">Add to Library</button>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Book Title *</label>
+        <div class="autocomplete-wrap">
+          <input class="form-input" id="newTitle" placeholder="e.g. The Great Gatsby" oninput="handleGlobalTitleSearch()">
+          <div class="autocomplete-dropdown" id="titleAutocomplete"></div>
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label">Author *</label><input class="form-input" id="newAuthor" placeholder="e.g. F. Scott Fitzgerald"></div>
+      <div class="form-group"><label class="form-label">Series <span style="font-weight:300;text-transform:none;letter-spacing:0">(optional)</span></label><input class="form-input" id="newSeries" placeholder="e.g. Throne of Glass"></div>
+      <div class="form-group">
+        <label class="form-label">Genre(s) — select up to 3</label>
+        <div class="genre-grid" id="addGenreGrid"></div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <input class="form-input" id="customGenreInput" placeholder="Add custom genre…" style="flex:1;padding:9px 12px;font-size:13px;" onkeydown="if(event.key==='Enter')addCustomGenre('add')">
+          <button onclick="addCustomGenre('add')" style="padding:9px 14px;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--accent);font-size:13px;cursor:pointer;white-space:nowrap;font-family:'DM Sans',sans-serif;">+ Add</button>
+        </div>
+        <div class="genre-hint" id="genreHint"></div>
+      </div>
+      <div class="form-group" id="addLocationGroup"><label class="form-label">Location</label>
+        <select class="form-select" id="newLocation"></select>
+      </div>
+      <div class="form-group" style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <label class="form-label" style="margin:0">Wishlist Item?</label>
+          <input type="checkbox" id="newWishlist" style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent)">
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <label class="form-label" style="margin:0">Already Read?</label>
+          <input type="checkbox" id="newRead" style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent)">
+        </div>
+      </div>
+      <button class="btn-submit" id="addBtn" onclick="addBook()">Add to Library</button>
+    </div>
   </div>
 </div>
 
 <!-- EDIT MODAL -->
 <div class="modal-overlay" id="editModal" onclick="closeOnOverlay(event,'editModal')">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <button class="modal-close" onclick="closeModal('editModal')">✕</button>
-    <div class="modal-title">Edit Book</div>
-    <div class="form-group"><label class="form-label">Book Title *</label><input class="form-input" id="editTitle"></div>
-    <div class="form-group"><label class="form-label">Author *</label><input class="form-input" id="editAuthor"></div>
-    <div class="form-group"><label class="form-label">Series <span style="font-weight:300;text-transform:none;letter-spacing:0">(optional)</span></label><input class="form-input" id="editSeries"></div>
-    <div class="form-group">
-      <label class="form-label">Genre(s) — select up to 3</label>
-      <div class="genre-grid" id="editGenreGrid"></div>
-      <div style="display:flex;gap:8px;margin-top:10px;">
-        <input class="form-input" id="editCustomGenreInput" placeholder="Add custom genre…" style="flex:1;padding:9px 12px;font-size:13px;" onkeydown="if(event.key==='Enter')addCustomGenre('edit')">
-        <button onclick="addCustomGenre('edit')" style="padding:9px 14px;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--accent);font-size:13px;cursor:pointer;white-space:nowrap;font-family:'DM Sans',sans-serif;">+ Add</button>
+  <div class="modal full-sheet" id="editSheet">
+    <div class="modal-header" id="editModalHeader">
+      <div class="modal-handle"></div>
+      <div class="modal-header-row">
+        <div class="modal-title">Edit Book</div>
+        <button class="modal-close" onclick="closeModal('editModal')">✕</button>
       </div>
     </div>
-    <div class="form-group" id="editLocationGroup"><label class="form-label">Location</label>
-      <select class="form-select" id="editLocation"></select>
-    </div>
-    <div class="form-group" style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;">
-      <div style="display:flex;align-items:center;gap:10px;">
-      <label class="form-label" style="margin:0">Wishlist Item?</label>
-      <input type="checkbox" id="editWishlist" style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent)">
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Book Title *</label><input class="form-input" id="editTitle"></div>
+      <div class="form-group"><label class="form-label">Author *</label><input class="form-input" id="editAuthor"></div>
+      <div class="form-group"><label class="form-label">Series <span style="font-weight:300;text-transform:none;letter-spacing:0">(optional)</span></label><input class="form-input" id="editSeries"></div>
+      <div class="form-group">
+        <label class="form-label">Genre(s) — select up to 3</label>
+        <div class="genre-grid" id="editGenreGrid"></div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <input class="form-input" id="editCustomGenreInput" placeholder="Add custom genre…" style="flex:1;padding:9px 12px;font-size:13px;" onkeydown="if(event.key==='Enter')addCustomGenre('edit')">
+          <button onclick="addCustomGenre('edit')" style="padding:9px 14px;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--accent);font-size:13px;cursor:pointer;white-space:nowrap;font-family:'DM Sans',sans-serif;">+ Add</button>
+        </div>
       </div>
-      <div style="display:flex;align-items:center;gap:10px;">
-      <label class="form-label" style="margin:0">Read?</label>
-      <input type="checkbox" id="editRead" style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent)">
+      <div class="form-group" id="editLocationGroup"><label class="form-label">Location</label>
+        <select class="form-select" id="editLocation"></select>
       </div>
+      <div class="form-group" style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <label class="form-label" style="margin:0">Wishlist Item?</label>
+          <input type="checkbox" id="editWishlist" style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent)">
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <label class="form-label" style="margin:0">Read?</label>
+          <input type="checkbox" id="editRead" style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent)">
+        </div>
+      </div>
+      <button class="btn-submit" onclick="saveEdit()">Save Changes</button>
+      <button class="btn-danger" onclick="deleteFromEdit()">🗑 Remove Book</button>
     </div>
-    <button class="btn-submit" onclick="saveEdit()">Save Changes</button>
-    <button class="btn-danger" onclick="deleteFromEdit()">🗑 Remove Book</button>
   </div>
 </div>
 
@@ -993,7 +1006,7 @@ let orderedLocations = [...DEFAULT_LOCATIONS]; // excludes Borrowed
 let borrowerLog = [];
 
 let selectedGenreFilters = [], genreFilterMode = 'OR';
-let selectedStatusFilters = [], statusFilterMode = 'OR';
+let selectedStatusFilters = [];
 let topFilters = ['all'];
 let addSelectedGenres = [], editSelectedGenres = [];
 let editingId = null;
@@ -1387,12 +1400,6 @@ function buildStatusFilters() {
     html += '<button class="filter-btn ' + (active ? 'active' : '') + '" onclick="toggleStatusFilter(\'' + esc(val) + '\')">' + esc(label) + '</button>';
   });
   wrap.innerHTML = html;
-  const mr = document.getElementById('statusModeRow');
-  mr.classList.toggle('visible', selectedStatusFilters.length >= 2);
-  if (selectedStatusFilters.length >= 2) {
-    document.getElementById('statusModeOR').classList.toggle('active', statusFilterMode === 'OR');
-    document.getElementById('statusModeAND').classList.toggle('active', statusFilterMode === 'AND');
-  }
 }
 
 function buildGenreGrid(gridId, selectedArr) {
@@ -1421,7 +1428,7 @@ function applyFilters() {
     }
     if (selectedStatusFilters.length > 0) {
       const matchS = s => b.location.toLowerCase() === s;
-      const ok = statusFilterMode === 'AND' ? selectedStatusFilters.every(matchS) : selectedStatusFilters.some(matchS);
+      const ok = selectedStatusFilters.some(matchS);
       if (!ok) return false;
     }
     if (q && !b.title.toLowerCase().includes(q) && !(b.author||'').toLowerCase().includes(q) && !(b.series||'').toLowerCase().includes(q)) return false;
@@ -1533,8 +1540,7 @@ window.toggleStatusFilter = s => {
   if (i >= 0) selectedStatusFilters.splice(i, 1); else selectedStatusFilters.push(s);
   buildStatusFilters(); applyFilters();
 };
-window.setGenreMode  = m => { genreFilterMode  = m; buildGenreFilters();  applyFilters(); };
-window.setStatusMode = m => { statusFilterMode = m; buildStatusFilters(); applyFilters(); };
+window.setGenreMode = m => { genreFilterMode = m; buildGenreFilters(); applyFilters(); };
 
 // ── GENRE PILLS ───────────────────────────────────────────────────────────────
 window.toggleGenrePill = (genre, gridId) => {
@@ -1982,8 +1988,10 @@ function makeSwipeable(headerId, sheetId, closeFn) {
 
 // Wire up swipe for both sheets after DOM is ready
 setTimeout(() => {
-  makeSwipeable('settingsHeader', 'settingsSheet', closeSettings);
-  makeSwipeable('bulkHeader',     'bulkSheet',     closeBulkAdd);
+  makeSwipeable('settingsHeader',  'settingsSheet', closeSettings);
+  makeSwipeable('bulkHeader',      'bulkSheet',     closeBulkAdd);
+  makeSwipeable('addModalHeader',  'addSheet',      () => closeModal('addModal'));
+  makeSwipeable('editModalHeader', 'editSheet',     () => closeModal('editModal'));
 }, 0);
 
 window.switchSettingsTab = tab => {
