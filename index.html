@@ -406,7 +406,11 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .borrower-log-title {
   font-family: 'Playfair Display', serif;
   font-size: 14px; color: var(--text);
-  margin-bottom: 4px;
+  margin-bottom: 2px;
+}
+.borrower-log-author {
+  font-size: 12px; color: var(--text3);
+  margin-bottom: 6px;
 }
 .borrower-log-meta {
   font-size: 12px; color: var(--text3);
@@ -1028,18 +1032,16 @@ let borrowerLogTab = 'all';
 function userSettingsDoc() {
   return doc(db, 'users', currentUser.uid, 'meta', 'settings');
 }
-function userBorrowLogDoc() {
-  return doc(db, 'users', currentUser.uid, 'meta', 'borrowLog');
-}
-
 async function loadSettings() {
   try {
     const snap = await getDocs(collection(db, 'users', currentUser.uid, 'meta'));
     const s = snap.docs.find(d => d.id === 'settings');
     if (s) {
       const data = s.data();
-      if (Array.isArray(data.genres) && data.genres.length)       orderedGenres    = data.genres;
+      if (Array.isArray(data.genres)    && data.genres.length)    orderedGenres    = data.genres;
       if (Array.isArray(data.locations) && data.locations.length) orderedLocations = data.locations;
+      if (Array.isArray(data.borrowLog))
+        borrowerLog = [...data.borrowLog].sort((a, b) => (b.sortKey || 0) - (a.sortKey || 0));
     }
   } catch(e) {}
 }
@@ -1052,31 +1054,26 @@ async function saveSettings() {
 
 async function loadBorrowLog() {
   try {
-    const snap = await getDoc(userBorrowLogDoc());
-    const entries = snap.exists() ? (snap.data().entries || []) : [];
-    borrowerLog = [...entries].sort((a, b) => (b.sortKey || 0) - (a.sortKey || 0));
-  } catch(e) { borrowerLog = []; }
-}
-
-async function addBorrowLogEntry(entry) {
-  try {
-    const ref = userBorrowLogDoc();
-    const snap = await getDoc(ref);
-    const existing = snap.exists() ? (snap.data().entries || []) : [];
-    const newEntry = { ...entry, sortKey: Date.now(), id: String(Date.now()) };
-    await setDoc(ref, { entries: [...existing, newEntry] });
+    const snap = await getDoc(userSettingsDoc());
+    if (snap.exists() && Array.isArray(snap.data().borrowLog))
+      borrowerLog = [...snap.data().borrowLog].sort((a, b) => (b.sortKey || 0) - (a.sortKey || 0));
   } catch(e) {}
 }
 
-async function updateBorrowLogEntry(id, data) {
+async function addBorrowLogEntry(entry) {
+  const newEntry = { ...entry, sortKey: Date.now(), id: String(Date.now()) };
+  borrowerLog = [newEntry, ...borrowerLog];          // update local state immediately
   try {
-    const ref = userBorrowLogDoc();
-    const snap = await getDoc(ref);
-    if (!snap.exists()) return;
-    const entries = (snap.data().entries || []).map(e =>
-      e.id === id ? { ...e, ...data } : e
-    );
-    await setDoc(ref, { entries });
+    await setDoc(userSettingsDoc(), { borrowLog: borrowerLog }, { merge: true });
+  } catch(e) { console.error('addBorrowLogEntry failed:', e); }
+}
+
+async function updateBorrowLogEntry(id, data) {
+  borrowerLog = borrowerLog.map(e => e.id === id ? { ...e, ...data } : e);  // update local state immediately
+  try {
+    await setDoc(userSettingsDoc(), { borrowLog: borrowerLog }, { merge: true });
+  } catch(e) { console.error('updateBorrowLogEntry failed:', e); }
+}
   } catch(e) {}
 }
 
@@ -1106,8 +1103,7 @@ onAuthStateChanged(auth, async user => {
     document.getElementById('settingsUserEmail').textContent = user.email || '';
     // measure header height after it's visible
     requestAnimationFrame(updateHeaderSpacer);
-    await loadSettings();
-    await loadBorrowLog();
+    await loadSettings(); // also loads borrowLog
     await preloadGlobalBooks();
     loadBooks();
   } else {
@@ -1751,9 +1747,14 @@ window.confirmCheckout = async () => {
   try {
     const b = books.find(x => x.id === checkoutTargetId);
     await updateBook(checkoutTargetId, { location: 'Borrowed', checkoutDate: today, borrowedBy: name });
-    // Log the checkout
-    await addBorrowLogEntry({ bookId: checkoutTargetId, bookTitle: b ? b.title : '', borrowedBy: name, checkoutDate: today, returnDate: null });
-    await loadBorrowLog();
+    await addBorrowLogEntry({
+      bookId: checkoutTargetId,
+      bookTitle: b ? b.title : '',
+      bookAuthor: b ? (b.author || '') : '',
+      borrowedBy: name,
+      checkoutDate: today,
+      returnDate: null
+    });
     await loadBooks();
   } catch(e) { showStatus('Error saving checkout.', 'error'); }
 };
@@ -1764,12 +1765,10 @@ window.confirmReturn = async () => {
   closeModal('returnModal');
   try {
     await updateBook(returnTargetId, { location: loc, checkoutDate: today, borrowedBy: '' });
-    // Find the open log entry and mark returned
     const logEntry = borrowerLog.find(e => e.bookId === returnTargetId && !e.returnDate);
     if (logEntry) {
       await updateBorrowLogEntry(logEntry.id, { returnDate: today });
     }
-    await loadBorrowLog();
     await loadBooks();
   } catch(e) { showStatus('Error saving.', 'error'); }
 };
@@ -2370,6 +2369,7 @@ function buildBorrowerLog() {
     return `
       <div class="borrower-log-item">
         <div class="borrower-log-title">${esc(entry.bookTitle || 'Unknown Book')}</div>
+        ${entry.bookAuthor ? `<div class="borrower-log-author">${esc(entry.bookAuthor)}</div>` : ''}
         <div class="borrower-log-meta">
           <span class="borrower-log-name">👤 ${esc(entry.borrowedBy)}</span>
           <span class="borrower-log-date">📤 ${esc(entry.checkoutDate)}</span>
