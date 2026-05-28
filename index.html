@@ -1104,8 +1104,8 @@ onAuthStateChanged(auth, async user => {
     // measure header height after it's visible
     requestAnimationFrame(updateHeaderSpacer);
     await loadSettings(); // also loads borrowLog
-    await preloadGlobalBooks();
-    loadBooks();
+    loadBooks();          // don't block on global books
+    preloadGlobalBooks().then(() => syncUserBooksToCache()); // background, merge after
   } else {
     currentUser = null;
     books = [];
@@ -1122,7 +1122,7 @@ setTimeout(() => {
     document.getElementById('loadingScreen').style.display = 'none';
     document.getElementById('loginScreen').style.display = 'flex';
   }
-}, 5000);
+}, 2000);
 
 
 
@@ -1136,16 +1136,34 @@ function normalizeSearchTitle(str = '') {
     .trim();
 }
 
+// Merge the user's own books into globalBookCache so autocomplete
+// always works even when globalLibrary is inaccessible.
+function syncUserBooksToCache() {
+  books.forEach(b => {
+    if (!b.title) return;
+    const normTitle  = normalizeBookText(b.title);
+    const normAuthor = normalizeBookText(b.author || '');
+    const id = normTitle + '__' + normAuthor;
+    if (!globalBookCache.find(g => g.id === id)) {
+      globalBookCache.push({
+        id,
+        title: b.title,
+        normalizedTitle: normTitle,
+        author: b.author || '',
+        series: b.series || '',
+        genres: b.genres || []
+      });
+    }
+  });
+  globalBookCache.sort((a, b) => (a.normalizedTitle || '').localeCompare(b.normalizedTitle || ''));
+}
+
 async function preloadGlobalBooks() {
   try {
     const snap = await getDocs(query(collection(db, 'globalLibrary'), orderBy('normalizedTitle', 'asc')));
-
-    globalBookCache = snap.docs.map(d => ({
-      id: d.id,
-      ...d.data()
-    }));
+    globalBookCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
   } catch(e) {
-    console.error('Failed to preload global books', e);
+    // globalLibrary inaccessible — autocomplete will use user's own books
   }
 }
 
@@ -1306,6 +1324,7 @@ async function loadBooks() {
       books = cached.docs.map(d => ({ id: d.id, ...d.data() }));
       hideStatus();
       buildGenreFilters(); buildStatusFilters(); applyFilters(); updateStats();
+      syncUserBooksToCache();
       document.getElementById('fabAdd').style.display = 'flex';
       document.getElementById('fabCsv').style.display = 'flex';
     } else {
@@ -1319,6 +1338,7 @@ async function loadBooks() {
     books = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     hideStatus();
     buildGenreFilters(); buildStatusFilters(); applyFilters(); updateStats();
+    syncUserBooksToCache();
     document.getElementById('fabAdd').style.display = 'flex';
     document.getElementById('fabCsv').style.display = 'flex';
   } catch(e) {
@@ -1338,7 +1358,7 @@ async function saveBook(data) {
   const cacheItem = {
     id: globalId,
     title: data.title || '',
-    normalizedTitle: normalizeSearchTitle(data.title || ''),
+    normalizedTitle: normalizeBookText(data.title || ''),
     author: data.author || '',
     series: data.series || '',
     genres: data.genres || []
