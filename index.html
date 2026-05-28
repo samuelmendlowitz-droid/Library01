@@ -983,11 +983,29 @@ All columns other than Author, Title, Series and Genres should be left empty or 
   </div>
 </div>
 
+<!-- Loading screen safety net: runs before module imports so it always fires -->
+<script>
+(function() {
+  function hideLoadingFallback() {
+    var ls = document.getElementById('loadingScreen');
+    var login = document.getElementById('loginScreen');
+    var main = document.getElementById('mainApp');
+    if (ls && ls.style.display !== 'none') {
+      ls.style.display = 'none';
+      if (main && main.style.display === 'block') return; // auth already succeeded
+      if (login) login.style.display = 'flex';
+    }
+  }
+  setTimeout(hideLoadingFallback, 3000);
+  window._hideLoadingFallback = hideLoadingFallback;
+})();
+</script>
+
 <!-- FIREBASE SDKs -->
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as fbSignOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, getDocsFromCache, query, orderBy, serverTimestamp, enableIndexedDbPersistence, increment } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, getDocsFromCache, query, orderBy, serverTimestamp, increment } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 // ── CONFIG ───────────────────────────────────────────────────────────────────
 const firebaseConfig = {
@@ -1003,8 +1021,6 @@ const firebaseConfig = {
 const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db   = getFirestore(app);
-
-enableIndexedDbPersistence(db).catch(() => {});
 
 // ── DEFAULT DATA ─────────────────────────────────────────────────────────────
 const DEFAULT_GENRES = ['Fiction','Non-Fiction','Fantasy','Young Adult','Sci-Fi','Mystery','Thriller','Romance','Historical Fiction','Biography','Self-Help','Horror','Graphic Novel','Poetry','Other'];
@@ -1118,11 +1134,8 @@ onAuthStateChanged(auth, async user => {
 });
 
 setTimeout(() => {
-  if (document.getElementById('loadingScreen').style.display !== 'none') {
-    document.getElementById('loadingScreen').style.display = 'none';
-    document.getElementById('loginScreen').style.display = 'flex';
-  }
-}, 2000);
+  if (window._hideLoadingFallback) window._hideLoadingFallback();
+}, 1500);
 
 
 
