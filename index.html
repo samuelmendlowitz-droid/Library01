@@ -78,9 +78,10 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 }
 .header-row { display: flex; align-items: flex-start; justify-content: space-between; }
 .header-title {
-  font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 700;
+  font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700;
   color: var(--accent2); letter-spacing: -0.5px;
   cursor: pointer; -webkit-tap-highlight-color: transparent;
+  display: flex; align-items: center; gap: 10px;
 }
 .header-title:active { opacity: 0.75; }
 .header-user { font-size: 11px; color: var(--text3); margin-top: 2px; }
@@ -648,7 +649,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   <div class="header" id="mainHeader">
     <div class="header-row">
       <div>
-        <div class="header-title" onclick="window.scrollTo({top:0,behavior:'smooth'})"><img src="M-Logo.png" alt="" style="height:22px;width:auto;vertical-align:middle;margin-right:7px;position:relative;top:-1px;"> Miriam's Library</div>
+        <div class="header-title" onclick="resetAllFilters()"><img src="M-Logo.png" alt="" style="height:36px;width:auto;"> Miriam's Library</div>
         <div class="header-user" id="headerUser"></div>
       </div>
       <button class="settings-btn" onclick="openSettings()" title="Settings">⚙️</button>
@@ -1530,6 +1531,19 @@ function updateStats() {
   document.getElementById('statBorrowed').textContent = libraryBooks.filter(b => b.location === 'Borrowed').length;
   document.getElementById('statWishlist').textContent = books.filter(b => b.location === 'Wishlist').length;
 }
+
+window.resetAllFilters = () => {
+  topFilters = ['all'];
+  selectedGenreFilters = [];
+  selectedStatusFilters = [];
+  document.getElementById('searchInput').value = '';
+  buildGenreFilters();
+  buildStatusFilters();
+  document.querySelectorAll('.stat-clickable').forEach(el => el.classList.remove('active'));
+  document.querySelector('.stat-clickable')?.classList.add('active');
+  applyFilters();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
 
 window.setTopFilter = filter => {
   if (filter === 'all') {
