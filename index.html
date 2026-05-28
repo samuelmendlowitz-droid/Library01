@@ -1096,8 +1096,6 @@ async function updateBorrowLogEntry(id, data) {
     await setDoc(userSettingsDoc(), { borrowLog: borrowerLog }, { merge: true });
   } catch(e) { console.error('updateBorrowLogEntry failed:', e); }
 }
-  } catch(e) {}
-}
 
 // ── AUTH ─────────────────────────────────────────────────────────────────────
 function showLoginError(e) {
