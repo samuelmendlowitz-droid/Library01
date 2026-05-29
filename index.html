@@ -1825,16 +1825,17 @@ function buildStatusFilters() {
   const wrap = document.getElementById('statusFilters');
   // Build from orderedLocations + Borrowed at bottom
   const allLocs = [...orderedLocations, 'Borrowed'];
-  const labelMap = { 'Bookshelf': '📍 Bookshelf', 'Closet': '📦 Closet', 'Borrowed': '↗ Checked Out' };
+  const labelMap = { 'Borrowed': '<i data-lucide="arrow-up-right"></i> Checked Out' };
 
   let html = '<button class="filter-btn ' + (selectedStatusFilters.length === 0 ? 'active' : '') + '" onclick="clearStatusFilter()">All</button>';
   allLocs.forEach(l => {
     const val = l.toLowerCase();
-    const label = labelMap[l] || ('📍 ' + l);
+    const label = labelMap[l] || ('<i data-lucide="map-pin"></i> ' + esc(l));
     const active = selectedStatusFilters.includes(val);
-    html += '<button class="filter-btn ' + (active ? 'active' : '') + '" onclick="toggleStatusFilter(\'' + esc(val) + '\')">' + esc(label) + '</button>';
+    html += '<button class="filter-btn ' + (active ? 'active' : '') + '" onclick="toggleStatusFilter(\'' + esc(val) + '\')">' + label + '</button>';
   });
   wrap.innerHTML = html;
+  refreshIcons();
 }
 
 function buildGenreGrid(gridId, selectedArr) {
