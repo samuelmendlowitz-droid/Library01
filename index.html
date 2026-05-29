@@ -151,6 +151,10 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .btn-edit:active { background: var(--accent); color: #1a1612; border-color: var(--accent); }
 .btn-checkout { padding: 5px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text2); font-size: 11px; font-family: 'DM Sans', sans-serif; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.15s; text-transform: uppercase; letter-spacing: 0.4px; }
 .btn-checkout.is-borrowed { background: #2a1a10; border-color: var(--borrowed); color: var(--borrowed); }
+.btn-add-collection { padding: 5px 10px; border-radius: 8px; border: 1px solid var(--accent); background: transparent; color: var(--accent); font-size: 11px; font-family: 'DM Sans', sans-serif; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.15s; text-transform: uppercase; letter-spacing: 0.4px; }
+.btn-add-collection:active { background: var(--accent); color: #1a1612; }
+.view-toggle-btn { padding: 6px 14px; border-radius: 999px; background: var(--surface2); border: 1px solid var(--border); color: var(--accent); font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+.view-toggle-btn.active { background: var(--accent); color: #1a1612; border-color: var(--accent); }
 .checkout-date { font-size: 10px; color: var(--text3); margin-top: 3px; text-align: right; }
 .borrower-name { font-size: 10px; color: var(--borrowed); margin-top: 2px; text-align: right; }
 
@@ -656,7 +660,10 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
         <div class="header-title" onclick="resetAllFilters()"><img src="M-Logo.png" alt="" style="height:36px;width:auto;"> Miriam's Library</div>
         <div class="header-user" id="headerUser"></div>
       </div>
-      <button class="settings-btn" onclick="openSettings()" title="Settings">⚙️</button>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button class="view-toggle-btn" id="viewToggleBtn" onclick="toggleLibraryView()">Global Library</button>
+        <button class="settings-btn" onclick="openSettings()" title="Settings">⚙️</button>
+      </div>
     </div>
     <div class="header-stats">
       <div class="stat stat-clickable active" onclick="setTopFilter('all')"><div class="stat-num" id="statTotal">0</div><div class="stat-label">Books</div></div>
@@ -683,7 +690,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
         <button class="filter-btn" id="modeAND" onclick="setGenreMode('AND')">AND</button>
       </div>
     </div>
-    <div>
+    <div id="locationFilterSection">
       <div class="filter-section-label">Filter by Location</div>
       <div class="filter-row" id="statusFilters"></div>
     </div>
@@ -727,7 +734,12 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
           <div class="autocomplete-dropdown" id="titleAutocomplete"></div>
         </div>
       </div>
-      <div class="form-group"><label class="form-label">Author *</label><input class="form-input" id="newAuthor" placeholder="e.g. F. Scott Fitzgerald"></div>
+      <div class="form-group"><label class="form-label">Author *</label>
+        <div class="autocomplete-wrap">
+          <input class="form-input" id="newAuthor" placeholder="e.g. F. Scott Fitzgerald" oninput="handleAuthorSearch()" autocomplete="off">
+          <div class="autocomplete-dropdown" id="authorAutocomplete"></div>
+        </div>
+      </div>
       <div class="form-group"><label class="form-label">Series <span style="font-weight:300;text-transform:none;letter-spacing:0">(optional)</span></label><input class="form-input" id="newSeries" placeholder="e.g. Throne of Glass"></div>
       <div class="form-group">
         <label class="form-label">Genre(s) — select up to 3</label>
@@ -1044,6 +1056,7 @@ let borrowerLog = [];
 let selectedGenreFilters = [], genreFilterMode = 'OR';
 let selectedStatusFilters = [];
 let topFilters = ['all'];
+let currentView = 'personal';
 let addSelectedGenres = [], editSelectedGenres = [];
 let editingId = null;
 let checkoutTargetId = null;
@@ -1205,7 +1218,7 @@ window.handleGlobalTitleSearch = function() {
 
   const meaningfulLength = normalizeBookText(raw).length;
 
-  if (meaningfulLength < 3) {
+  if (meaningfulLength < 2) {
     dropdown.style.display = 'none';
     dropdown.innerHTML = '';
     return;
@@ -1259,15 +1272,47 @@ window.selectAutocompleteBook = function(title, author, series) {
 };
 
 document.addEventListener('click', (e) => {
-  const wrap = document.querySelector('.autocomplete-wrap');
-  const dropdown = document.getElementById('titleAutocomplete');
-
-  if (!wrap || !dropdown) return;
-
-  if (!wrap.contains(e.target)) {
-    dropdown.style.display = 'none';
+  const titleWrap = document.getElementById('newTitle')?.closest('.autocomplete-wrap');
+  const titleDrop = document.getElementById('titleAutocomplete');
+  if (titleDrop && titleWrap && !titleWrap.contains(e.target)) {
+    titleDrop.style.display = 'none';
+    titleDrop.innerHTML = '';
+  }
+  const authorWrap = document.getElementById('newAuthor')?.closest('.autocomplete-wrap');
+  const authorDrop = document.getElementById('authorAutocomplete');
+  if (authorDrop && authorWrap && !authorWrap.contains(e.target)) {
+    authorDrop.style.display = 'none';
+    authorDrop.innerHTML = '';
   }
 });
+
+window.handleAuthorSearch = function() {
+  const input = document.getElementById('newAuthor');
+  const dropdown = document.getElementById('authorAutocomplete');
+  if (!input || !dropdown) return;
+  const raw = input.value.trim();
+  const normalized = normalizeBookText(raw);
+  if (normalized.length < 2) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; return; }
+  const seen = new Set();
+  const matches = [];
+  globalBookCache.forEach(b => {
+    if (!b.author || seen.has(b.author)) return;
+    if (normalizeBookText(b.author).startsWith(normalized)) { seen.add(b.author); matches.push(b.author); }
+  });
+  if (!matches.length) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; return; }
+  dropdown.innerHTML = matches.slice(0, 6).map(a =>
+    `<div class="autocomplete-item" onclick="selectAuthorSuggestion('${a.replace(/'/g, "\\'")}')">
+      <div class="autocomplete-title">${esc(a)}</div>
+    </div>`
+  ).join('');
+  dropdown.style.display = 'block';
+};
+
+window.selectAuthorSuggestion = function(author) {
+  document.getElementById('newAuthor').value = author;
+  const d = document.getElementById('authorAutocomplete');
+  d.style.display = 'none'; d.innerHTML = '';
+};
 
 
 // ── GLOBAL COMMUNITY LIBRARY ────────────────────────────────────────────────
@@ -1480,6 +1525,7 @@ function buildGenreGrid(gridId, selectedArr) {
 }
 
 function applyFilters() {
+  if (currentView === 'global') { applyGlobalFilters(); return; }
   const q    = document.getElementById('searchInput').value.toLowerCase().trim();
   const sort = document.getElementById('sortSelect').value;
   let filtered = books.filter(b => {
@@ -1577,6 +1623,7 @@ function updateStats() {
 }
 
 window.resetAllFilters = () => {
+  if (currentView === 'global') { toggleLibraryView(); return; }
   topFilters = ['all'];
   selectedGenreFilters = [];
   selectedStatusFilters = [];
@@ -1587,6 +1634,111 @@ window.resetAllFilters = () => {
   document.querySelector('.stat-clickable')?.classList.add('active');
   applyFilters();
   window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+// ── GLOBAL LIBRARY VIEW ───────────────────────────────────────────────────────
+window.toggleLibraryView = () => {
+  currentView = currentView === 'personal' ? 'global' : 'personal';
+  const isGlobal = currentView === 'global';
+  const btn = document.getElementById('viewToggleBtn');
+  btn.textContent = isGlobal ? 'My Library' : 'Global Library';
+  btn.classList.toggle('active', isGlobal);
+
+  document.getElementById('locationFilterSection').style.display = isGlobal ? 'none' : '';
+  document.getElementById('genreModeRow').style.display = 'none'; // always hide AND/OR in global
+  document.getElementById('fabAdd').style.display = isGlobal ? 'none' : 'flex';
+  document.getElementById('fabCsv').style.display = isGlobal ? 'none' : 'flex';
+  document.querySelector('.header-stats').style.display = isGlobal ? 'none' : '';
+
+  selectedGenreFilters = [];
+  document.getElementById('searchInput').value = '';
+
+  if (isGlobal) {
+    preloadGlobalBooks().then(() => { syncUserBooksToCache(); buildGlobalGenreFilters(); applyGlobalFilters(); });
+    buildGlobalGenreFilters();
+    applyGlobalFilters();
+  } else {
+    buildGenreFilters();
+    buildStatusFilters();
+    updateStats();
+    applyFilters();
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+function buildGlobalGenreFilters() {
+  const seen = new Set();
+  globalBookCache.forEach(b => (b.genres || []).forEach(g => seen.add(g)));
+  const genres = [...seen].sort();
+  document.getElementById('genreFilters').innerHTML = genres.map(g => {
+    const active = selectedGenreFilters.includes(g);
+    return `<button class="filter-btn${active ? ' active' : ''}" onclick="toggleGlobalGenreFilter('${g.replace(/'/g, "\\'")}')">
+      ${active ? '✓ ' : ''}${esc(g)}
+    </button>`;
+  }).join('');
+}
+
+window.toggleGlobalGenreFilter = g => {
+  const i = selectedGenreFilters.indexOf(g);
+  if (i >= 0) selectedGenreFilters.splice(i, 1);
+  else if (selectedGenreFilters.length < 3) selectedGenreFilters.push(g);
+  buildGlobalGenreFilters();
+  applyGlobalFilters();
+};
+
+function applyGlobalFilters() {
+  const q = document.getElementById('searchInput').value.toLowerCase().trim();
+  const sort = document.getElementById('sortSelect').value;
+  let list = globalBookCache.filter(b => {
+    if (q && !(b.title||'').toLowerCase().includes(q) && !(b.author||'').toLowerCase().includes(q) && !(b.series||'').toLowerCase().includes(q)) return false;
+    if (selectedGenreFilters.length > 0 && !selectedGenreFilters.some(g => (b.genres||[]).includes(g))) return false;
+    return true;
+  });
+  list = [...list].sort((a, b) => {
+    if (sort === 'author-asc')  return (a.author||'').toLowerCase().localeCompare((b.author||'').toLowerCase());
+    if (sort === 'author-desc') return (b.author||'').toLowerCase().localeCompare((a.author||'').toLowerCase());
+    if (sort === 'title-desc')  return (b.title||'').toLowerCase().localeCompare((a.title||'').toLowerCase());
+    return (a.title||'').toLowerCase().localeCompare((b.title||'').toLowerCase());
+  });
+  document.getElementById('listHeader').textContent = list.length + ' book' + (list.length !== 1 ? 's' : '') + ' in global library';
+  renderGlobalBooks(list);
+}
+
+function renderGlobalBooks(list) {
+  const wrap = document.getElementById('bookList');
+  if (!list.length) {
+    const msg = globalBookCache.length === 0
+      ? 'Global library not yet accessible — update your Firestore rules to enable it'
+      : 'No books match your search';
+    wrap.innerHTML = `<div class="empty"><div class="empty-icon">🌍</div><div class="empty-title">${msg}</div></div>`;
+    return;
+  }
+  wrap.innerHTML = list.map(b => {
+    const genres = (b.genres||[]).slice(0,3).map(g => `<span class="tag genre">${esc(g)}</span>`).join('');
+    const series = b.series ? `<span class="tag series">📚 ${esc(b.series)}</span>` : '';
+    const safeId = (b.id||'').replace(/'/g, "\\'");
+    return `<div class="book-card">
+      <div class="book-info">
+        <div class="book-title">${esc(b.title||'')}</div>
+        <div class="book-author">${esc(b.author||'')}</div>
+        <div class="book-tags">${genres}${series}</div>
+      </div>
+      <div class="book-actions">
+        <button class="btn-add-collection" onclick="addGlobalBookToCollection('${safeId}')">＋ Add</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+window.addGlobalBookToCollection = bookId => {
+  const b = globalBookCache.find(x => x.id === bookId);
+  if (!b) return;
+  document.getElementById('newTitle').value  = b.title  || '';
+  document.getElementById('newAuthor').value = b.author || '';
+  document.getElementById('newSeries').value = b.series || '';
+  addSelectedGenres = [...(b.genres||[]).slice(0,3)];
+  openAddModal();
+  requestAnimationFrame(() => { buildGenreGrid('addGenreGrid', addSelectedGenres); updateGenreHint(); });
 };
 
 window.setTopFilter = filter => {
