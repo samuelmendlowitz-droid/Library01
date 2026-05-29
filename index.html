@@ -1093,7 +1093,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
     <div class="modal-title"><i data-lucide="download"></i> Bulk Add from CSV</div>
     <p style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6;">Upload a CSV file with columns: <strong style="color:var(--accent)">Title, Author, Read, Genres, Location, (blank), (blank), Series</strong></p>
     <div class="csv-drop" onclick="document.getElementById('csvFileInput').click()">
-      <div class="csv-drop-icon">📄</div>
+      <div class="csv-drop-icon"><i data-lucide="file-text"></i></div>
       <div class="csv-drop-label">Tap to select CSV file</div>
       <div class="csv-drop-sub">Duplicates will be skipped automatically</div>
     </div>
@@ -1108,7 +1108,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
     <div class="bulk-header" id="bulkHeader">
       <div class="bulk-handle"></div>
       <div class="bulk-title-row">
-        <div class="bulk-title">📥 Bulk Add Books</div>
+        <div class="bulk-title"><i data-lucide="download"></i> Bulk Add Books</div>
         <button class="bulk-close" onclick="closeBulkAdd()" title="Close"><i data-lucide="x"></i></button>
       </div>
     </div>
@@ -1139,7 +1139,7 @@ I will tell you a list of books, or give you a photo of my bookshelf and I want 
 For every book I list, do a search to find the author, genres and series (if applicable) and add those into the sheet as well.
 All columns other than Author, Title, Series and Genres should be left empty or in their default state.</div>
         <button class="btn-bulk-action" id="copyPromptBtn" onclick="copyBulkPrompt()">
-          <span>📋</span> Copy Prompt
+          <i data-lucide="clipboard"></i> Copy Prompt
         </button>
       </div>
 
@@ -1163,7 +1163,7 @@ All columns other than Author, Title, Series and Genres should be left empty or 
         </div>
         <div class="bulk-step-desc">Save the CSV the AI creates, then upload it here — our system handles the rest!</div>
         <div class="csv-drop" onclick="document.getElementById('csvFileInputBulk').click()" style="padding:20px;">
-          <div class="csv-drop-icon">📄</div>
+          <div class="csv-drop-icon"><i data-lucide="file-text"></i></div>
           <div class="csv-drop-label">Tap to upload your CSV</div>
           <div class="csv-drop-sub">Duplicates are skipped automatically</div>
         </div>
@@ -1181,8 +1181,8 @@ All columns other than Author, Title, Series and Genres should be left empty or 
     <div class="settings-header" id="settingsHeader">
       <div class="settings-handle"></div>
       <div class="settings-title-row">
-        <button class="settings-back-btn" id="settingsBackBtn" style="display:none" onclick="backToSettingsHome()">‹ Back</button>
-        <div class="settings-title" id="settingsTitle">⚙️ Settings</div>
+        <button class="settings-back-btn" id="settingsBackBtn" style="display:none" onclick="backToSettingsHome()"><i data-lucide="chevron-left"></i> Back</button>
+        <div class="settings-title" id="settingsTitle"><i data-lucide="settings"></i> Settings</div>
         <div class="settings-title-actions">
           <button class="settings-close" onclick="closeSettings()" title="Close"><i data-lucide="x"></i></button>
         </div>
@@ -1193,24 +1193,24 @@ All columns other than Author, Title, Series and Genres should be left empty or 
       <!-- HOME menu -->
       <div class="settings-panel active" id="spanel-home">
         <button class="settings-menu-item" onclick="openSettingsSection('manage')">
-          <span class="smi-icon">🏷</span>
+          <span class="smi-icon"><i data-lucide="tag"></i></span>
           <div class="smi-text"><div class="smi-title">Genres &amp; Locations</div><div class="smi-sub">Manage genre list and bookshelf locations</div></div>
-          <span class="smi-arrow">›</span>
+          <span class="smi-arrow"><i data-lucide="chevron-right"></i></span>
         </button>
         <button class="settings-menu-item" onclick="openSettingsSection('borrowers')">
-          <span class="smi-icon">📋</span>
+          <span class="smi-icon"><i data-lucide="clipboard-list"></i></span>
           <div class="smi-text"><div class="smi-title">Borrower Log</div><div class="smi-sub">Track books checked in and out</div></div>
-          <span class="smi-arrow">›</span>
+          <span class="smi-arrow"><i data-lucide="chevron-right"></i></span>
         </button>
         <button class="settings-menu-item" onclick="openSettingsSection('importexport')">
-          <span class="smi-icon">📤</span>
+          <span class="smi-icon"><i data-lucide="arrow-up-down"></i></span>
           <div class="smi-text"><div class="smi-title">Import / Export</div><div class="smi-sub">Bulk upload or download your library</div></div>
-          <span class="smi-arrow">›</span>
+          <span class="smi-arrow"><i data-lucide="chevron-right"></i></span>
         </button>
         <button class="settings-menu-item" onclick="openSettingsSection('account')">
-          <span class="smi-icon">👤</span>
+          <span class="smi-icon"><i data-lucide="user"></i></span>
           <div class="smi-text"><div class="smi-title">Account</div><div class="smi-sub">View account info or sign out</div></div>
-          <span class="smi-arrow">›</span>
+          <span class="smi-arrow"><i data-lucide="chevron-right"></i></span>
         </button>
       </div>
 
@@ -1243,7 +1243,7 @@ All columns other than Author, Title, Series and Genres should be left empty or 
         </div>
         <div id="borrowerLogList">
           <div class="empty" style="padding:40px 0;">
-            <div class="empty-icon">📋</div>
+            <div class="empty-icon"><i data-lucide="clipboard-list"></i></div>
             <div class="empty-title">No borrowing history yet</div>
             <div class="empty-sub">Check out a book to start the log</div>
           </div>
@@ -1253,14 +1253,14 @@ All columns other than Author, Title, Series and Genres should be left empty or 
       <!-- Import / Export -->
       <div class="settings-panel" id="spanel-importexport">
         <button class="settings-menu-item" onclick="closeSettings();openBulkAdd()">
-          <span class="smi-icon">📥</span>
+          <span class="smi-icon"><i data-lucide="download"></i></span>
           <div class="smi-text"><div class="smi-title">Bulk Upload</div><div class="smi-sub">Import books from a CSV file</div></div>
-          <span class="smi-arrow">›</span>
+          <span class="smi-arrow"><i data-lucide="chevron-right"></i></span>
         </button>
         <button class="settings-menu-item" onclick="exportLibraryAsCsv()">
-          <span class="smi-icon">📤</span>
+          <span class="smi-icon"><i data-lucide="upload"></i></span>
           <div class="smi-text"><div class="smi-title">Export Library</div><div class="smi-sub">Download your personal library as a CSV</div></div>
-          <span class="smi-arrow">›</span>
+          <span class="smi-arrow"><i data-lucide="chevron-right"></i></span>
         </button>
       </div>
 
@@ -1271,7 +1271,7 @@ All columns other than Author, Title, Series and Genres should be left empty or 
           <div id="settingsUserName" style="font-size:15px;color:var(--text);font-weight:500;"></div>
           <div id="settingsUserEmail" style="font-size:12px;color:var(--text3);margin-top:2px;"></div>
         </div>
-        <button class="btn-signout-settings" onclick="signOut()">🚪 Sign Out</button>
+        <button class="btn-signout-settings" onclick="signOut()"><i data-lucide="log-out"></i> Sign Out</button>
       </div>
 
     </div>
@@ -1903,7 +1903,7 @@ function renderBooks(list) {
   if (currentBookView === 'list') { renderBooksList(list); return; }
   document.getElementById('listHeader').textContent = list.length + ' book' + (list.length !== 1 ? 's' : '');
   if (!list.length) {
-    wrap.innerHTML = '<div class="empty"><div class="empty-icon">📖</div><div class="empty-title">No books found</div><div class="empty-sub">Try adjusting your search or filters</div></div>';
+    wrap.innerHTML = '<div class="empty"><div class="empty-icon"><i data-lucide="book-open"></i></div><div class="empty-title">No books found</div><div class="empty-sub">Try adjusting your search or filters</div></div>'; refreshIcons();
     return;
   }
   wrap.innerHTML = list.map(b => {
@@ -1913,16 +1913,16 @@ function renderBooks(list) {
     const borCls  = isBorrowed ? 'is-borrowed' : '';
     const maxGenres = currentBookView === 'grid' ? 1 : 99;
     const genreTags = (b.genres||[]).slice(0, maxGenres).map(g => '<span class="tag genre">' + esc(g) + '</span>').join('');
-    const seriesTag = currentBookView === 'grid' ? '' : (b.series ? '<span class="tag series">📚 ' + esc(b.series) + (b.seriesNumber ? ' #' + b.seriesNumber : '') + '</span>' : '');
+    const seriesTag = currentBookView === 'grid' ? '' : (b.series ? '<span class="tag series"><i data-lucide="book-open" class="tag-icon"></i> ' + esc(b.series) + (b.seriesNumber ? ' #' + b.seriesNumber : '') + '</span>' : '');
     const locCls = isBorrowed ? 'tag borrowed-tag' : 'tag location';
     const gbId = createGlobalBookId(b.title||'', b.author||'');
     const gb = globalBookCache.find(x => x.id === gbId);
     const ratingStr = gb ? renderStars(gb.ratingTotal || 0, gb.ratingCount || 0) : '';
-    const locTag = currentBookView === 'grid' ? '' : ((b.location && b.location !== 'Wishlist') ? '<span class="' + locCls + '">📍 ' + esc(b.location) + '</span>' : '');
-    const chkLabel = isBorrowed ? (currentBookView === 'grid' ? '↩' : '↩ Check In') : (isWishlist ? '+ Add' : (currentBookView === 'grid' ? '↗' : '↗ Check Out'));
+    const locTag = currentBookView === 'grid' ? '' : ((b.location && b.location !== 'Wishlist') ? '<span class="' + locCls + '"><i data-lucide="map-pin" class="tag-icon"></i> ' + esc(b.location) + '</span>' : '');
+    const chkLabel = isBorrowed ? (currentBookView === 'grid' ? '<i data-lucide="corner-down-left"></i>' : '<i data-lucide="corner-down-left"></i> Check In') : (isWishlist ? '+ Add' : (currentBookView === 'grid' ? '<i data-lucide="arrow-up-right"></i>' : '<i data-lucide="arrow-up-right"></i> Check Out'));
     const chkCls   = isBorrowed ? 'btn-checkout is-borrowed' : 'btn-checkout';
-    const dateLabel = b.checkoutDate && currentBookView !== 'grid' ? '<div class="checkout-date">' + (isBorrowed ? '📤 ' : '📥 ') + esc(b.checkoutDate) + '</div>' : '';
-    const nameLabel = isBorrowed && b.borrowedBy && currentBookView !== 'grid' ? '<div class="borrower-name">👤 ' + esc(b.borrowedBy) + '</div>' : '';
+    const dateLabel = b.checkoutDate && currentBookView !== 'grid' ? '<div class="checkout-date">' + (isBorrowed ? '<i data-lucide="upload" class="checkout-date-icon"></i> ' : '<i data-lucide="download" class="checkout-date-icon"></i> ') + esc(b.checkoutDate) + '</div>' : '';
+    const nameLabel = isBorrowed && b.borrowedBy && currentBookView !== 'grid' ? '<div class="borrower-name"><i data-lucide="user"></i> ' + esc(b.borrowedBy) + '</div>' : '';
     return '<div class="book-card ' + readCls + ' ' + borCls + '" id="card-' + b.id + '">'
       + '<div class="book-check" onclick="toggleRead(\'' + b.id + '\',' + b.read + ')"><span class="check-icon">✓</span></div>'
       + '<div class="book-info">'
@@ -1932,7 +1932,7 @@ function renderBooks(list) {
       + '<div class="book-tags">' + genreTags + seriesTag + locTag + '</div>'
       + '</div>'
       + '<div class="book-actions">'
-      + '<div class="btn-edit" onclick="openEditModal(\'' + b.id + '\')">✏️</div>'
+      + '<div class="btn-edit" onclick="openEditModal(\'' + b.id + '\')"><i data-lucide="pencil"></i></div>'
       + (isWishlist
           ? '<button class="btn-checkout" onclick="moveWishlistToLibrary(\'' + b.id + '\')">+ Add</button>'
           : '<button class="' + chkCls + '" onclick="toggleCheckout(\'' + b.id + '\')">' + chkLabel + '</button>')
@@ -1946,7 +1946,7 @@ function renderBooksList(list) {
   document.getElementById('listHeader').innerHTML =
     '<div class="list-col-header"><span></span><span>Title</span><span>Author</span><span>Series</span><span>Genres</span><span>Rating</span><span>Location</span><span></span></div>';
   if (!list.length) {
-    wrap.innerHTML = '<div class="empty"><div class="empty-icon">📖</div><div class="empty-title">No books found</div></div>';
+    wrap.innerHTML = '<div class="empty"><div class="empty-icon"><i data-lucide="book-open"></i></div><div class="empty-title">No books found</div></div>'; refreshIcons();
     return;
   }
   wrap.innerHTML = list.map(b => {
@@ -1956,7 +1956,7 @@ function renderBooksList(list) {
     const gbId = createGlobalBookId(b.title||'', b.author||'');
     const gb = globalBookCache.find(x => x.id === gbId);
     const avgRating = (gb && gb.ratingCount) ? (gb.ratingTotal/gb.ratingCount).toFixed(1) + ' ★' : '—';
-    const chkLabel = isBorrowed ? '↩ In' : (isWishlist ? '+ Add' : '↗ Out');
+    const chkLabel = isBorrowed ? '<i data-lucide="corner-down-left"></i> In' : (isWishlist ? '+ Add' : '<i data-lucide="arrow-up-right"></i> Out');
     const chkCls = isBorrowed ? 'lr-chk-btn borrowed' : 'lr-chk-btn';
     const series = b.series ? esc(b.series) + (b.seriesNumber ? ' #' + b.seriesNumber : '') : '—';
     const genres = (b.genres||[]).slice(0,2).join(', ') || '—';
@@ -1970,7 +1970,7 @@ function renderBooksList(list) {
       + '<div class="lr-cell lr-rating">' + avgRating + '</div>'
       + '<div class="lr-cell lr-location">' + loc + '</div>'
       + '<div class="lr-actions">'
-      + '<span class="lr-edit-btn" onclick="openEditModal(\'' + b.id + '\')">✏️</span>'
+      + '<span class="lr-edit-btn" onclick="openEditModal(\'' + b.id + '\')"><i data-lucide="pencil"></i></span>'
       + (isWishlist
           ? '<button class="lr-chk-btn" onclick="moveWishlistToLibrary(\'' + b.id + '\')">+ Add</button>'
           : '<button class="' + chkCls + '" onclick="toggleCheckout(\'' + b.id + '\')">' + chkLabel + '</button>')
@@ -2095,7 +2095,7 @@ function renderGlobalBooks(list) {
     const msg = globalBookCache.length === 0
       ? 'Global library not yet accessible — update your Firestore rules to enable it'
       : 'No books match your search';
-    wrap.innerHTML = `<div class="empty"><div class="empty-icon">🌍</div><div class="empty-title">${msg}</div></div>`;
+    wrap.innerHTML = `<div class="empty"><div class="empty-icon"><i data-lucide="globe"></i></div><div class="empty-title">${msg}</div></div>`; refreshIcons();
     return;
   }
   const maxGenres = currentBookView === 'grid' ? 1 : 3;
@@ -2103,12 +2103,12 @@ function renderGlobalBooks(list) {
     const personal = books.find(x => createGlobalBookId(x.title||'', x.author||'') === b.id);
     const isRead = personal ? !!personal.read : false;
     const genres = (b.genres||[]).slice(0, maxGenres).map(g => `<span class="tag genre">${esc(g)}</span>`).join('');
-    const series = currentBookView === 'grid' ? '' : (b.series ? `<span class="tag series">📚 ${esc(b.series)}${b.seriesNumber ? ' #' + b.seriesNumber : ''}</span>` : '');
+    const series = currentBookView === 'grid' ? '' : (b.series ? `<span class="tag series"><i data-lucide="book-open" class="tag-icon"></i> ${esc(b.series)}${b.seriesNumber ? ' #' + b.seriesNumber : ''}</span>` : '');
     const ratingStr = renderStars(b.ratingTotal || 0, b.ratingCount || 0);
     const safeId = (b.id||'').replace(/'/g, "\\'");
     const actionBtn = personal
       ? `<span style="font-size:10px;color:var(--read);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;">✓ Owned</span>`
-      : `<button class="btn-add-collection" onclick="addGlobalBookToCollection('${safeId}')">＋ Add</button>`;
+      : `<button class="btn-add-collection" onclick="addGlobalBookToCollection('${safeId}')"><i data-lucide="plus"></i> Add</button>`;
     return `<div class="book-card${isRead ? ' is-read' : ''}">
       <div class="book-check" onclick="toggleGlobalRead('${safeId}')"><span class="check-icon">✓</span></div>
       <div class="book-info">
@@ -2129,7 +2129,7 @@ function renderGlobalBooksList(list) {
   document.getElementById('listHeader').innerHTML =
     '<div class="list-col-header"><span></span><span>Title</span><span>Author</span><span>Series</span><span>Genres</span><span>Rating</span><span></span><span></span></div>';
   if (!list.length) {
-    wrap.innerHTML = `<div class="empty"><div class="empty-icon">🌍</div><div class="empty-title">No books found</div></div>`;
+    wrap.innerHTML = `<div class="empty"><div class="empty-icon"><i data-lucide="globe"></i></div><div class="empty-title">No books found</div></div>`; refreshIcons();
     return;
   }
   wrap.innerHTML = list.map(b => {
@@ -2141,7 +2141,7 @@ function renderGlobalBooksList(list) {
     const safeId = (b.id||'').replace(/'/g, "\\'");
     const actionBtn = personal
       ? `<span style="font-size:10px;color:var(--read);font-weight:600;">✓ Owned</span>`
-      : `<button class="lr-chk-btn" onclick="addGlobalBookToCollection('${safeId}')">＋ Add</button>`;
+      : `<button class="lr-chk-btn" onclick="addGlobalBookToCollection('${safeId}')"><i data-lucide="plus"></i> Add</button>`;
     return `<div class="list-row${isRead ? ' is-read' : ''}">
       <div class="lr-check" onclick="toggleGlobalRead('${safeId}')"><span class="lr-check-icon">✓</span></div>
       <div class="lr-cell lr-title">${esc(b.title||'')}</div>
@@ -2547,7 +2547,7 @@ window.openBulkAdd = () => {
   if (fileInput) fileInput.value = '';
   // Reset copy button state
   const copyBtn = document.getElementById('copyPromptBtn');
-  if (copyBtn) { copyBtn.classList.remove('success-flash'); copyBtn.innerHTML = '<span>📋</span> Copy Prompt'; }
+  if (copyBtn) { copyBtn.classList.remove('success-flash'); copyBtn.innerHTML = '<i data-lucide="clipboard"></i> Copy Prompt'; refreshIcons(); }
   document.getElementById('bulkOverlay').classList.add('open');
 };
 
@@ -2584,7 +2584,7 @@ window.copyBulkPrompt = async () => {
     btn.innerHTML = '<span>✅</span> Copied!';
     setTimeout(() => {
       btn.classList.remove('success-flash');
-      btn.innerHTML = '<span>📋</span> Copy Prompt';
+      btn.innerHTML = '<i data-lucide="clipboard"></i> Copy Prompt'; refreshIcons();
     }, 2500);
   } catch(e) {
     // Fallback for older browsers / non-HTTPS
@@ -2599,7 +2599,7 @@ window.copyBulkPrompt = async () => {
     btn.innerHTML = '<span>✅</span> Copied!';
     setTimeout(() => {
       btn.classList.remove('success-flash');
-      btn.innerHTML = '<span>📋</span> Copy Prompt';
+      btn.innerHTML = '<i data-lucide="clipboard"></i> Copy Prompt'; refreshIcons();
     }, 2500);
   }
 };
@@ -2737,7 +2737,7 @@ window.backToSettingsHome = () => {
   document.querySelectorAll('.settings-panel').forEach(p => p.classList.remove('active'));
   document.getElementById('spanel-home').classList.add('active');
   document.getElementById('settingsBackBtn').style.display = 'none';
-  document.getElementById('settingsTitle').textContent = '⚙️ Settings';
+  document.getElementById('settingsTitle').innerHTML = '<i data-lucide="settings"></i> Settings';
 };
 
 window.exportLibraryAsCsv = () => {
@@ -2839,14 +2839,14 @@ function buildManageGenreList() {
          ondragover="dragOver(event,'genre')"
          ondragend="dragEnd(event,'genre')"
          ondrop="dragDrop(event,'genre',${i})">
-      <span class="drag-handle" title="Drag to reorder">⠿</span>
+      <span class="drag-handle" title="Drag to reorder"><i data-lucide="grip-vertical"></i></span>
       <div class="manage-item-label">
         <input type="text" value="${esc(g)}"
                onblur="renameGenre(${i},this.value)"
                onkeydown="if(event.key==='Enter')this.blur()">
       </div>
       <div class="manage-item-actions">
-        <button class="btn-icon danger" title="Delete" onclick="deleteGenre(${i})">🗑</button>
+        <button class="btn-icon danger" title="Delete" onclick="deleteGenre(${i})"><i data-lucide="trash-2"></i></button>
       </div>
     </div>
   `).join('');
@@ -2862,21 +2862,21 @@ function buildManageLocationList() {
          ondragover="dragOver(event,'location')"
          ondragend="dragEnd(event,'location')"
          ondrop="dragDrop(event,'location',${i})">
-      <span class="drag-handle" title="Drag to reorder">⠿</span>
+      <span class="drag-handle" title="Drag to reorder"><i data-lucide="grip-vertical"></i></span>
       <div class="manage-item-label">
         <input type="text" value="${esc(l)}"
                onblur="renameLocation(${i},this.value)"
                onkeydown="if(event.key==='Enter')this.blur()">
       </div>
       <div class="manage-item-actions">
-        <button class="btn-icon danger" title="Delete" onclick="deleteLocation(${i})">🗑</button>
+        <button class="btn-icon danger" title="Delete" onclick="deleteLocation(${i})"><i data-lucide="trash-2"></i></button>
       </div>
     </div>
   `).join('');
 
   const locked = `
     <div class="manage-item locked">
-      <span class="drag-handle" style="cursor:not-allowed;opacity:0.3">⠿</span>
+      <span class="drag-handle" style="cursor:not-allowed;opacity:0.3"><i data-lucide="grip-vertical"></i></span>
       <div class="manage-item-label">
         <input type="text" value="Borrowed" disabled style="opacity:0.5;cursor:not-allowed;">
       </div>
@@ -3148,7 +3148,7 @@ function buildBorrowerLog() {
                    : 'No borrowing history yet';
     container.innerHTML = `
       <div class="empty" style="padding:40px 0;">
-        <div class="empty-icon">📋</div>
+        <div class="empty-icon"><i data-lucide="clipboard-list"></i></div>
         <div class="empty-title">${emptyMsg}</div>
         <div class="empty-sub">Check out a book to start the log</div>
       </div>`;
@@ -3163,8 +3163,8 @@ function buildBorrowerLog() {
           <div class="borrower-log-title">${esc(entry.bookTitle || 'Unknown Book')}</div>
           ${entry.bookAuthor ? `<div class="borrower-log-author">${esc(entry.bookAuthor)}</div>` : ''}
           <div class="borrower-log-meta">
-            <span class="borrower-log-name">👤 ${esc(entry.borrowedBy)}</span>
-            <span class="borrower-log-date">📥 ${esc(entry.date || entry.returnDate)}</span>
+            <span class="borrower-log-name"><i data-lucide="user" class="borrower-log-icon"></i> ${esc(entry.borrowedBy)}</span>
+            <span class="borrower-log-date"><i data-lucide="download" class="borrower-log-icon"></i> ${esc(entry.date || entry.returnDate)}</span>
             <span class="borrower-log-status in">Returned</span>
           </div>
         </div>`;
@@ -3175,8 +3175,8 @@ function buildBorrowerLog() {
           <div class="borrower-log-title">${esc(entry.bookTitle || 'Unknown Book')}</div>
           ${entry.bookAuthor ? `<div class="borrower-log-author">${esc(entry.bookAuthor)}</div>` : ''}
           <div class="borrower-log-meta">
-            <span class="borrower-log-name">👤 ${esc(entry.borrowedBy)}</span>
-            <span class="borrower-log-date">📤 ${esc(entry.date || entry.checkoutDate)}</span>
+            <span class="borrower-log-name"><i data-lucide="user" class="borrower-log-icon"></i> ${esc(entry.borrowedBy)}</span>
+            <span class="borrower-log-date"><i data-lucide="upload" class="borrower-log-icon"></i> ${esc(entry.date || entry.checkoutDate)}</span>
             <span class="borrower-log-status out">Out</span>
           </div>
         </div>`;
@@ -3184,7 +3184,7 @@ function buildBorrowerLog() {
     // Legacy combined entries (old format)
     const statusCls  = entry.returnDate ? 'in' : 'out';
     const statusText = entry.returnDate ? 'Returned' : 'Out';
-    const dateIcon   = entry.returnDate ? '📥' : '📤';
+    const dateIcon   = entry.returnDate ? '<i data-lucide="download" class="borrower-log-icon"></i>' : '<i data-lucide="upload" class="borrower-log-icon"></i>';
     const date       = entry.returnDate || entry.checkoutDate;
     return `
       <div class="borrower-log-item">
