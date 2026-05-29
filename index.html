@@ -1202,7 +1202,14 @@ function syncUserBooksToCache() {
 async function preloadGlobalBooks() {
   try {
     const snap = await getDocs(query(collection(db, 'globalLibrary'), orderBy('normalizedTitle', 'asc')));
-    globalBookCache = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    // Delete and exclude test/fake books from global library
+    all.forEach(b => {
+      if (isLikelyTestBook(b.title, b.author)) {
+        deleteDoc(doc(db, 'globalLibrary', b.id)).catch(() => {});
+      }
+    });
+    globalBookCache = all.filter(b => !isLikelyTestBook(b.title, b.author));
   } catch(e) {
     // globalLibrary inaccessible — autocomplete will use user's own books
   }
@@ -1332,6 +1339,38 @@ function cleanGenreList(genres = []) {
   return [...new Set((genres || []).filter(Boolean))].slice(0, 3);
 }
 
+// Returns true if title/author look like test/fake data
+function isLikelyTestBook(title, author) {
+  const t = (title || '').trim().toLowerCase();
+  const a = (author || '').trim().toLowerCase();
+  if (!t || !a) return true;
+  if (normalizeBookText(t).length < 3) return true;
+  const fakeWords = ['test','asdf','qwerty','qwer','zxcv','aaa','bbb','ccc','xxx','foo','bar','baz','hello','sample','dummy','placeholder','fake','temp','blah','lol'];
+  return fakeWords.some(w => t === w || t.startsWith(w + ' ') || t.endsWith(' ' + w) || a === w);
+}
+
+// Queries Google Books API to confirm a real book with this title/author exists.
+// Returns true on network errors (fail-open) so valid books aren't blocked.
+async function validateWithGoogleBooks(title, author) {
+  try {
+    const controller = new AbortController();
+    const tid = setTimeout(() => controller.abort(), 6000);
+    const q = encodeURIComponent(`intitle:${title}${author ? ' inauthor:' + author : ''}`);
+    const resp = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=5`, { signal: controller.signal });
+    clearTimeout(tid);
+    if (!resp.ok) return true;
+    const data = await resp.json();
+    if (!data.items || !data.items.length) return false;
+    const normTitle = normalizeBookText(title);
+    return data.items.some(item => {
+      const t = normalizeBookText(item.volumeInfo?.title || '');
+      return t.includes(normTitle) || normTitle.includes(t);
+    });
+  } catch (e) {
+    return true; // abort / network error — don't block
+  }
+}
+
 async function syncBookToGlobalLibrary(bookData) {
   try {
     const title = (bookData.title || '').trim();
@@ -1419,15 +1458,11 @@ async function loadBooks() {
   }
 }
 
-async function saveBook(data) {
+async function saveBook(data, { skipGlobalSync = false } = {}) {
   await addDoc(userBooksCol(), { ...data, addedAt: serverTimestamp() });
-  await syncBookToGlobalLibrary(data);
 
-  // immediately update local autocomplete cache
+  // Always update local autocomplete cache immediately
   const globalId = createGlobalBookId(data.title || '', data.author || '');
-
-  const existingIndex = globalBookCache.findIndex(b => b.id === globalId);
-
   const cacheItem = {
     id: globalId,
     title: data.title || '',
@@ -1436,18 +1471,21 @@ async function saveBook(data) {
     series: data.series || '',
     genres: data.genres || []
   };
-
+  const existingIndex = globalBookCache.findIndex(b => b.id === globalId);
   if (existingIndex >= 0) {
-    globalBookCache[existingIndex] = {
-      ...globalBookCache[existingIndex],
-      ...cacheItem
-    };
+    globalBookCache[existingIndex] = { ...globalBookCache[existingIndex], ...cacheItem };
   } else {
     globalBookCache.push(cacheItem);
+    globalBookCache.sort((a, b) => (a.normalizedTitle||'').localeCompare(b.normalizedTitle||''));
+  }
 
-    globalBookCache.sort((a, b) =>
-      (a.normalizedTitle || '').localeCompare(b.normalizedTitle || '')
-    );
+  // Validate book exists before contributing to global library
+  if (!skipGlobalSync) {
+    const title = (data.title || '').trim();
+    const author = (data.author || '').trim();
+    if (!isLikelyTestBook(title, author) && await validateWithGoogleBooks(title, author)) {
+      await syncBookToGlobalLibrary(data);
+    }
   }
 }
 
@@ -1722,10 +1760,13 @@ function renderGlobalBooks(list) {
     return;
   }
   wrap.innerHTML = list.map(b => {
+    const personal = books.find(x => createGlobalBookId(x.title||'', x.author||'') === b.id);
+    const isRead = personal ? !!personal.read : false;
     const genres = (b.genres||[]).slice(0,3).map(g => `<span class="tag genre">${esc(g)}</span>`).join('');
     const series = b.series ? `<span class="tag series">📚 ${esc(b.series)}</span>` : '';
     const safeId = (b.id||'').replace(/'/g, "\\'");
-    return `<div class="book-card">
+    return `<div class="book-card${isRead ? ' is-read' : ''}">
+      <div class="book-check" onclick="toggleGlobalRead('${safeId}')"><span class="check-icon">✓</span></div>
       <div class="book-info">
         <div class="book-title">${esc(b.title||'')}</div>
         <div class="book-author">${esc(b.author||'')}</div>
@@ -1737,6 +1778,29 @@ function renderGlobalBooks(list) {
     </div>`;
   }).join('');
 }
+
+window.toggleGlobalRead = async (globalId) => {
+  const personal = books.find(b => createGlobalBookId(b.title||'', b.author||'') === globalId);
+  if (personal) {
+    // Toggle read on existing personal book
+    personal.read = !personal.read;
+    applyGlobalFilters();
+    updateStats();
+    try { await updateBook(personal.id, { read: personal.read }); }
+    catch(e) { personal.read = !personal.read; applyGlobalFilters(); }
+  } else {
+    // Book not in personal library — add it as read
+    const gb = globalBookCache.find(b => b.id === globalId);
+    if (!gb) return;
+    await saveBook({
+      title: gb.title||'', author: gb.author||'', series: gb.series||'',
+      genres: gb.genres||[], location: orderedLocations[0]||'Bookshelf 1',
+      read: true, checkoutDate: '', borrowedBy: ''
+    }, { skipGlobalSync: true });
+    await loadBooks();
+    applyGlobalFilters();
+  }
+};
 
 window.addGlobalBookToCollection = bookId => {
   const b = globalBookCache.find(x => x.id === bookId);
