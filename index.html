@@ -1281,16 +1281,18 @@ All columns other than Author, Title, Series and Genres should be left empty or 
           <div class="smi-text"><div class="smi-title">Export Library</div><div class="smi-sub">Download your personal library as a CSV</div></div>
           <span class="smi-arrow"><i data-lucide="chevron-right"></i></span>
         </button>
-        <button class="settings-menu-item" onclick="document.getElementById('wipeConfirmSection').style.display='block';this.style.display='none'">
-          <span class="smi-icon"><i data-lucide="trash-2"></i></span>
-          <div class="smi-text"><div class="smi-title" style="color:var(--danger)">Wipe Global Library</div><div class="smi-sub">Delete all books from the shared global library</div></div>
-          <span class="smi-arrow"><i data-lucide="chevron-right"></i></span>
-        </button>
-        <div id="wipeConfirmSection" style="display:none;margin-top:4px;padding:14px;background:var(--surface2);border:1px solid var(--danger);border-radius:var(--radius-sm);">
-          <div style="font-size:13px;color:var(--text);margin-bottom:12px;">This permanently deletes <strong>all books</strong> from the shared global library. This cannot be undone.</div>
-          <div style="display:flex;gap:8px;">
-            <button id="wipeConfirmBtn" onclick="wipeGlobalLibrary()" style="flex:1;padding:10px;background:var(--danger);color:#fff;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Confirm Wipe</button>
-            <button onclick="document.getElementById('wipeConfirmSection').style.display='none';document.querySelector('[onclick*=wipeConfirmSection]').style.display=''" style="flex:1;padding:10px;background:var(--surface3);color:var(--text2);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancel</button>
+        <div id="ownerWipeSection" style="display:none;">
+          <button class="settings-menu-item" onclick="document.getElementById('wipeConfirmSection').style.display='block';this.style.display='none'">
+            <span class="smi-icon"><i data-lucide="trash-2"></i></span>
+            <div class="smi-text"><div class="smi-title" style="color:var(--danger)">Wipe Global Library</div><div class="smi-sub">Delete all books from the shared global library</div></div>
+            <span class="smi-arrow"><i data-lucide="chevron-right"></i></span>
+          </button>
+          <div id="wipeConfirmSection" style="display:none;margin-top:4px;padding:14px;background:var(--surface2);border:1px solid var(--danger);border-radius:var(--radius-sm);">
+            <div style="font-size:13px;color:var(--text);margin-bottom:12px;">This permanently deletes <strong>all books</strong> from the shared global library. This cannot be undone.</div>
+            <div style="display:flex;gap:8px;">
+              <button id="wipeConfirmBtn" onclick="wipeGlobalLibrary()" style="flex:1;padding:10px;background:var(--danger);color:#fff;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Confirm Wipe</button>
+              <button onclick="document.getElementById('wipeConfirmSection').style.display='none';document.querySelector('[onclick*=wipeConfirmSection]').style.display=''" style="flex:1;padding:10px;background:var(--surface3);color:var(--text2);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">Cancel</button>
+            </div>
           </div>
         </div>
       </div>
@@ -2842,6 +2844,8 @@ window.openSettingsSection = (section) => {
     buildBorrowerLog();
   }
   if (section === 'importexport') {
+    const ownerSection = document.getElementById('ownerWipeSection');
+    if (ownerSection) ownerSection.style.display = currentUser && currentUser.email === 'samuelmendlowitz@gmail.com' ? '' : 'none';
     const wcs = document.getElementById('wipeConfirmSection');
     if (wcs) wcs.style.display = 'none';
     const wipeMenuBtn = document.querySelector('[onclick*="wipeConfirmSection"]');
