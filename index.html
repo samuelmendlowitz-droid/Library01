@@ -1290,6 +1290,14 @@ All columns other than Author, Title, Series and Genres should be left empty or 
           <div id="settingsUserName" style="font-size:15px;color:var(--text);font-weight:500;"></div>
           <div id="settingsUserEmail" style="font-size:12px;color:var(--text3);margin-top:2px;"></div>
         </div>
+        <div class="form-group">
+          <label class="form-label">First Name</label>
+          <div style="display:flex;gap:8px;">
+            <input class="form-input" id="customFirstNameInput" placeholder="e.g. Miriam" style="flex:1;" onkeydown="if(event.key==='Enter')saveCustomFirstName()">
+            <button onclick="saveCustomFirstName()" style="padding:9px 16px;background:var(--accent);color:#1a1612;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;">Save</button>
+          </div>
+          <div style="font-size:11px;color:var(--text3);margin-top:6px;">Shown as "[Name]'s Library" under the header title</div>
+        </div>
         <button class="btn-signout-settings" onclick="signOut()"><i data-lucide="log-out"></i> Sign Out</button>
       </div>
 
@@ -1358,6 +1366,7 @@ let orderedGenres    = [...DEFAULT_GENRES];
 let orderedLocations = [...DEFAULT_LOCATIONS]; // excludes Borrowed
 // borrower log: [{bookId, bookTitle, borrowedBy, checkoutDate, returnDate|null}]
 let borrowerLog = [];
+let customFirstName = '';
 
 let selectedGenreFilters = [], genreFilterMode = 'OR';
 let selectedStatusFilters = [];
@@ -1384,6 +1393,7 @@ async function loadSettings() {
       if (Array.isArray(data.locations) && data.locations.length) orderedLocations = data.locations;
       if (Array.isArray(data.borrowLog))
         borrowerLog = [...data.borrowLog].sort((a, b) => (b.sortKey || 0) - (a.sortKey || 0));
+      if (data.customFirstName) customFirstName = data.customFirstName;
     }
   } catch(e) {}
 }
@@ -1393,6 +1403,26 @@ async function saveSettings() {
     await setDoc(userSettingsDoc(), { genres: orderedGenres, locations: orderedLocations }, { merge: true });
   } catch(e) {}
 }
+
+function updateHeaderSubtitle() {
+  const el = document.getElementById('headerUser');
+  if (!el) return;
+  if (customFirstName) {
+    el.textContent = customFirstName + "'s Library";
+  } else {
+    el.textContent = currentUser ? (currentUser.displayName || currentUser.email) : '';
+  }
+}
+
+window.saveCustomFirstName = async () => {
+  const val = document.getElementById('customFirstNameInput').value.trim();
+  customFirstName = val;
+  try {
+    await setDoc(userSettingsDoc(), { customFirstName: val }, { merge: true });
+  } catch(e) {}
+  updateHeaderSubtitle();
+  showStatus('Name updated.', 'success');
+};
 
 async function loadBorrowLog() {
   try {
@@ -1449,12 +1479,12 @@ onAuthStateChanged(auth, async user => {
     currentUser = user;
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('mainApp').style.display = 'block';
-    document.getElementById('headerUser').textContent = user.displayName || user.email;
     document.getElementById('settingsUserName').textContent = user.displayName || '';
     document.getElementById('settingsUserEmail').textContent = user.email || '';
     // measure header height after it's visible
     requestAnimationFrame(updateHeaderSpacer);
     await loadSettings(); // also loads borrowLog
+    updateHeaderSubtitle();
     loadBooks();          // don't block on global books
     preloadGlobalBooks().then(() => syncUserBooksToCache()); // background, merge after
   } else {
@@ -2765,6 +2795,9 @@ window.openSettingsSection = (section) => {
     document.querySelectorAll('.log-tab').forEach(t => t.classList.remove('active'));
     document.getElementById('ltab-all').classList.add('active');
     buildBorrowerLog();
+  }
+  if (section === 'account') {
+    document.getElementById('customFirstNameInput').value = customFirstName;
   }
   refreshIcons();
 };
