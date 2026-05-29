@@ -1796,12 +1796,12 @@ window.confirmCheckout = async () => {
     const b = books.find(x => x.id === checkoutTargetId);
     await updateBook(checkoutTargetId, { location: 'Borrowed', checkoutDate: today, borrowedBy: name });
     await addBorrowLogEntry({
+      type: 'checkout',
       bookId: checkoutTargetId,
       bookTitle: b ? b.title : '',
       bookAuthor: b ? (b.author || '') : '',
       borrowedBy: name,
-      checkoutDate: today,
-      returnDate: null
+      date: today
     });
     await loadBooks();
   } catch(e) { showStatus('Error saving checkout.', 'error'); }
@@ -1812,11 +1812,17 @@ window.confirmReturn = async () => {
   const today = new Date().toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
   closeModal('returnModal');
   try {
-    await updateBook(returnTargetId, { location: loc, checkoutDate: today, borrowedBy: '' });
-    const logEntry = borrowerLog.find(e => e.bookId === returnTargetId && !e.returnDate);
-    if (logEntry) {
-      await updateBorrowLogEntry(logEntry.id, { returnDate: today });
-    }
+    const b = books.find(x => x.id === returnTargetId);
+    const borrowerName = b ? (b.borrowedBy || '') : '';
+    await updateBook(returnTargetId, { location: loc, checkoutDate: '', borrowedBy: '' });
+    await addBorrowLogEntry({
+      type: 'return',
+      bookId: returnTargetId,
+      bookTitle: b ? b.title : '',
+      bookAuthor: b ? (b.author || '') : '',
+      borrowedBy: borrowerName,
+      date: today
+    });
     await loadBooks();
   } catch(e) { showStatus('Error saving.', 'error'); }
 };
@@ -2395,8 +2401,14 @@ window.switchBorrowerTab = tab => {
 
 function buildBorrowerLog() {
   const container = document.getElementById('borrowerLogList');
-  const filtered = borrowerLogTab === 'out' ? borrowerLog.filter(e => !e.returnDate)
-                 : borrowerLogTab === 'in'  ? borrowerLog.filter(e =>  e.returnDate)
+
+  // Support both new per-action entries (type:'checkout'|'return') and
+  // old combined entries (checkoutDate + optional returnDate, no type field)
+  const isOut = e => e.type === 'checkout' || (!e.type && e.checkoutDate && !e.returnDate);
+  const isIn  = e => e.type === 'return'   || (!e.type && e.returnDate);
+
+  const filtered = borrowerLogTab === 'out' ? borrowerLog.filter(isOut)
+                 : borrowerLogTab === 'in'  ? borrowerLog.filter(isIn)
                  : borrowerLog;
 
   if (!filtered.length) {
@@ -2411,17 +2423,46 @@ function buildBorrowerLog() {
       </div>`;
     return;
   }
+
   container.innerHTML = filtered.map(entry => {
+    // New per-action entries
+    if (entry.type === 'return') {
+      return `
+        <div class="borrower-log-item">
+          <div class="borrower-log-title">${esc(entry.bookTitle || 'Unknown Book')}</div>
+          ${entry.bookAuthor ? `<div class="borrower-log-author">${esc(entry.bookAuthor)}</div>` : ''}
+          <div class="borrower-log-meta">
+            <span class="borrower-log-name">👤 ${esc(entry.borrowedBy)}</span>
+            <span class="borrower-log-date">📥 ${esc(entry.date || entry.returnDate)}</span>
+            <span class="borrower-log-status in">Returned</span>
+          </div>
+        </div>`;
+    }
+    if (entry.type === 'checkout') {
+      return `
+        <div class="borrower-log-item">
+          <div class="borrower-log-title">${esc(entry.bookTitle || 'Unknown Book')}</div>
+          ${entry.bookAuthor ? `<div class="borrower-log-author">${esc(entry.bookAuthor)}</div>` : ''}
+          <div class="borrower-log-meta">
+            <span class="borrower-log-name">👤 ${esc(entry.borrowedBy)}</span>
+            <span class="borrower-log-date">📤 ${esc(entry.date || entry.checkoutDate)}</span>
+            <span class="borrower-log-status out">Out</span>
+          </div>
+        </div>`;
+    }
+    // Legacy combined entries (old format)
     const statusCls  = entry.returnDate ? 'in' : 'out';
     const statusText = entry.returnDate ? 'Returned' : 'Out';
+    const dateIcon   = entry.returnDate ? '📥' : '📤';
+    const date       = entry.returnDate || entry.checkoutDate;
     return `
       <div class="borrower-log-item">
         <div class="borrower-log-title">${esc(entry.bookTitle || 'Unknown Book')}</div>
         ${entry.bookAuthor ? `<div class="borrower-log-author">${esc(entry.bookAuthor)}</div>` : ''}
         <div class="borrower-log-meta">
           <span class="borrower-log-name">👤 ${esc(entry.borrowedBy)}</span>
-          <span class="borrower-log-date">📤 ${esc(entry.checkoutDate)}</span>
-          ${entry.returnDate ? `<span class="borrower-log-date">📥 ${esc(entry.returnDate)}</span>` : ''}
+          ${entry.checkoutDate ? `<span class="borrower-log-date">📤 ${esc(entry.checkoutDate)}</span>` : ''}
+          ${entry.returnDate   ? `<span class="borrower-log-date">📥 ${esc(entry.returnDate)}</span>`   : ''}
           <span class="borrower-log-status ${statusCls}">${statusText}</span>
         </div>
       </div>`;
