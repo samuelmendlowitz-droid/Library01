@@ -12,11 +12,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg: #010306;
-  --surface: #050b16;
-  --surface2: #091528;
-  --surface3: #0f1e38;
-  --border: #1b2c45;
+  --bg: #060608;
+  --surface: #0c0d1c;
+  --surface2: #111326;
+  --surface3: #181a30;
+  --border: #22253e;
   --accent: #c9a96e;
   --accent2: #dfc07e;
   --text: #e8d4a0;
@@ -40,7 +40,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
   align-items: center;
   justify-content: center;
   padding: 40px 24px;
-  background: var(--grain), radial-gradient(ellipse at 50% 30%, #0e1e3a 0%, #020408 70%);
+  background: var(--grain), radial-gradient(ellipse at 50% 30%, #12142a 0%, #060608 70%);
 }
 .login-logo { width: 90px; margin-bottom: 24px; display: block; margin-left: auto; margin-right: auto; }
 .login-title { font-family: 'Playfair Display', serif; font-size: 36px; font-weight: 700; color: var(--accent2); text-align: center; line-height: 1.2; margin-bottom: 8px; }
@@ -61,7 +61,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 
 /* HEADER */
 .header {
-  background: var(--grain), linear-gradient(180deg, #020610 0%, #010306 100%);
+  background: var(--grain), linear-gradient(180deg, #06070c 0%, #050507 100%);
   padding: 52px 20px 20px;
   border-bottom: 1px solid rgba(20, 35, 60, 0.4);
   position: fixed; top: 0; left: 0; right: 0; z-index: 100;
@@ -795,18 +795,18 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 
 /* ── DARKNESS OVERRIDES ─────────────────────────────────────────────────────── */
 
-/* Popups / sheets / pages — very dark blue */
+/* Popups / sheets / pages — midnight denim (method 2) */
 .modal, .modal-header, .full-sheet,
 .settings-sheet, .settings-header, .settings-body,
 .bulk-sheet, .bulk-header,
 .controls {
-  background-color: #050b16 !important;
+  background-color: #0c0d1c !important;
   background-image: var(--grain);
 }
 
-/* Book cards — a bit darker than before, lighter than popups so they read as foreground */
+/* Book cards — slightly warmer midnight so they float forward */
 .book-card {
-  background-color: #0b1828 !important;
+  background-color: #0f1022 !important;
 }
 
 </style>
