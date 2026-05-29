@@ -1041,8 +1041,8 @@ const auth = getAuth(app);
 const db   = getFirestore(app);
 
 // ── DEFAULT DATA ─────────────────────────────────────────────────────────────
-const DEFAULT_GENRES = ['Fiction','Non-Fiction','Fantasy','Young Adult','Sci-Fi','Mystery','Thriller','Romance','Historical Fiction','Biography','Self-Help','Horror','Graphic Novel','Poetry','Other'];
-const DEFAULT_LOCATIONS = ['Bookshelf','Closet']; // 'Borrowed' is always locked at bottom
+const DEFAULT_GENRES = ['Fiction','Non-Fiction','Fantasy','Science Fiction','Mystery','Thriller','Crime','Romance','Young Adult','Historical Fiction','Literary Fiction','Horror','Adventure','Biography','Memoir','Self-Help',"Children's",'Graphic Novel','Classics','Poetry'];
+const DEFAULT_LOCATIONS = ['Bookshelf 1']; // 'Borrowed' is always locked at bottom
 
 // ── STATE ────────────────────────────────────────────────────────────────────
 let currentUser = null;
@@ -1645,7 +1645,6 @@ window.toggleLibraryView = () => {
   btn.classList.toggle('active', isGlobal);
 
   document.getElementById('locationFilterSection').style.display = isGlobal ? 'none' : '';
-  document.getElementById('genreModeRow').style.display = 'none'; // always hide AND/OR in global
   document.getElementById('fabAdd').style.display = isGlobal ? 'none' : 'flex';
   document.getElementById('fabCsv').style.display = isGlobal ? 'none' : 'flex';
   document.querySelector('.header-stats').style.display = isGlobal ? 'none' : '';
@@ -1676,6 +1675,10 @@ function buildGlobalGenreFilters() {
       ${active ? '✓ ' : ''}${esc(g)}
     </button>`;
   }).join('');
+  const mr = document.getElementById('genreModeRow');
+  mr.style.display = selectedGenreFilters.length > 1 ? 'flex' : 'none';
+  document.getElementById('modeOR').classList.toggle('active', genreFilterMode === 'OR');
+  document.getElementById('modeAND').classList.toggle('active', genreFilterMode === 'AND');
 }
 
 window.toggleGlobalGenreFilter = g => {
@@ -1691,7 +1694,12 @@ function applyGlobalFilters() {
   const sort = document.getElementById('sortSelect').value;
   let list = globalBookCache.filter(b => {
     if (q && !(b.title||'').toLowerCase().includes(q) && !(b.author||'').toLowerCase().includes(q) && !(b.series||'').toLowerCase().includes(q)) return false;
-    if (selectedGenreFilters.length > 0 && !selectedGenreFilters.some(g => (b.genres||[]).includes(g))) return false;
+    if (selectedGenreFilters.length > 0) {
+      const ok = genreFilterMode === 'AND'
+        ? selectedGenreFilters.every(g => (b.genres||[]).includes(g))
+        : selectedGenreFilters.some(g => (b.genres||[]).includes(g));
+      if (!ok) return false;
+    }
     return true;
   });
   list = [...list].sort((a, b) => {
@@ -1771,7 +1779,11 @@ window.toggleStatusFilter = s => {
   if (i >= 0) selectedStatusFilters.splice(i, 1); else selectedStatusFilters.push(s);
   buildStatusFilters(); applyFilters();
 };
-window.setGenreMode = m => { genreFilterMode = m; buildGenreFilters(); applyFilters(); };
+window.setGenreMode = m => {
+  genreFilterMode = m;
+  if (currentView === 'global') { buildGlobalGenreFilters(); applyGlobalFilters(); }
+  else { buildGenreFilters(); applyFilters(); }
+};
 
 // ── GENRE PILLS ───────────────────────────────────────────────────────────────
 window.toggleGenrePill = (genre, gridId) => {
