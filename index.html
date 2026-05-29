@@ -153,6 +153,8 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .btn-checkout.is-borrowed { background: #2a1a10; border-color: var(--borrowed); color: var(--borrowed); }
 .btn-add-collection { padding: 5px 10px; border-radius: 8px; border: 1px solid var(--accent); background: transparent; color: var(--accent); font-size: 11px; font-family: 'DM Sans', sans-serif; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.15s; text-transform: uppercase; letter-spacing: 0.4px; }
 .btn-add-collection:active { background: var(--accent); color: #1a1612; }
+.series-num-btn { padding: 5px 10px; border-radius: 8px; background: var(--surface2); border: 1px solid var(--border); color: var(--accent); font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; flex-shrink: 0; display: flex; align-items: center; gap: 4px; }
+.series-num-btn:active { background: var(--surface3); }
 .view-toggle-btn { padding: 6px 14px; border-radius: 999px; background: var(--surface2); border: 1px solid var(--border); color: var(--accent); font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
 .view-toggle-btn.active { background: var(--accent); color: #1a1612; border-color: var(--accent); }
 .checkout-date { font-size: 10px; color: var(--text3); margin-top: 3px; text-align: right; }
@@ -740,7 +742,20 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
           <div class="autocomplete-dropdown" id="authorAutocomplete"></div>
         </div>
       </div>
-      <div class="form-group"><label class="form-label">Series <span style="font-weight:300;text-transform:none;letter-spacing:0">(optional)</span></label><input class="form-input" id="newSeries" placeholder="e.g. Throne of Glass"></div>
+      <div class="form-group">
+        <label class="form-label">Series <span style="font-weight:300;text-transform:none;letter-spacing:0">(optional)</span></label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input class="form-input" id="newSeries" placeholder="e.g. Throne of Glass" style="flex:1;" oninput="onSeriesInput('new')">
+          <button class="series-num-btn" id="newSeriesNumBtn" style="display:none" onclick="toggleSeriesSlider('new')">#<span id="newSeriesNumVal">1</span></button>
+        </div>
+        <div id="newSeriesSlider" style="display:none;padding:8px 0 2px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:12px;color:var(--text3);white-space:nowrap;">Book #</span>
+            <input type="range" id="newSeriesNum" min="1" max="50" value="1" style="flex:1;accent-color:var(--accent);" oninput="onSeriesSlider('new')">
+            <span style="font-size:13px;font-weight:600;color:var(--accent);min-width:20px;text-align:right;" id="newSeriesNumLabel">1</span>
+          </div>
+        </div>
+      </div>
       <div class="form-group">
         <label class="form-label">Genre(s) — select up to 3</label>
         <div class="genre-grid" id="addGenreGrid"></div>
@@ -781,7 +796,20 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     <div class="modal-body">
       <div class="form-group"><label class="form-label">Book Title *</label><input class="form-input" id="editTitle"></div>
       <div class="form-group"><label class="form-label">Author *</label><input class="form-input" id="editAuthor"></div>
-      <div class="form-group"><label class="form-label">Series <span style="font-weight:300;text-transform:none;letter-spacing:0">(optional)</span></label><input class="form-input" id="editSeries"></div>
+      <div class="form-group">
+        <label class="form-label">Series <span style="font-weight:300;text-transform:none;letter-spacing:0">(optional)</span></label>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input class="form-input" id="editSeries" placeholder="e.g. Throne of Glass" style="flex:1;" oninput="onSeriesInput('edit')">
+          <button class="series-num-btn" id="editSeriesNumBtn" style="display:none" onclick="toggleSeriesSlider('edit')">#<span id="editSeriesNumVal">1</span></button>
+        </div>
+        <div id="editSeriesSlider" style="display:none;padding:8px 0 2px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:12px;color:var(--text3);white-space:nowrap;">Book #</span>
+            <input type="range" id="editSeriesNum" min="1" max="50" value="1" style="flex:1;accent-color:var(--accent);" oninput="onSeriesSlider('edit')">
+            <span style="font-size:13px;font-weight:600;color:var(--accent);min-width:20px;text-align:right;" id="editSeriesNumLabel">1</span>
+          </div>
+        </div>
+      </div>
       <div class="form-group">
         <label class="form-label">Genre(s) — select up to 3</label>
         <div class="genre-grid" id="editGenreGrid"></div>
@@ -1627,7 +1655,7 @@ function renderBooks(list) {
     const readCls = b.read ? 'is-read' : '';
     const borCls  = isBorrowed ? 'is-borrowed' : '';
     const genreTags = (b.genres||[]).map(g => '<span class="tag genre">' + esc(g) + '</span>').join('');
-    const seriesTag = b.series ? '<span class="tag series">📚 ' + esc(b.series) + '</span>' : '';
+    const seriesTag = b.series ? '<span class="tag series">📚 ' + esc(b.series) + (b.seriesNumber ? ' #' + b.seriesNumber : '') + '</span>' : '';
     const locCls = isBorrowed ? 'tag borrowed-tag' : 'tag location';
     const locTag = (b.location && b.location !== 'Wishlist') ? '<span class="' + locCls + '">📍 ' + esc(b.location) + '</span>' : '';
     const chkLabel = isBorrowed ? '↩ Check In' : (isWishlist ? '📚 Add To Library' : '↗ Check Out');
@@ -1763,8 +1791,11 @@ function renderGlobalBooks(list) {
     const personal = books.find(x => createGlobalBookId(x.title||'', x.author||'') === b.id);
     const isRead = personal ? !!personal.read : false;
     const genres = (b.genres||[]).slice(0,3).map(g => `<span class="tag genre">${esc(g)}</span>`).join('');
-    const series = b.series ? `<span class="tag series">📚 ${esc(b.series)}</span>` : '';
+    const series = b.series ? `<span class="tag series">📚 ${esc(b.series)}${b.seriesNumber ? ' #' + b.seriesNumber : ''}</span>` : '';
     const safeId = (b.id||'').replace(/'/g, "\\'");
+    const actionBtn = personal
+      ? `<span style="font-size:10px;color:var(--read);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;">✓ Owned</span>`
+      : `<button class="btn-add-collection" onclick="addGlobalBookToCollection('${safeId}')">＋ Add</button>`;
     return `<div class="book-card${isRead ? ' is-read' : ''}">
       <div class="book-check" onclick="toggleGlobalRead('${safeId}')"><span class="check-icon">✓</span></div>
       <div class="book-info">
@@ -1773,7 +1804,7 @@ function renderGlobalBooks(list) {
         <div class="book-tags">${genres}${series}</div>
       </div>
       <div class="book-actions">
-        <button class="btn-add-collection" onclick="addGlobalBookToCollection('${safeId}')">＋ Add</button>
+        ${actionBtn}
       </div>
     </div>`;
   }).join('');
@@ -1802,15 +1833,43 @@ window.toggleGlobalRead = async (globalId) => {
   }
 };
 
+window.onSeriesInput = (ctx) => {
+  const id = ctx === 'new' ? 'newSeries' : 'editSeries';
+  const val = document.getElementById(id).value.trim();
+  const btn = document.getElementById(ctx + 'SeriesNumBtn');
+  if (!btn) return;
+  btn.style.display = val ? 'flex' : 'none';
+  if (!val) document.getElementById(ctx + 'SeriesSlider').style.display = 'none';
+};
+
+window.toggleSeriesSlider = (ctx) => {
+  const el = document.getElementById(ctx + 'SeriesSlider');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+};
+
+window.onSeriesSlider = (ctx) => {
+  const val = document.getElementById(ctx + 'SeriesNum').value;
+  document.getElementById(ctx + 'SeriesNumVal').textContent = val;
+  document.getElementById(ctx + 'SeriesNumLabel').textContent = val;
+};
+
 window.addGlobalBookToCollection = bookId => {
   const b = globalBookCache.find(x => x.id === bookId);
   if (!b) return;
+  openAddModal(); // resets form first
+  // Fill values AFTER openAddModal clears them
   document.getElementById('newTitle').value  = b.title  || '';
   document.getElementById('newAuthor').value = b.author || '';
   document.getElementById('newSeries').value = b.series || '';
   addSelectedGenres = [...(b.genres||[]).slice(0,3)];
-  openAddModal();
-  requestAnimationFrame(() => { buildGenreGrid('addGenreGrid', addSelectedGenres); updateGenreHint(); });
+  buildGenreGrid('addGenreGrid', addSelectedGenres);
+  updateGenreHint();
+  if (b.series) onSeriesInput('new');
+  if (b.seriesNumber) {
+    document.getElementById('newSeriesNum').value = b.seriesNumber;
+    document.getElementById('newSeriesNumVal').textContent = b.seriesNumber;
+    document.getElementById('newSeriesNumLabel').textContent = b.seriesNumber;
+  }
 };
 
 window.setTopFilter = filter => {
@@ -1885,6 +1944,11 @@ window.openAddModal = () => {
   document.getElementById('newWishlist').checked = false;
   document.getElementById('addLocationGroup').style.display = 'block';
   document.getElementById('genreHint').textContent = '';
+  document.getElementById('newSeriesNumBtn').style.display = 'none';
+  document.getElementById('newSeriesSlider').style.display = 'none';
+  document.getElementById('newSeriesNum').value = '1';
+  document.getElementById('newSeriesNumVal').textContent = '1';
+  document.getElementById('newSeriesNumLabel').textContent = '1';
   buildGenreGrid('addGenreGrid', addSelectedGenres);
   openModal('addModal');
 };
@@ -1893,6 +1957,8 @@ window.addBook = async () => {
   const title   = document.getElementById('newTitle').value.trim();
   const author  = document.getElementById('newAuthor').value.trim();
   const series  = document.getElementById('newSeries').value.trim();
+  const seriesNumber = series && document.getElementById('newSeriesNumBtn').style.display !== 'none'
+    ? (parseInt(document.getElementById('newSeriesNum').value) || null) : null;
   const loc     = document.getElementById('newLocation').value;
   const read    = document.getElementById('newRead').checked;
   const wishlist = document.getElementById('newWishlist').checked;
@@ -1909,7 +1975,7 @@ window.addBook = async () => {
   const btn = document.getElementById('addBtn');
   btn.disabled = true; btn.textContent = 'Adding…';
   try {
-    await saveBook({ title, author, series, genres: addSelectedGenres, location: wishlist ? 'Wishlist' : loc, read, checkoutDate: '', borrowedBy: '' });
+    await saveBook({ title, author, series, seriesNumber, genres: addSelectedGenres, location: wishlist ? 'Wishlist' : loc, read, checkoutDate: '', borrowedBy: '' });
     closeModal('addModal');
     await loadBooks();
     showStatus('Book added!', 'success');
@@ -1927,6 +1993,12 @@ window.openEditModal = id => {
   document.getElementById('editTitle').value   = b.title;
   document.getElementById('editAuthor').value  = b.author||'';
   document.getElementById('editSeries').value  = b.series||'';
+  const sNum = b.seriesNumber || 1;
+  document.getElementById('editSeriesNum').value = String(sNum);
+  document.getElementById('editSeriesNumVal').textContent = sNum;
+  document.getElementById('editSeriesNumLabel').textContent = sNum;
+  document.getElementById('editSeriesNumBtn').style.display = b.series ? 'flex' : 'none';
+  document.getElementById('editSeriesSlider').style.display = 'none';
   buildLocationSelect('editLocation', b.location || orderedLocations[0] || 'Bookshelf');
   document.getElementById('editRead').checked    = b.read||false;
   document.getElementById('editWishlist').checked = b.location === 'Wishlist';
@@ -1939,13 +2011,15 @@ window.saveEdit = async () => {
   const title   = document.getElementById('editTitle').value.trim();
   const author  = document.getElementById('editAuthor').value.trim();
   const series  = document.getElementById('editSeries').value.trim();
+  const seriesNumber = series && document.getElementById('editSeriesNumBtn').style.display !== 'none'
+    ? (parseInt(document.getElementById('editSeriesNum').value) || null) : null;
   const loc     = document.getElementById('editLocation').value;
   const read    = document.getElementById('editRead').checked;
   const wishlist = document.getElementById('editWishlist').checked;
   if (!title || !author) { showStatus('Please enter title and author.', 'error'); return; }
   try {
     const b = books.find(x => x.id === editingId);
-    await updateBook(editingId, { title, author, series, genres: editSelectedGenres, location: wishlist ? 'Wishlist' : loc, read, checkoutDate: b.checkoutDate||'', borrowedBy: b.borrowedBy||'' });
+    await updateBook(editingId, { title, author, series, seriesNumber, genres: editSelectedGenres, location: wishlist ? 'Wishlist' : loc, read, checkoutDate: b.checkoutDate||'', borrowedBy: b.borrowedBy||'' });
     closeModal('editModal');
     await loadBooks();
   } catch(e) { showStatus('Error saving.', 'error'); }
