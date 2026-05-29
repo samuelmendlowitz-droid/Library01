@@ -7,7 +7,24 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Miriam's Library">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 145' fill='none'><line x1='41' y1='27' x2='70' y2='128' stroke='%23c9a96e' stroke-width='13' stroke-linecap='round'/><line x1='159' y1='27' x2='130' y2='128' stroke='%23c9a96e' stroke-width='13' stroke-linecap='round'/><path d='M41 27 C 92 44,100 95,100 113' stroke='%23c9a96e' stroke-width='7' stroke-linecap='round'/><path d='M159 27 C 108 44,100 95,100 113' stroke='%23c9a96e' stroke-width='7' stroke-linecap='round'/></svg>" type="image/svg+xml">
-<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 145' fill='none'><rect width='200' height='145' fill='%230c0d1c'/><line x1='41' y1='27' x2='70' y2='128' stroke='%23c9a96e' stroke-width='13' stroke-linecap='round'/><line x1='159' y1='27' x2='130' y2='128' stroke='%23c9a96e' stroke-width='13' stroke-linecap='round'/><path d='M41 27 C 92 44,100 95,100 113' stroke='%23c9a96e' stroke-width='7' stroke-linecap='round'/><path d='M159 27 C 108 44,100 95,100 113' stroke='%23c9a96e' stroke-width='7' stroke-linecap='round'/></svg>">
+<link rel="apple-touch-icon" id="ati">
+<script>
+(function(){
+  var svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 145" fill="none"><rect width="200" height="145" fill="#0c0d1c"/><line x1="41" y1="27" x2="70" y2="128" stroke="#c9a96e" stroke-width="13" stroke-linecap="round"/><line x1="159" y1="27" x2="130" y2="128" stroke="#c9a96e" stroke-width="13" stroke-linecap="round"/><path d="M41 27 C 92 44,100 95,100 113" stroke="#c9a96e" stroke-width="7" stroke-linecap="round"/><path d="M159 27 C 108 44,100 95,100 113" stroke="#c9a96e" stroke-width="7" stroke-linecap="round"/></svg>';
+  var img=new Image();
+  img.onload=function(){
+    var c=document.createElement('canvas');
+    c.width=c.height=512;
+    var ctx=c.getContext('2d');
+    ctx.fillStyle='#0c0d1c';
+    ctx.fillRect(0,0,512,512);
+    var h=145*512/200,y=(512-h)/2;
+    ctx.drawImage(img,0,y,512,h);
+    document.getElementById('ati').href=c.toDataURL('image/png');
+  };
+  img.src='data:image/svg+xml;base64,'+btoa(svg);
+})();
+</script>
 <title>Miriam's Library</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
