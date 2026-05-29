@@ -1829,7 +1829,7 @@ function buildGenreFilters() {
   merged.forEach(g => {
     const idx = selectedGenreFilters.indexOf(g);
     const cls = idx === 0 ? 'active' : idx === 1 ? 'active-2' : idx === 2 ? 'active-2' : '';
-    html += '<button class="filter-btn ' + cls + '" onclick="toggleGenreFilter(\'' + esc(g) + '\')">' + esc(g) + '</button>';
+    html += '<button class="filter-btn ' + cls + '" onclick="toggleGenreFilter(\'' + jsStr(g) + '\')">' + esc(g) + '</button>';
   });
   wrap.innerHTML = html;
   const mr = document.getElementById('genreModeRow');
@@ -1864,7 +1864,7 @@ function buildGenreGrid(gridId, selectedArr) {
   selectedArr.forEach(g => { if (!merged.includes(g)) merged.push(g); });
 
   document.getElementById(gridId).innerHTML = merged.map(g =>
-    '<button class="genre-pill ' + (selectedArr.includes(g) ? 'selected' : '') + '" onclick="toggleGenrePill(\'' + esc(g) + '\',\'' + gridId + '\')">' + esc(g) + '</button>'
+    '<button class="genre-pill ' + (selectedArr.includes(g) ? 'selected' : '') + '" onclick="toggleGenrePill(\'' + jsStr(g) + '\',\'' + gridId + '\')">' + esc(g) + '</button>'
   ).join('');
 }
 
@@ -2719,6 +2719,7 @@ function hideStatus() { document.getElementById('statusBar').className = 'status
 
 // ── UTILS ─────────────────────────────────────────────────────────────────────
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+function jsStr(s) { return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
 
 // ── HEADER SPACER (fixed header offset) ───────────────────────────────────────
 function updateHeaderSpacer() {
