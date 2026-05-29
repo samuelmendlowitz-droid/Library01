@@ -832,10 +832,10 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
         </div>
         <div style="display:flex;align-items:center;gap:10px;">
           <label class="form-label" style="margin:0">Read?</label>
-          <input type="checkbox" id="editRead" style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent)">
+          <input type="checkbox" id="editRead" style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent)" onchange="onEditReadChange()">
         </div>
       </div>
-      <div class="form-group">
+      <div class="form-group" id="editRatingGroup">
         <label class="form-label">Your Rating <span style="font-weight:300;text-transform:none;letter-spacing:0">(optional)</span></label>
         <div class="star-rating" id="editStarRating">
           <span class="star" onclick="setStarRating(1)">★</span>
@@ -1674,7 +1674,7 @@ function renderBooks(list) {
     const locCls = isBorrowed ? 'tag borrowed-tag' : 'tag location';
     const gbId = createGlobalBookId(b.title||'', b.author||'');
     const gb = globalBookCache.find(x => x.id === gbId);
-    const ratingStr = (gb && gb.ratingCount) ? (gb.ratingTotal / gb.ratingCount).toFixed(1) + '/5 ⭐' : '';
+    const ratingStr = gb ? renderStars(gb.ratingTotal || 0, gb.ratingCount || 0) : '';
     const locTag = (b.location && b.location !== 'Wishlist') ? '<span class="' + locCls + '">📍 ' + esc(b.location) + '</span>' : '';
     const chkLabel = isBorrowed ? '↩ Check In' : (isWishlist ? '📚 Add To Library' : '↗ Check Out');
     const chkCls   = isBorrowed ? 'btn-checkout is-borrowed' : 'btn-checkout';
@@ -1685,7 +1685,7 @@ function renderBooks(list) {
       + '<div class="book-info">'
       + '<div class="book-title">' + esc(b.title) + '</div>'
       + '<div class="book-author">' + esc(b.author||'') + '</div>'
-      + (ratingStr ? '<div class="book-rating">' + ratingStr + '</div>' : '')
+      + ratingStr
       + '<div class="book-tags">' + genreTags + seriesTag + locTag + '</div>'
       + '</div>'
       + '<div class="book-actions">'
@@ -1811,7 +1811,7 @@ function renderGlobalBooks(list) {
     const isRead = personal ? !!personal.read : false;
     const genres = (b.genres||[]).slice(0,3).map(g => `<span class="tag genre">${esc(g)}</span>`).join('');
     const series = b.series ? `<span class="tag series">📚 ${esc(b.series)}${b.seriesNumber ? ' #' + b.seriesNumber : ''}</span>` : '';
-    const ratingStr = b.ratingCount ? (b.ratingTotal / b.ratingCount).toFixed(1) + '/5 ⭐' : '';
+    const ratingStr = renderStars(b.ratingTotal || 0, b.ratingCount || 0);
     const safeId = (b.id||'').replace(/'/g, "\\'");
     const actionBtn = personal
       ? `<span style="font-size:10px;color:var(--read);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;">✓ Owned</span>`
@@ -1821,7 +1821,7 @@ function renderGlobalBooks(list) {
       <div class="book-info">
         <div class="book-title">${esc(b.title||'')}</div>
         <div class="book-author">${esc(b.author||'')}</div>
-        ${ratingStr ? `<div class="book-rating">${ratingStr}</div>` : ''}
+        ${ratingStr}
         <div class="book-tags">${genres}${series}</div>
       </div>
       <div class="book-actions">
@@ -1872,6 +1872,25 @@ window.onSeriesSlider = (ctx) => {
   const val = document.getElementById(ctx + 'SeriesNum').value;
   document.getElementById(ctx + 'SeriesNumVal').textContent = val;
   document.getElementById(ctx + 'SeriesNumLabel').textContent = val;
+};
+
+function renderStars(ratingTotal, ratingCount) {
+  if (!ratingCount) return '';
+  const avg = ratingTotal / ratingCount;
+  const filled = Math.round(avg);
+  const stars = Array.from({length:5}, (_,i) =>
+    `<span style="color:${i < filled ? '#f5a623' : 'var(--surface3)'}">★</span>`
+  ).join('');
+  return `<div class="book-rating">${stars} <span style="opacity:0.7">${avg.toFixed(1)}</span></div>`;
+}
+
+window.onEditReadChange = () => {
+  const isRead = document.getElementById('editRead').checked;
+  document.getElementById('editRatingGroup').style.display = isRead ? '' : 'none';
+  if (!isRead) {
+    document.getElementById('editRating').value = 0;
+    updateStarDisplay(0);
+  }
 };
 
 window.setStarRating = (val) => {
@@ -2059,6 +2078,7 @@ window.openEditModal = id => {
   const rating = b.rating || 0;
   document.getElementById('editRating').value = rating;
   updateStarDisplay(rating);
+  document.getElementById('editRatingGroup').style.display = b.read ? '' : 'none';
   openModal('editModal');
 };
 
