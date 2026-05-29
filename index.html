@@ -1299,6 +1299,10 @@ All columns other than Author, Title, Series and Genres should be left empty or 
     var err = document.getElementById('loginError');
     if (err) err.textContent = 'Still loading — please wait a moment and try again.';
   };
+
+  window.addEventListener('load', function() {
+    if (window.lucide) lucide.createIcons();
+  });
 })();
 </script>
 
@@ -1939,6 +1943,7 @@ function renderBooks(list) {
       + dateLabel + nameLabel
       + '</div></div>';
   }).join('');
+  refreshIcons();
 }
 
 function renderBooksList(list) {
@@ -1976,6 +1981,7 @@ function renderBooksList(list) {
           : '<button class="' + chkCls + '" onclick="toggleCheckout(\'' + b.id + '\')">' + chkLabel + '</button>')
       + '</div></div>';
   }).join('');
+  refreshIcons();
 }
 
 function updateStats() {
@@ -2000,6 +2006,11 @@ window.resetAllFilters = () => {
   applyFilters();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
+
+// ── LUCIDE ICON REFRESH ───────────────────────────────────────────────────────
+function refreshIcons() {
+  if (window.lucide) lucide.createIcons();
+}
 
 // ── GLOBAL LIBRARY VIEW ───────────────────────────────────────────────────────
 window.setBookView = (view) => {
@@ -2122,6 +2133,7 @@ function renderGlobalBooks(list) {
       </div>
     </div>`;
   }).join('');
+  refreshIcons();
 }
 
 function renderGlobalBooksList(list) {
@@ -2153,6 +2165,7 @@ function renderGlobalBooksList(list) {
       <div class="lr-actions">${actionBtn}</div>
     </div>`;
   }).join('');
+  refreshIcons();
 }
 
 window.toggleGlobalRead = async (globalId) => {
@@ -2717,6 +2730,7 @@ window.openSettings = () => {
   buildManageLists();
   backToSettingsHome();
   document.getElementById('settingsOverlay').classList.add('open');
+  refreshIcons();
 };
 
 window.openSettingsSection = (section) => {
@@ -2731,6 +2745,7 @@ window.openSettingsSection = (section) => {
     document.getElementById('ltab-all').classList.add('active');
     buildBorrowerLog();
   }
+  refreshIcons();
 };
 
 window.backToSettingsHome = () => {
@@ -2738,6 +2753,7 @@ window.backToSettingsHome = () => {
   document.getElementById('spanel-home').classList.add('active');
   document.getElementById('settingsBackBtn').style.display = 'none';
   document.getElementById('settingsTitle').innerHTML = '<i data-lucide="settings"></i> Settings';
+  refreshIcons();
 };
 
 window.exportLibraryAsCsv = () => {
@@ -2850,6 +2866,7 @@ function buildManageGenreList() {
       </div>
     </div>
   `).join('');
+  refreshIcons();
 }
 
 function buildManageLocationList() {
@@ -2884,6 +2901,7 @@ function buildManageLocationList() {
     </div>
   `;
   list.innerHTML = draggable + locked;
+  refreshIcons();
 }
 
 // ── GENRE CRUD ────────────────────────────────────────────────────────────────
@@ -3191,13 +3209,14 @@ function buildBorrowerLog() {
         <div class="borrower-log-title">${esc(entry.bookTitle || 'Unknown Book')}</div>
         ${entry.bookAuthor ? `<div class="borrower-log-author">${esc(entry.bookAuthor)}</div>` : ''}
         <div class="borrower-log-meta">
-          <span class="borrower-log-name">👤 ${esc(entry.borrowedBy)}</span>
-          ${entry.checkoutDate ? `<span class="borrower-log-date">📤 ${esc(entry.checkoutDate)}</span>` : ''}
-          ${entry.returnDate   ? `<span class="borrower-log-date">📥 ${esc(entry.returnDate)}</span>`   : ''}
+          <span class="borrower-log-name"><i data-lucide="user" class="borrower-log-icon"></i> ${esc(entry.borrowedBy)}</span>
+          ${entry.checkoutDate ? `<span class="borrower-log-date"><i data-lucide="upload" class="borrower-log-icon"></i> ${esc(entry.checkoutDate)}</span>` : ''}
+          ${entry.returnDate   ? `<span class="borrower-log-date"><i data-lucide="download" class="borrower-log-icon"></i> ${esc(entry.returnDate)}</span>`   : ''}
           <span class="borrower-log-status ${statusCls}">${statusText}</span>
         </div>
       </div>`;
   }).join('');
+  refreshIcons();
 }
 
 </script>
