@@ -161,6 +161,45 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .book-rating { font-size: 11px; color: #f5a623; font-weight: 600; margin-top: 3px; letter-spacing: 0.2px; }
 .view-toggle-btn { padding: 6px 14px; border-radius: 999px; background: var(--surface2); border: 1px solid var(--border); color: var(--accent); font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
 .view-toggle-btn.active { background: var(--accent); color: #1a1612; border-color: var(--accent); }
+.view-btns { display: flex; gap: 3px; flex-shrink: 0; }
+.view-btn { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text2); font-size: 15px; width: 30px; height: 30px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; padding: 0; font-family: 'DM Sans',sans-serif; }
+.view-btn.active { background: var(--accent); border-color: var(--accent); color: #1a1612; }
+
+/* Grid view — 2 columns */
+.book-list.grid-view { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 8px 12px 100px; }
+.book-list.grid-view .book-card { flex-direction: column; padding: 10px; gap: 6px; align-items: flex-start; }
+.book-list.grid-view .book-info { width: 100%; }
+.book-list.grid-view .book-title { font-size: 13px; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.book-list.grid-view .book-author { font-size: 11px; }
+.book-list.grid-view .book-actions { width: 100%; flex-direction: row; justify-content: space-between; align-items: center; gap: 4px; }
+.book-list.grid-view .btn-checkout { font-size: 10px; padding: 4px 6px; }
+.book-list.grid-view .book-check { width: 20px; height: 20px; flex-shrink: 0; }
+.book-list.grid-view .check-icon { font-size: 10px; }
+.book-list.grid-view .book-tags { gap: 3px; margin-top: 5px; }
+.book-list.grid-view .tag { font-size: 9px; padding: 2px 6px; }
+
+/* List view — spreadsheet rows */
+.book-list.list-view { gap: 0; padding: 0 0 100px; flex-direction: column; overflow-x: auto; }
+.list-col-header { display: grid; grid-template-columns: 30px 1fr 1fr 90px 80px 72px 76px 68px; gap: 6px; padding: 7px 16px; background: var(--surface2); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 5; min-width: 560px; }
+.list-col-header span { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; white-space: nowrap; overflow: hidden; }
+.list-row { display: grid; grid-template-columns: 30px 1fr 1fr 90px 80px 72px 76px 68px; gap: 6px; padding: 8px 16px; border-bottom: 1px solid var(--border); align-items: center; min-width: 560px; transition: background 0.1s; }
+.list-row:hover { background: var(--surface2); }
+.list-row.is-read .lr-check { background: var(--read); border-color: var(--read); }
+.lr-check { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; background: var(--surface2); flex-shrink: 0; }
+.lr-check-icon { font-size: 10px; color: white; display: none; }
+.list-row.is-read .lr-check-icon { display: block; }
+.lr-cell { font-size: 12px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lr-title { font-family: 'Playfair Display', serif; font-size: 13px; font-weight: 700; }
+.lr-author { color: var(--text2); font-size: 12px; }
+.lr-series { color: #8ab4c9; font-size: 11px; }
+.lr-genres { color: var(--accent); font-size: 11px; }
+.lr-rating { color: #f5a623; font-size: 11px; white-space: nowrap; }
+.lr-location { color: var(--text3); font-size: 11px; }
+.lr-actions { display: flex; gap: 4px; align-items: center; }
+.lr-edit-btn { font-size: 13px; cursor: pointer; padding: 2px 4px; border-radius: 4px; border: 1px solid transparent; }
+.lr-edit-btn:hover { border-color: var(--border); background: var(--surface2); }
+.lr-chk-btn { font-size: 10px; padding: 3px 6px; border-radius: 6px; border: 1px solid var(--border); background: transparent; color: var(--text2); cursor: pointer; white-space: nowrap; font-family: 'DM Sans',sans-serif; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+.lr-chk-btn.borrowed { border-color: var(--borrowed); color: var(--borrowed); }
 .checkout-date { font-size: 10px; color: var(--text3); margin-top: 3px; text-align: right; }
 .borrower-name { font-size: 10px; color: var(--borrowed); margin-top: 2px; text-align: right; }
 
@@ -711,6 +750,11 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
         <option value="genre-custom">Genre (Custom Order)</option>
         <option value="added-desc">Recently Added</option>
       </select>
+      <div class="view-btns">
+        <button class="view-btn active" id="vbCard" onclick="setBookView('card')" title="Card view">⊟</button>
+        <button class="view-btn" id="vbGrid" onclick="setBookView('grid')" title="Grid view">⊞</button>
+        <button class="view-btn" id="vbList" onclick="setBookView('list')" title="List view">☰</button>
+      </div>
     </div>
   </div>
 
@@ -1100,6 +1144,7 @@ let selectedGenreFilters = [], genreFilterMode = 'OR';
 let selectedStatusFilters = [];
 let topFilters = ['all'];
 let currentView = 'personal';
+let currentBookView = 'card'; // 'card' | 'grid' | 'list'
 let addSelectedGenres = [], editSelectedGenres = [];
 let editingId = null;
 let checkoutTargetId = null;
@@ -1654,12 +1699,15 @@ function applyFilters() {
     });
   }
 
-  document.getElementById('listHeader').textContent = filtered.length + ' book' + (filtered.length !== 1 ? 's' : '');
   renderBooks(filtered);
 }
 
 function renderBooks(list) {
   const wrap = document.getElementById('bookList');
+  wrap.classList.toggle('grid-view', currentBookView === 'grid');
+  wrap.classList.toggle('list-view', currentBookView === 'list');
+  if (currentBookView === 'list') { renderBooksList(list); return; }
+  document.getElementById('listHeader').textContent = list.length + ' book' + (list.length !== 1 ? 's' : '');
   if (!list.length) {
     wrap.innerHTML = '<div class="empty"><div class="empty-icon">📖</div><div class="empty-title">No books found</div><div class="empty-sub">Try adjusting your search or filters</div></div>';
     return;
@@ -1669,17 +1717,18 @@ function renderBooks(list) {
     const isWishlist = b.location === 'Wishlist';
     const readCls = b.read ? 'is-read' : '';
     const borCls  = isBorrowed ? 'is-borrowed' : '';
-    const genreTags = (b.genres||[]).map(g => '<span class="tag genre">' + esc(g) + '</span>').join('');
-    const seriesTag = b.series ? '<span class="tag series">📚 ' + esc(b.series) + (b.seriesNumber ? ' #' + b.seriesNumber : '') + '</span>' : '';
+    const maxGenres = currentBookView === 'grid' ? 1 : 99;
+    const genreTags = (b.genres||[]).slice(0, maxGenres).map(g => '<span class="tag genre">' + esc(g) + '</span>').join('');
+    const seriesTag = currentBookView === 'grid' ? '' : (b.series ? '<span class="tag series">📚 ' + esc(b.series) + (b.seriesNumber ? ' #' + b.seriesNumber : '') + '</span>' : '');
     const locCls = isBorrowed ? 'tag borrowed-tag' : 'tag location';
     const gbId = createGlobalBookId(b.title||'', b.author||'');
     const gb = globalBookCache.find(x => x.id === gbId);
     const ratingStr = gb ? renderStars(gb.ratingTotal || 0, gb.ratingCount || 0) : '';
-    const locTag = (b.location && b.location !== 'Wishlist') ? '<span class="' + locCls + '">📍 ' + esc(b.location) + '</span>' : '';
-    const chkLabel = isBorrowed ? '↩ Check In' : (isWishlist ? '📚 Add To Library' : '↗ Check Out');
+    const locTag = currentBookView === 'grid' ? '' : ((b.location && b.location !== 'Wishlist') ? '<span class="' + locCls + '">📍 ' + esc(b.location) + '</span>' : '');
+    const chkLabel = isBorrowed ? (currentBookView === 'grid' ? '↩' : '↩ Check In') : (isWishlist ? '+ Add' : (currentBookView === 'grid' ? '↗' : '↗ Check Out'));
     const chkCls   = isBorrowed ? 'btn-checkout is-borrowed' : 'btn-checkout';
-    const dateLabel = b.checkoutDate ? '<div class="checkout-date">' + (isBorrowed ? '📤 ' : '📥 ') + esc(b.checkoutDate) + '</div>' : '';
-    const nameLabel = isBorrowed && b.borrowedBy ? '<div class="borrower-name">👤 ' + esc(b.borrowedBy) + '</div>' : '';
+    const dateLabel = b.checkoutDate && currentBookView !== 'grid' ? '<div class="checkout-date">' + (isBorrowed ? '📤 ' : '📥 ') + esc(b.checkoutDate) + '</div>' : '';
+    const nameLabel = isBorrowed && b.borrowedBy && currentBookView !== 'grid' ? '<div class="borrower-name">👤 ' + esc(b.borrowedBy) + '</div>' : '';
     return '<div class="book-card ' + readCls + ' ' + borCls + '" id="card-' + b.id + '">'
       + '<div class="book-check" onclick="toggleRead(\'' + b.id + '\',' + b.read + ')"><span class="check-icon">✓</span></div>'
       + '<div class="book-info">'
@@ -1691,9 +1740,46 @@ function renderBooks(list) {
       + '<div class="book-actions">'
       + '<div class="btn-edit" onclick="openEditModal(\'' + b.id + '\')">✏️</div>'
       + (isWishlist
-          ? '<button class="btn-checkout" onclick="moveWishlistToLibrary(\'' + b.id + '\')">📚 Add To Library</button>'
+          ? '<button class="btn-checkout" onclick="moveWishlistToLibrary(\'' + b.id + '\')">+ Add</button>'
           : '<button class="' + chkCls + '" onclick="toggleCheckout(\'' + b.id + '\')">' + chkLabel + '</button>')
       + dateLabel + nameLabel
+      + '</div></div>';
+  }).join('');
+}
+
+function renderBooksList(list) {
+  const wrap = document.getElementById('bookList');
+  document.getElementById('listHeader').innerHTML =
+    '<div class="list-col-header"><span></span><span>Title</span><span>Author</span><span>Series</span><span>Genres</span><span>Rating</span><span>Location</span><span></span></div>';
+  if (!list.length) {
+    wrap.innerHTML = '<div class="empty"><div class="empty-icon">📖</div><div class="empty-title">No books found</div></div>';
+    return;
+  }
+  wrap.innerHTML = list.map(b => {
+    const isBorrowed = b.location === 'Borrowed';
+    const isWishlist = b.location === 'Wishlist';
+    const readCls = b.read ? 'is-read' : '';
+    const gbId = createGlobalBookId(b.title||'', b.author||'');
+    const gb = globalBookCache.find(x => x.id === gbId);
+    const avgRating = (gb && gb.ratingCount) ? (gb.ratingTotal/gb.ratingCount).toFixed(1) + ' ★' : '—';
+    const chkLabel = isBorrowed ? '↩ In' : (isWishlist ? '+ Add' : '↗ Out');
+    const chkCls = isBorrowed ? 'lr-chk-btn borrowed' : 'lr-chk-btn';
+    const series = b.series ? esc(b.series) + (b.seriesNumber ? ' #' + b.seriesNumber : '') : '—';
+    const genres = (b.genres||[]).slice(0,2).join(', ') || '—';
+    const loc = b.location && b.location !== 'Wishlist' ? esc(b.location) : '—';
+    return '<div class="list-row ' + readCls + '" id="card-' + b.id + '">'
+      + '<div class="lr-check" onclick="toggleRead(\'' + b.id + '\',' + b.read + ')"><span class="lr-check-icon">✓</span></div>'
+      + '<div class="lr-cell lr-title">' + esc(b.title) + '</div>'
+      + '<div class="lr-cell lr-author">' + esc(b.author||'') + '</div>'
+      + '<div class="lr-cell lr-series">' + series + '</div>'
+      + '<div class="lr-cell lr-genres">' + esc(genres) + '</div>'
+      + '<div class="lr-cell lr-rating">' + avgRating + '</div>'
+      + '<div class="lr-cell lr-location">' + loc + '</div>'
+      + '<div class="lr-actions">'
+      + '<span class="lr-edit-btn" onclick="openEditModal(\'' + b.id + '\')">✏️</span>'
+      + (isWishlist
+          ? '<button class="lr-chk-btn" onclick="moveWishlistToLibrary(\'' + b.id + '\')">+ Add</button>'
+          : '<button class="' + chkCls + '" onclick="toggleCheckout(\'' + b.id + '\')">' + chkLabel + '</button>')
       + '</div></div>';
   }).join('');
 }
@@ -1722,6 +1808,16 @@ window.resetAllFilters = () => {
 };
 
 // ── GLOBAL LIBRARY VIEW ───────────────────────────────────────────────────────
+window.setBookView = (view) => {
+  currentBookView = view;
+  ['card','grid','list'].forEach(v => {
+    const btn = document.getElementById('vb' + v.charAt(0).toUpperCase() + v.slice(1));
+    if (btn) btn.classList.toggle('active', v === view);
+  });
+  if (currentView === 'global') applyGlobalFilters();
+  else applyFilters();
+};
+
 window.toggleLibraryView = () => {
   currentView = currentView === 'personal' ? 'global' : 'personal';
   const isGlobal = currentView === 'global';
@@ -1793,12 +1889,15 @@ function applyGlobalFilters() {
     if (sort === 'title-desc')  return (b.title||'').toLowerCase().localeCompare((a.title||'').toLowerCase());
     return (a.title||'').toLowerCase().localeCompare((b.title||'').toLowerCase());
   });
-  document.getElementById('listHeader').textContent = list.length + ' book' + (list.length !== 1 ? 's' : '') + ' in global library';
   renderGlobalBooks(list);
 }
 
 function renderGlobalBooks(list) {
   const wrap = document.getElementById('bookList');
+  wrap.classList.toggle('grid-view', currentBookView === 'grid');
+  wrap.classList.toggle('list-view', currentBookView === 'list');
+  if (currentBookView === 'list') { renderGlobalBooksList(list); return; }
+  document.getElementById('listHeader').textContent = list.length + ' book' + (list.length !== 1 ? 's' : '') + ' in global library';
   if (!list.length) {
     const msg = globalBookCache.length === 0
       ? 'Global library not yet accessible — update your Firestore rules to enable it'
@@ -1806,11 +1905,12 @@ function renderGlobalBooks(list) {
     wrap.innerHTML = `<div class="empty"><div class="empty-icon">🌍</div><div class="empty-title">${msg}</div></div>`;
     return;
   }
+  const maxGenres = currentBookView === 'grid' ? 1 : 3;
   wrap.innerHTML = list.map(b => {
     const personal = books.find(x => createGlobalBookId(x.title||'', x.author||'') === b.id);
     const isRead = personal ? !!personal.read : false;
-    const genres = (b.genres||[]).slice(0,3).map(g => `<span class="tag genre">${esc(g)}</span>`).join('');
-    const series = b.series ? `<span class="tag series">📚 ${esc(b.series)}${b.seriesNumber ? ' #' + b.seriesNumber : ''}</span>` : '';
+    const genres = (b.genres||[]).slice(0, maxGenres).map(g => `<span class="tag genre">${esc(g)}</span>`).join('');
+    const series = currentBookView === 'grid' ? '' : (b.series ? `<span class="tag series">📚 ${esc(b.series)}${b.seriesNumber ? ' #' + b.seriesNumber : ''}</span>` : '');
     const ratingStr = renderStars(b.ratingTotal || 0, b.ratingCount || 0);
     const safeId = (b.id||'').replace(/'/g, "\\'");
     const actionBtn = personal
@@ -1827,6 +1927,37 @@ function renderGlobalBooks(list) {
       <div class="book-actions">
         ${actionBtn}
       </div>
+    </div>`;
+  }).join('');
+}
+
+function renderGlobalBooksList(list) {
+  const wrap = document.getElementById('bookList');
+  document.getElementById('listHeader').innerHTML =
+    '<div class="list-col-header"><span></span><span>Title</span><span>Author</span><span>Series</span><span>Genres</span><span>Rating</span><span></span><span></span></div>';
+  if (!list.length) {
+    wrap.innerHTML = `<div class="empty"><div class="empty-icon">🌍</div><div class="empty-title">No books found</div></div>`;
+    return;
+  }
+  wrap.innerHTML = list.map(b => {
+    const personal = books.find(x => createGlobalBookId(x.title||'', x.author||'') === b.id);
+    const isRead = personal ? !!personal.read : false;
+    const avgRating = b.ratingCount ? (b.ratingTotal/b.ratingCount).toFixed(1) + ' ★' : '—';
+    const series = b.series ? esc(b.series) + (b.seriesNumber ? ' #' + b.seriesNumber : '') : '—';
+    const genres = (b.genres||[]).slice(0,2).join(', ') || '—';
+    const safeId = (b.id||'').replace(/'/g, "\\'");
+    const actionBtn = personal
+      ? `<span style="font-size:10px;color:var(--read);font-weight:600;">✓ Owned</span>`
+      : `<button class="lr-chk-btn" onclick="addGlobalBookToCollection('${safeId}')">＋ Add</button>`;
+    return `<div class="list-row${isRead ? ' is-read' : ''}">
+      <div class="lr-check" onclick="toggleGlobalRead('${safeId}')"><span class="lr-check-icon">✓</span></div>
+      <div class="lr-cell lr-title">${esc(b.title||'')}</div>
+      <div class="lr-cell lr-author">${esc(b.author||'')}</div>
+      <div class="lr-cell lr-series">${series}</div>
+      <div class="lr-cell lr-genres">${esc(genres)}</div>
+      <div class="lr-cell lr-rating">${avgRating}</div>
+      <div></div>
+      <div class="lr-actions">${actionBtn}</div>
     </div>`;
   }).join('');
 }
