@@ -1026,8 +1026,8 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
     <div class="modal-header">
       <div class="modal-handle"></div>
       <div class="modal-header-row">
-        <button style="background:none;border:none;color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;padding:0;font-family:'DM Sans',sans-serif" onclick="closeFriendLibrary()"><i data-lucide="chevron-left"></i> Back</button>
-        <div class="modal-title" id="friendLibTitle"></div>
+        <button style="background:none;border:none;color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;padding:0;font-family:'DM Sans',sans-serif;flex-shrink:0" onclick="closeFriendLibrary()"><i data-lucide="chevron-left"></i> Back</button>
+        <div class="modal-title" id="friendLibTitle" style="flex:1;text-align:center;padding:0 12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
         <div style="width:60px"></div>
       </div>
     </div>
@@ -1036,6 +1036,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
         <button class="ctab active" id="flib-tab-lib" onclick="setFriendLibTab('library')">Library</button>
         <button class="ctab" id="flib-tab-wish" onclick="setFriendLibTab('wishlist')">Wishlist</button>
       </div>
+      <div class="subheader-stats" id="friendLibStats" style="padding:0 0 4px;"></div>
       <div class="search-wrap">
         <span class="search-icon">🔍</span>
         <input class="search-input" id="friendLibSearch" placeholder="Search…" oninput="renderFriendBooks()">
@@ -3886,13 +3887,13 @@ function renderMyFriends() {
   el.innerHTML = friendsList.map(f => {
     const init = (f.displayName || f.username || '?')[0].toUpperCase();
     const sid = jsStr(f.id), sdn = jsStr(f.displayName || f.username);
-    return '<div class="friend-card">'
+    return '<div class="friend-card" data-friend-id="' + esc(f.id) + '">'
       + '<div class="friend-avatar">' + esc(init) + '</div>'
       + '<div class="friend-info"><div class="friend-name">' + esc(f.displayName || f.username) + '</div>'
       + '<div class="friend-username">@' + esc(f.username) + '</div></div>'
       + '<div class="friend-actions">'
       + '<button class="btn-edit" onclick="openFriendLibrary(\'' + sid + '\',\'' + sdn + '\')" title="View library"><i data-lucide="book-open"></i></button>'
-      + '<button class="btn-edit" style="color:var(--danger);border-color:var(--danger)" onclick="removeFriend(\'' + sid + '\')" title="Remove friend"><i data-lucide="user-x"></i></button>'
+      + '<button class="btn-edit" style="color:var(--danger);border-color:var(--danger)" onclick="confirmRemoveFriend(\'' + sid + '\')" title="Remove friend"><i data-lucide="user-x"></i></button>'
       + '</div></div>';
   }).join('');
   refreshIcons();
@@ -4028,6 +4029,14 @@ window.declineFriendRequest = async (fromUid) => {
   } catch(e) { showStatus('Error: ' + e.message, 'error'); }
 };
 
+window.confirmRemoveFriend = (friendUid) => {
+  const card = document.querySelector('.friend-card[data-friend-id="' + friendUid + '"] .friend-actions');
+  if (!card) return;
+  card.innerHTML = '<span style="font-size:12px;color:var(--text2);white-space:nowrap;margin-right:4px">Unfriend?</span>'
+    + '<button class="btn-add-collection" style="background:var(--danger);border-color:var(--danger);color:#fff" onclick="removeFriend(\'' + jsStr(friendUid) + '\')">Yes</button>'
+    + '<button class="btn-edit" onclick="renderMyFriends()">No</button>';
+};
+
 window.removeFriend = async (friendUid) => {
   try {
     await deleteDoc(friendDoc(currentUser.uid, friendUid));
@@ -4040,6 +4049,30 @@ window.removeFriend = async (friendUid) => {
 };
 
 // ── FRIEND LIBRARY ────────────────────────────────────────────────────────────
+function renderFriendLibStats() {
+  const el = document.getElementById('friendLibStats');
+  if (!el) return;
+  const isWishlist = friendLibTab === 'wishlist';
+  const base = isWishlist
+    ? friendLibBooks.filter(b => b.location === 'Wishlist')
+    : friendLibBooks.filter(b => b.location !== 'Wishlist');
+  const stats = isWishlist
+    ? [
+        { num: base.length,                        label: 'Wishlist' },
+        { num: base.filter(b => b.read).length,    label: 'Read' },
+        { num: base.filter(b => !b.read).length,   label: 'Unread' },
+      ]
+    : [
+        { num: base.length,                                          label: 'Books' },
+        { num: base.filter(b => b.read).length,                     label: 'Read' },
+        { num: base.filter(b => !b.read).length,                    label: 'Unread' },
+        { num: base.filter(b => b.location === 'Borrowed').length,  label: 'Borrowed' },
+      ];
+  el.innerHTML = stats.map(s =>
+    '<div class="stat"><div class="stat-num">' + s.num + '</div><div class="stat-label">' + s.label + '</div></div>'
+  ).join('');
+}
+
 window.openFriendLibrary = async (uid, name) => {
   friendLibUid = uid; friendLibName = name; friendLibTab = 'library';
   document.getElementById('friendLibTitle').textContent = name + "'s Library";
@@ -4052,6 +4085,7 @@ window.openFriendLibrary = async (uid, name) => {
   try {
     const snap = await getDocs(query(collection(db, 'users', uid, 'books'), orderBy('addedAt', 'asc')));
     friendLibBooks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderFriendLibStats();
     renderFriendBooks();
   } catch(e) {
     document.getElementById('friendLibList').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3)">Could not load library.</div>';
@@ -4068,6 +4102,7 @@ window.setFriendLibTab = (tab) => {
   document.getElementById('flib-tab-lib').classList.toggle('active', tab === 'library');
   document.getElementById('flib-tab-wish').classList.toggle('active', tab === 'wishlist');
   document.getElementById('friendLibSearch').value = '';
+  renderFriendLibStats();
   renderFriendBooks();
 };
 
