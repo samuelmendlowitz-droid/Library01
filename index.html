@@ -139,6 +139,11 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .chat-book-title { font-size: 13px; font-family: 'Playfair Display', serif; color: var(--text); font-weight: 700; line-height: 1.3; }
 .chat-book-author { font-size: 11px; color: var(--text3); margin-top: 2px; }
 .chat-book-badge { font-size: 10px; color: var(--accent); font-weight: 600; margin-top: 5px; text-transform: uppercase; letter-spacing: 0.05em; }
+.chat-book-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; }
+.chat-book-tags { display: flex; flex-wrap: wrap; gap: 3px; flex: 1; }
+.chat-book-tags .tag { font-size: 9px; padding: 1px 5px; }
+.wishlist-star-btn { background: none; border: none; cursor: pointer; font-size: 16px; color: var(--text3); padding: 2px 4px; line-height: 1; transition: color 0.15s; flex-shrink: 0; }
+.wishlist-star-btn:hover, .wishlist-star-btn.in-wishlist { color: #f5a623; }
 .borrow-req-card { border-radius: var(--radius-sm); padding: 10px 12px; border: 1px solid var(--border); }
 .borrow-req-card.mine { background: rgba(201,169,110,0.08); border-color: rgba(201,169,110,0.25); }
 .borrow-req-card.theirs { background: var(--surface3); }
@@ -968,7 +973,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
     </div>
     <div class="header-nav">
       <button class="hnav-btn active" id="hnav-mylibrary" onclick="setPage('mylibrary')">My Library</button>
-      <button class="hnav-btn" id="hnav-wishlist" onclick="setPage('wishlist')">Wishlist</button>
+      <button class="hnav-btn" id="hnav-wishlist" onclick="setPage('wishlist')">★ Wishlist</button>
       <button class="hnav-btn" id="hnav-global" onclick="setPage('global')">Global Library</button>
       <button class="hnav-btn" id="hnav-discover" onclick="setPage('discover')">Discover</button>
       <button class="hnav-btn" id="hnav-community" onclick="setPage('community')">Community</button>
@@ -1023,33 +1028,38 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
     <div class="coming-soon"><i data-lucide="compass" class="coming-soon-icon"></i><div class="coming-soon-title">Discover</div><div class="coming-soon-sub">Coming soon</div></div>
   </div>
   <div id="page-community" style="display:none">
-    <!-- Subtabs: Friends | Clubs -->
     <div class="community-tabs">
-      <button class="ctab active" id="ctab-friends" onclick="setCommunityTab('friends')">Friends</button>
-      <button class="ctab" id="ctab-clubs" onclick="setCommunityTab('clubs')">Clubs</button>
+      <button class="ctab active" id="ctab-chats" onclick="setCommunityTab('chats')">Chats</button>
+      <button class="ctab" id="ctab-requests" onclick="setCommunityTab('requests')" style="position:relative">Requests<span class="req-badge" id="reqBadge" style="display:none">0</span></button>
+      <button class="ctab" id="ctab-discover" onclick="setCommunityTab('discover')">Discover</button>
     </div>
-    <!-- Friends -->
-    <div id="comm-friends">
-      <div class="friends-nav">
-        <button class="fnav-btn active" id="fnav-myfriends" onclick="setFriendsView('myfriends')">My Friends</button>
-        <button class="fnav-btn" id="fnav-requests" onclick="setFriendsView('requests')" style="position:relative">Requests<span class="req-badge" id="reqBadge" style="display:none">0</span></button>
-        <button class="fnav-btn" id="fnav-find" onclick="setFriendsView('find')">Find Friends</button>
+
+    <!-- Chats -->
+    <div id="comm-chats">
+      <div id="comm-chats-list" class="friends-list"></div>
+    </div>
+
+    <!-- Requests -->
+    <div id="comm-requests" style="display:none">
+      <div class="friends-nav" style="padding:12px 16px 4px">
+        <button class="fnav-btn active" id="rqfilt-all" onclick="setRequestFilter('all')">All</button>
+        <button class="fnav-btn" id="rqfilt-received" onclick="setRequestFilter('received')">Received</button>
+        <button class="fnav-btn" id="rqfilt-sent" onclick="setRequestFilter('sent')">Sent</button>
       </div>
-      <div id="fview-myfriends" class="friends-list"></div>
-      <div id="fview-requests" class="friends-list" style="display:none"></div>
-      <div id="fview-find" style="display:none">
-        <div class="find-search">
-          <div class="search-wrap">
-            <span class="search-icon">🔍</span>
-            <input class="search-input" id="friendSearchInput" placeholder="Search by username…" oninput="debounceFriendSearch(this.value)">
-          </div>
+      <div id="comm-requests-list" class="friends-list"></div>
+    </div>
+
+    <!-- Discover -->
+    <div id="comm-discover" style="display:none">
+      <div style="padding:14px 16px 4px">
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input class="search-input" id="friendSearchInput" placeholder="Search by username…" oninput="debounceFriendSearch(this.value)">
         </div>
-        <div class="find-results" id="findResults"><div style="padding:16px;color:var(--text3);font-size:13px;text-align:center">Type a username to search</div></div>
       </div>
-    </div>
-    <!-- Clubs (coming soon) -->
-    <div id="comm-clubs" style="display:none">
-      <div class="coming-soon" style="margin-top:20px"><i data-lucide="users-round" class="coming-soon-icon"></i><div class="coming-soon-title">Clubs</div><div class="coming-soon-sub">Coming soon</div></div>
+      <div class="find-results" id="findResults">
+        <div style="padding:16px;color:var(--text3);font-size:13px;text-align:center">Type at least 3 characters</div>
+      </div>
     </div>
   </div>
 </div>
@@ -3265,7 +3275,7 @@ window.toggleFilterPanel = () => {
     document.getElementById('filterPanel').style.display = 'none';
     document.getElementById('filterBtn').classList.remove('active');
   }
-  updateHeaderSpacer();
+  requestAnimationFrame(updateHeaderSpacer);
 };
 
 window.toggleSortPanel = () => {
@@ -3281,7 +3291,7 @@ window.toggleSortPanel = () => {
     document.getElementById('sortPanel').style.display = 'none';
     document.getElementById('sortBtn').classList.remove('active');
   }
-  updateHeaderSpacer();
+  requestAnimationFrame(updateHeaderSpacer);
 };
 
 function buildSortOptions() {
@@ -3925,94 +3935,103 @@ async function loadFriends() {
 }
 
 // ── COMMUNITY PAGE ────────────────────────────────────────────────────────────
+let requestFilter = 'all';
+
 function initCommunityPage() {
-  communitySubtab = 'friends'; friendsView = 'myfriends';
-  document.getElementById('ctab-friends')?.classList.add('active');
-  document.getElementById('ctab-clubs')?.classList.remove('active');
-  document.getElementById('comm-friends').style.display = '';
-  document.getElementById('comm-clubs').style.display = 'none';
-  document.getElementById('fnav-myfriends')?.classList.add('active');
-  document.getElementById('fnav-requests')?.classList.remove('active');
-  document.getElementById('fnav-find')?.classList.remove('active');
-  document.getElementById('fview-myfriends').style.display = '';
-  document.getElementById('fview-requests').style.display = 'none';
-  document.getElementById('fview-find').style.display = 'none';
-  loadFriends().then(() => renderMyFriends());
+  communitySubtab = 'chats';
+  ['chats','requests','discover'].forEach(t => {
+    document.getElementById('ctab-' + t)?.classList.toggle('active', t === 'chats');
+    const el = document.getElementById('comm-' + t);
+    if (el) el.style.display = t === 'chats' ? '' : 'none';
+  });
+  loadFriends().then(() => renderChats());
 }
 
 window.setCommunityTab = (tab) => {
   communitySubtab = tab;
-  ['friends','clubs'].forEach(t => {
+  ['chats','requests','discover'].forEach(t => {
     document.getElementById('ctab-' + t)?.classList.toggle('active', t === tab);
     const el = document.getElementById('comm-' + t);
     if (el) el.style.display = t === tab ? '' : 'none';
   });
-  if (tab === 'friends') loadFriends().then(() => renderFriendsView());
-};
-
-window.setFriendsView = (view) => {
-  friendsView = view;
-  ['myfriends','requests','find'].forEach(v => {
-    document.getElementById('fnav-' + v)?.classList.toggle('active', v === view);
-    const el = document.getElementById('fview-' + v);
-    if (el) el.style.display = v === view ? '' : 'none';
-  });
-  if (view === 'myfriends') renderMyFriends();
-  else if (view === 'requests') renderFriendRequests();
-  else if (view === 'find') {
+  if (tab === 'chats') renderChats();
+  else if (tab === 'requests') renderRequests();
+  else if (tab === 'discover') {
     const si = document.getElementById('friendSearchInput');
     if (si) si.value = '';
-    document.getElementById('findResults').innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px;text-align:center">Type a username to search</div>';
+    const fr = document.getElementById('findResults');
+    if (fr) fr.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px;text-align:center">Type at least 3 characters</div>';
   }
 };
 
-function renderFriendsView() {
-  if (friendsView === 'myfriends') renderMyFriends();
-  else if (friendsView === 'requests') renderFriendRequests();
-}
+// Compat shim — notification clicks still call this
+window.setFriendsView = (view) => {
+  if (view === 'requests') setCommunityTab('requests');
+  else setCommunityTab('chats');
+};
 
-// ── RENDER FRIENDS ────────────────────────────────────────────────────────────
-function renderMyFriends() {
-  const el = document.getElementById('fview-myfriends');
+// ── RENDER CHATS ──────────────────────────────────────────────────────────────
+function renderChats() {
+  const el = document.getElementById('comm-chats-list');
   if (!el) return;
   if (!friendsList.length) {
-    el.innerHTML = '<div class="empty" style="padding:40px 0"><div class="empty-icon"><i data-lucide="users"></i></div><div class="empty-title">No friends yet</div><div class="empty-sub">Use Find Friends to connect</div></div>';
+    el.innerHTML = '<div class="empty" style="padding:40px 0"><div class="empty-icon"><i data-lucide="message-circle"></i></div><div class="empty-title">No chats yet</div><div class="empty-sub">Add friends to start chatting</div></div>';
     refreshIcons(); return;
   }
   el.innerHTML = friendsList.map(f => {
     const init = (f.displayName || f.username || '?')[0].toUpperCase();
     const sid = jsStr(f.id), sdn = jsStr(f.displayName || f.username);
-    return '<div class="friend-card" data-friend-id="' + esc(f.id) + '" style="cursor:pointer" onclick="openFriendDetails(\'' + sid + '\',\'' + sdn + '\')">'
-      + '<div class="friend-avatar">' + esc(init) + '</div>'
-      + '<div class="friend-info"><div class="friend-name">' + esc(f.displayName || f.username) + '</div>'
+    return '<div class="friend-card" data-friend-id="' + esc(f.id) + '">'
+      + '<div class="friend-avatar" style="cursor:pointer" onclick="openFriendDetails(\'' + sid + '\',\'' + sdn + '\');setTimeout(()=>setFriendDetailsTab(\'chat\'),200)">' + esc(init) + '</div>'
+      + '<div class="friend-info" style="cursor:pointer;flex:1;min-width:0" onclick="openFriendDetails(\'' + sid + '\',\'' + sdn + '\');setTimeout(()=>setFriendDetailsTab(\'chat\'),200)">'
+      + '<div class="friend-name">' + esc(f.displayName || f.username) + '</div>'
       + '<div class="friend-username">@' + esc(f.username) + '</div></div>'
-      + '<div class="friend-actions"><i data-lucide="chevron-right" style="color:var(--text3);width:16px;height:16px;flex-shrink:0"></i></div>'
-      + '</div>';
-  }).join('');
-  refreshIcons();
-}
-
-function renderFriendRequests() {
-  const el = document.getElementById('fview-requests');
-  if (!el) return;
-  if (!friendRequests.length) {
-    el.innerHTML = '<div style="padding:40px 0;text-align:center;color:var(--text3);font-size:13px">No pending requests</div>';
-    return;
-  }
-  el.innerHTML = friendRequests.map(r => {
-    const init = (r.displayName || r.username || '?')[0].toUpperCase();
-    const sid = jsStr(r.id);
-    return '<div class="friend-card">'
-      + '<div class="friend-avatar">' + esc(init) + '</div>'
-      + '<div class="friend-info"><div class="friend-name">' + esc(r.displayName || r.username) + '</div>'
-      + '<div class="friend-username">@' + esc(r.username) + '</div></div>'
-      + '<div class="friend-actions">'
-      + '<button class="btn-add-collection" onclick="acceptFriendRequest(\'' + sid + '\')">Accept</button>'
-      + '<button class="btn-edit" style="color:var(--danger);border-color:var(--danger)" onclick="declineFriendRequest(\'' + sid + '\')" title="Decline"><i data-lucide="x"></i></button>'
+      + '<div class="friend-actions" style="gap:6px;flex-shrink:0">'
+      + '<button class="btn-edit" onclick="openFriendDetails(\'' + sid + '\',\'' + sdn + '\')" title="Library"><i data-lucide="book-open"></i></button>'
+      + '<button class="btn-edit" style="opacity:0.4;cursor:not-allowed" title="Clubs (coming soon)" disabled><i data-lucide="users-round"></i></button>'
       + '</div></div>';
   }).join('');
   refreshIcons();
 }
+
+function renderMyFriends() { renderChats(); } // alias used by removeFriendAndClose
+
+// ── RENDER REQUESTS ───────────────────────────────────────────────────────────
+window.setRequestFilter = (f) => {
+  requestFilter = f;
+  ['all','received','sent'].forEach(v => document.getElementById('rqfilt-' + v)?.classList.toggle('active', v === f));
+  renderRequests();
+};
+
+function renderRequests() {
+  const el = document.getElementById('comm-requests-list');
+  if (!el) return;
+  let list = [];
+  if (requestFilter !== 'sent')     list = [...list, ...friendRequests.map(r => ({ ...r, dir:'received' }))];
+  if (requestFilter !== 'received') list = [...list, ...sentRequests.map(r => ({ ...r, dir:'sent' }))];
+  if (!list.length) {
+    el.innerHTML = '<div style="padding:40px 0;text-align:center;color:var(--text3);font-size:13px">No requests</div>';
+    return;
+  }
+  el.innerHTML = list.map(r => {
+    const init = (r.displayName || r.username || '?')[0].toUpperCase();
+    const sid = jsStr(r.id);
+    const actions = r.dir === 'received'
+      ? '<button class="btn-add-collection" onclick="acceptFriendRequest(\'' + sid + '\')">Accept</button>'
+        + '<button class="btn-edit" style="color:var(--danger);border-color:var(--danger)" onclick="declineFriendRequest(\'' + sid + '\')" title="Decline"><i data-lucide="x"></i></button>'
+      : '<span style="font-size:11px;color:var(--text3);padding:4px 8px">Pending</span>';
+    return '<div class="friend-card">'
+      + '<div class="friend-avatar">' + esc(init) + '</div>'
+      + '<div class="friend-info"><div class="friend-name">' + esc(r.displayName || r.username) + '</div>'
+      + '<div class="friend-username">@' + esc(r.username) + '</div>'
+      + '<div style="font-size:11px;color:var(--text3);margin-top:2px">'
+      + (r.dir === 'received' ? 'Wants to be your friend' : 'Request sent') + '</div>'
+      + '</div><div class="friend-actions">' + actions + '</div></div>';
+  }).join('');
+  refreshIcons();
+}
+
+function renderFriendRequests() { renderRequests(); } // alias
 
 // ── FIND FRIENDS ──────────────────────────────────────────────────────────────
 window.debounceFriendSearch = (val) => {
@@ -4243,7 +4262,7 @@ function buildFlibGenreFilters() {
   const el = document.getElementById('flibGenreFilters');
   if (!el) return;
   el.innerHTML = allGenres.map(g =>
-    '<button class="filter-pill' + (flibGenreFilters.includes(g) ? ' active' : '') + '" onclick="toggleFlibGenre(\'' + jsStr(g) + '\')">' + esc(g) + '</button>'
+    '<button class="filter-btn' + (flibGenreFilters.includes(g) ? ' active' : '') + '" onclick="toggleFlibGenre(\'' + jsStr(g) + '\')">' + esc(g) + '</button>'
   ).join('');
 }
 
@@ -4323,12 +4342,17 @@ window.applyFriendLibFilters = () => {
   el.innerHTML = list.map(b => {
     const genres = (b.genres||[]).slice(0,2).map(g => '<span class="tag genre">' + esc(g) + '</span>').join('');
     const series = b.series ? '<span class="tag series"><i data-lucide="book-open" class="tag-icon"></i> ' + esc(b.series) + (b.seriesNumber ? ' #'+b.seriesNumber : '') + '</span>' : '';
+    const alreadyWishlisted = books.some(w => w.location === 'Wishlist' && (w.title||'').toLowerCase() === (b.title||'').toLowerCase());
+    const starBtn = '<button class="wishlist-star-btn' + (alreadyWishlisted ? ' in-wishlist' : '') + '" title="' + (alreadyWishlisted ? 'In wishlist' : 'Add to wishlist') + '" onclick="addToWishlist(\'' + jsStr(b.title||'') + '\',\'' + jsStr(b.author||'') + '\',' + JSON.stringify(b.genres||[]) + ',\'' + jsStr(b.series||'') + '\',\'' + jsStr(b.seriesNumber||'') + '\',this)">★</button>';
     return '<div class="book-card' + (b.read ? ' is-read' : '') + '">'
       + '<div class="book-check"><span class="check-icon">✓</span></div>'
       + '<div class="book-info"><div class="book-title">' + esc(b.title||'') + '</div>'
       + '<div class="book-author">' + esc(b.author||'') + '</div>'
       + '<div class="book-tags">' + genres + series + '</div></div>'
-      + '<button class="btn-edit" onclick="requestBorrow(\'' + jsStr(friendDetailsUid) + '\',\'' + jsStr(b.id) + '\',\'' + jsStr(b.title||'') + '\')" title="Request to borrow" style="flex-shrink:0"><i data-lucide="hand"></i></button>'
+      + '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">'
+      + starBtn
+      + '<button class="btn-edit" onclick="requestBorrow(\'' + jsStr(friendDetailsUid) + '\',\'' + jsStr(b.id) + '\',\'' + jsStr(b.title||'') + '\')" title="Request to borrow"><i data-lucide="hand"></i></button>'
+      + '</div>'
       + '</div>';
   }).join('');
   refreshIcons();
@@ -4375,13 +4399,25 @@ function renderChatMessages(msgs) {
         + '</div>';
     }
     if (m.type === 'book_ref') {
+      const gbId = createGlobalBookId(m.bookTitle||'', m.bookAuthor||'');
+      const gb = globalBookCache.find(x => x.id === gbId);
+      const ratingStr = gb ? renderStars(gb.ratingTotal||0, gb.ratingCount||0) : '';
+      const bookGenres = m.bookGenres || (gb ? gb.genres : []) || [];
+      const genrePills = bookGenres.slice(0,3).map(g => '<span class="tag genre">' + esc(g) + '</span>').join('');
+      const seriesStr = m.bookSeries ? '<span class="tag series">' + esc(m.bookSeries) + (m.bookSeriesNumber ? ' #'+m.bookSeriesNumber : '') + '</span>' : '';
+      const alreadyWishlisted = books.some(b => b.location === 'Wishlist' && (b.title||'').toLowerCase() === (m.bookTitle||'').toLowerCase());
+      const starBtn = '<button class="wishlist-star-btn' + (alreadyWishlisted ? ' in-wishlist' : '') + '" title="' + (alreadyWishlisted ? 'In wishlist' : 'Add to wishlist') + '" onclick="addToWishlist(\'' + jsStr(m.bookTitle||'') + '\',\'' + jsStr(m.bookAuthor||'') + '\',' + JSON.stringify(bookGenres) + ',\'' + jsStr(m.bookSeries||'') + '\',\'' + jsStr(m.bookSeriesNumber||'') + '\',this)">★</button>';
       return '<div class="chat-wrap ' + side + '">'
         + (!mine ? '<div class="chat-sender">' + esc(m.displayName||m.fromUsername) + '</div>' : '')
         + '<div class="chat-book-card ' + side + '">'
         + (m.text ? '<div style="font-size:13px;color:var(--text2);margin-bottom:6px;font-style:italic">' + esc(m.text) + '</div>' : '')
         + '<div class="chat-book-title">' + esc(m.bookTitle||'') + '</div>'
         + (m.bookAuthor ? '<div class="chat-book-author">' + esc(m.bookAuthor) + '</div>' : '')
-        + '<div class="chat-book-badge">📖 Book Reference</div>'
+        + (ratingStr ? '<div style="margin-top:3px">' + ratingStr + '</div>' : '')
+        + '<div class="chat-book-footer">'
+        + '<div class="chat-book-tags">' + genrePills + seriesStr + '</div>'
+        + starBtn
+        + '</div>'
         + '</div>'
         + '<div class="chat-time">' + ts + '</div>'
         + '</div>';
@@ -4439,21 +4475,23 @@ window.filterBookPicker = (q) => {
   if (!el) return;
   if (!list.length) { el.innerHTML = '<div style="padding:8px;color:var(--text3);font-size:13px">No books found</div>'; return; }
   el.innerHTML = list.map(b =>
-    '<div class="book-picker-item" onclick="sendBookRef(\'' + jsStr(b.id) + '\',\'' + jsStr(b.title||'') + '\',\'' + jsStr(b.author||'') + '\')">'
+    '<div class="book-picker-item" onclick="sendBookRef(\'' + jsStr(b.id) + '\',\'' + jsStr(b.title||'') + '\',\'' + jsStr(b.author||'') + '\',' + JSON.stringify(b.genres||[]) + ',\'' + jsStr(b.series||'') + '\',\'' + jsStr(b.seriesNumber||'') + '\')">'
     + '<div style="font-size:13px;font-weight:600;color:var(--text)">' + esc(b.title||'') + '</div>'
     + '<div style="font-size:11px;color:var(--text3)">' + esc(b.author||'') + '</div>'
     + '</div>'
   ).join('');
 };
 
-window.sendBookRef = async (bookId, bookTitle, bookAuthor) => {
+window.sendBookRef = async (bookId, bookTitle, bookAuthor, bookGenres, bookSeries, bookSeriesNumber) => {
   if (!friendDetailsUid) return;
   closeBookPicker();
   const note = document.getElementById('chatTextInput').value.trim();
   document.getElementById('chatTextInput').value = ''; document.getElementById('chatTextInput').style.height = 'auto';
   try {
     await addDoc(chatColRef(currentUser.uid, friendDetailsUid), {
-      type: 'book_ref', bookId, bookTitle, bookAuthor, text: note,
+      type: 'book_ref', bookId, bookTitle, bookAuthor,
+      bookGenres: bookGenres || [], bookSeries: bookSeries || '', bookSeriesNumber: bookSeriesNumber || '',
+      text: note,
       fromUid: currentUser.uid, fromUsername: userUsername,
       displayName: currentUser.displayName || userUsername,
       createdAt: serverTimestamp()
@@ -4463,6 +4501,18 @@ window.sendBookRef = async (bookId, bookTitle, bookAuthor) => {
       fromUsername: userUsername, displayName: currentUser.displayName || userUsername,
       text: '📖 Shared a book: ' + bookTitle, read: false, createdAt: serverTimestamp()
     });
+  } catch(e) { showStatus('Failed: ' + e.message, 'error'); }
+};
+
+window.addToWishlist = async (title, author, genres, series, seriesNumber, btnEl) => {
+  if (!currentUser) return;
+  const already = books.some(b => b.location === 'Wishlist' && (b.title||'').toLowerCase() === (title||'').toLowerCase());
+  if (already) { showStatus('Already in your wishlist', 'success'); return; }
+  try {
+    await saveBook({ title, author, genres: genres||[], series: series||'', seriesNumber: seriesNumber||'', location: 'Wishlist', read: false, rating: 0, checkoutDate: '', borrowedBy: '' }, { skipGlobalSync: true });
+    if (btnEl) { btnEl.classList.add('in-wishlist'); btnEl.title = 'In wishlist'; }
+    showStatus('Added to wishlist ★', 'success');
+    await loadBooks();
   } catch(e) { showStatus('Failed: ' + e.message, 'error'); }
 };
 
@@ -4520,13 +4570,15 @@ window.handleNotifClick = (type, fromUid, fromName) => {
   closeModal('notifModal');
   if (type === 'friend_request') {
     setPage('community');
-    setTimeout(() => { setCommunityTab('friends'); setFriendsView('requests'); }, 120);
+    setTimeout(() => setCommunityTab('requests'), 120);
   } else if (type === 'chat_message' || type === 'borrow_request') {
     const friend = friendsList.find(f => f.id === fromUid);
-    if (friend) {
-      openFriendDetails(fromUid, fromName || friend.displayName || friend.username);
-      setTimeout(() => setFriendDetailsTab('chat'), 200);
-    }
+    const name = fromName || (friend && (friend.displayName || friend.username)) || '';
+    setPage('community');
+    setTimeout(() => {
+      openFriendDetails(fromUid, name);
+      setTimeout(() => setFriendDetailsTab('chat'), 250);
+    }, 120);
   }
 };
 
