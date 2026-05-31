@@ -118,6 +118,39 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .notif-text { flex: 1; min-width: 0; }
 .notif-title { font-size: 13px; color: var(--text); line-height: 1.4; }
 .notif-sub { font-size: 11px; color: var(--text3); margin-top: 3px; }
+.fdet-body { display: flex; flex-direction: column; overflow: hidden; flex: 1; min-height: 0; }
+.fdet-controls { padding: 10px 16px 0; display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; }
+.fdet-list { flex: 1; overflow-y: auto; padding: 10px 16px 80px; display: flex; flex-direction: column; gap: 8px; }
+.fdet-list.grid-view { display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; }
+.fdet-list.list-view .book-card { flex-direction: row; padding: 8px 10px; }
+.chat-body { display: flex; flex-direction: column; flex: 1; min-height: 0; position: relative; overflow: hidden; }
+.chat-messages { flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
+.chat-wrap { display: flex; flex-direction: column; max-width: 78%; }
+.chat-wrap.mine { align-self: flex-end; align-items: flex-end; }
+.chat-wrap.theirs { align-self: flex-start; align-items: flex-start; }
+.chat-sender { font-size: 10px; color: var(--text3); margin-bottom: 3px; padding: 0 4px; }
+.chat-bubble { padding: 9px 13px; border-radius: 16px; font-size: 13px; line-height: 1.5; word-break: break-word; }
+.chat-bubble.mine { background: var(--accent); color: #1a1612; border-bottom-right-radius: 4px; }
+.chat-bubble.theirs { background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+.chat-time { font-size: 10px; color: var(--text3); margin-top: 3px; padding: 0 4px; }
+.chat-book-card { border-radius: var(--radius-sm); padding: 10px 12px; max-width: 240px; }
+.chat-book-card.mine { background: rgba(201,169,110,0.15); border: 1px solid rgba(201,169,110,0.3); }
+.chat-book-card.theirs { background: var(--surface3); border: 1px solid var(--border); }
+.chat-book-title { font-size: 13px; font-family: 'Playfair Display', serif; color: var(--text); font-weight: 700; line-height: 1.3; }
+.chat-book-author { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.chat-book-badge { font-size: 10px; color: var(--accent); font-weight: 600; margin-top: 5px; text-transform: uppercase; letter-spacing: 0.05em; }
+.borrow-req-card { border-radius: var(--radius-sm); padding: 10px 12px; border: 1px solid var(--border); }
+.borrow-req-card.mine { background: rgba(201,169,110,0.08); border-color: rgba(201,169,110,0.25); }
+.borrow-req-card.theirs { background: var(--surface3); }
+.chat-input-row { padding: 10px 14px; border-top: 1px solid var(--border); display: flex; gap: 8px; align-items: flex-end; background: var(--surface); flex-shrink: 0; }
+.chat-textarea { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 9px 14px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text); resize: none; outline: none; min-height: 38px; max-height: 120px; overflow-y: auto; line-height: 1.4; }
+.chat-textarea:focus { border-color: var(--accent); }
+.chat-send-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); border: none; color: #1a1612; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+.chat-plus-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--surface3); border: 1px solid var(--border); color: var(--text2); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+.book-picker { position: absolute; bottom: 58px; left: 0; right: 0; background: var(--surface); border-top: 1px solid var(--border); padding: 10px 14px; max-height: 220px; overflow-y: auto; z-index: 10; display: flex; flex-direction: column; gap: 6px; }
+.book-picker-search { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text); outline: none; width: 100%; box-sizing: border-box; }
+.book-picker-item { padding: 8px 10px; border-radius: var(--radius-sm); cursor: pointer; display: flex; flex-direction: column; gap: 2px; }
+.book-picker-item:active { background: var(--surface2); }
 .header-nav { display: flex; gap: 0; margin-top: 10px; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; }
 .header-nav::-webkit-scrollbar { display: none; }
 .hnav-btn { padding: 7px 14px; border: none; border-bottom: 2px solid transparent; background: none; color: var(--text3); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all 0.15s; flex-shrink: 0; -webkit-tap-highlight-color: transparent; }
@@ -1049,27 +1082,68 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
   </div>
 </div>
 
-<div class="modal-overlay" id="friendLibModal">
-  <div class="modal full-sheet" id="friendLibSheet">
+<div class="modal-overlay" id="friendDetailsModal">
+  <div class="modal full-sheet" id="friendDetailsSheet">
     <div class="modal-header">
       <div class="modal-handle"></div>
       <div class="modal-header-row">
-        <button style="background:none;border:none;color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;padding:0;font-family:'DM Sans',sans-serif;flex-shrink:0" onclick="closeFriendLibrary()"><i data-lucide="chevron-left"></i> Back</button>
-        <div class="modal-title" id="friendLibTitle" style="flex:1;text-align:center;padding:0 12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
-        <div style="width:60px"></div>
+        <button style="background:none;border:none;color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;padding:0;font-family:'DM Sans',sans-serif;flex-shrink:0" onclick="closeFriendDetails()"><i data-lucide="chevron-left"></i> Back</button>
+        <div class="modal-title" id="friendDetailsTitle" style="flex:1;text-align:center;padding:0 12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
+        <button onclick="confirmRemoveFriend(friendDetailsUid)" style="background:none;border:none;color:var(--text3);cursor:pointer;display:flex;align-items:center;padding:4px;flex-shrink:0" title="Unfriend"><i data-lucide="user-x" style="width:16px;height:16px"></i></button>
+      </div>
+      <div class="flib-tabs">
+        <button class="ctab active" id="fdet-tab-library" onclick="setFriendDetailsTab('library')">Library</button>
+        <button class="ctab" id="fdet-tab-chat" onclick="setFriendDetailsTab('chat')">Chat<span id="chatUnreadBadge" style="display:none;margin-left:5px;background:var(--danger);color:#fff;border-radius:8px;padding:0 5px;font-size:10px;font-weight:700"></span></button>
+        <button class="ctab" id="fdet-tab-clubs" onclick="setFriendDetailsTab('clubs')">Clubs</button>
       </div>
     </div>
-    <div class="modal-body" style="padding-top:0;display:flex;flex-direction:column;gap:10px">
-      <div class="flib-tabs">
-        <button class="ctab active" id="flib-tab-lib" onclick="setFriendLibTab('library')">Library</button>
-        <button class="ctab" id="flib-tab-wish" onclick="setFriendLibTab('wishlist')">Wishlist</button>
+
+    <!-- Library tab -->
+    <div id="fdet-library" class="fdet-body">
+      <div class="fdet-controls">
+        <div class="subheader-stats" id="friendLibStats"></div>
+        <div class="subheader-ctrl">
+          <div class="search-wrap" style="flex:1;min-width:0">
+            <span class="search-icon">🔍</span>
+            <input class="search-input" id="friendLibSearch" placeholder="Search…" oninput="applyFriendLibFilters()">
+          </div>
+          <button class="ctrl-btn" id="flibFilterBtn" onclick="toggleFlibPanel('filter')"><i data-lucide="sliders-horizontal"></i></button>
+          <button class="ctrl-btn" id="flibSortBtn" onclick="toggleFlibPanel('sort')"><i data-lucide="arrow-up-down"></i></button>
+          <button class="ctrl-btn" id="flibViewBtn" onclick="cycleFlibView()"><i data-lucide="layout-list" id="flibViewIcon"></i></button>
+        </div>
+        <div id="flibFilterPanel" style="display:none;padding-top:10px;border-top:1px solid var(--border)">
+          <div class="filter-row" id="flibGenreFilters"></div>
+        </div>
+        <div id="flibSortPanel" style="display:none;padding-top:10px;border-top:1px solid var(--border)">
+          <div class="sort-options" id="flibSortOptions"></div>
+        </div>
       </div>
-      <div class="subheader-stats" id="friendLibStats" style="padding:0 0 4px;"></div>
-      <div class="search-wrap">
-        <span class="search-icon">🔍</span>
-        <input class="search-input" id="friendLibSearch" placeholder="Search…" oninput="renderFriendBooks()">
+      <div id="friendLibList" class="fdet-list"></div>
+    </div>
+
+    <!-- Chat tab -->
+    <div id="fdet-chat" class="chat-body" style="display:none">
+      <div class="chat-messages" id="chatMessages"></div>
+      <div id="bookPicker" class="book-picker" style="display:none">
+        <input class="book-picker-search" id="bookPickerSearch" placeholder="Search your books…" oninput="filterBookPicker(this.value)">
+        <div id="bookPickerList" style="margin-top:6px"></div>
       </div>
-      <div id="friendLibList" style="display:flex;flex-direction:column;gap:8px;padding-bottom:20px"></div>
+      <div class="chat-input-row">
+        <button class="chat-plus-btn" onclick="toggleBookPicker()"><i data-lucide="plus"></i></button>
+        <textarea class="chat-textarea" id="chatTextInput" placeholder="Message…" rows="1"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage()}"
+          oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
+        <button class="chat-send-btn" onclick="sendChatMessage()"><i data-lucide="send"></i></button>
+      </div>
+    </div>
+
+    <!-- Clubs tab -->
+    <div id="fdet-clubs" style="display:none">
+      <div class="coming-soon" style="min-height:40vh">
+        <div style="font-size:40px">🏛️</div>
+        <div style="font-family:'Playfair Display',serif;font-size:22px;color:var(--accent2)">Clubs</div>
+        <div style="font-size:14px;color:var(--text3)">Coming soon</div>
+      </div>
     </div>
   </div>
 </div>
@@ -1496,7 +1570,7 @@ All columns other than Author, Title, Series and Genres should be left empty or 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as fbSignOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, getDocsFromCache, query, where, limit, orderBy, serverTimestamp, increment } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, getDocsFromCache, query, where, limit, orderBy, onSnapshot, serverTimestamp, increment } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 // ── CONFIG ───────────────────────────────────────────────────────────────────
 const firebaseConfig = {
@@ -1540,7 +1614,10 @@ let editingId = null;
 let userUsername = '';
 let friendsList = [], friendRequests = [], sentRequests = [];
 let communitySubtab = 'friends', friendsView = 'myfriends';
-let friendLibUid = null, friendLibName = '', friendLibTab = 'library', friendLibBooks = [];
+let friendDetailsUid = null, friendDetailsName = '', friendDetailsTab = 'library';
+let friendLibBooks = [], flibSort = 'title-asc', flibView = 'card';
+let flibGenreFilters = [], flibTopFilter = 'all', flibFilterOpen = false, flibSortOpen = false;
+let chatListener = null, bookPickerOpen = false;
 let friendSearchTimer = null;
 let notifications = [], unreadNotifCount = 0;
 let checkoutTargetId = null;
@@ -1556,6 +1633,7 @@ function userProfileDoc(uid) { return doc(db, 'users', uid, 'meta', 'profile'); 
 function friendDoc(uid, fid) { return doc(db, 'users', uid, 'friends', fid); }
 function friendsCol(uid) { return collection(db, 'users', uid, 'friends'); }
 function notifsCol(uid) { return collection(db, 'users', uid, 'notifications'); }
+function chatColRef(uid1, uid2) { return collection(db, 'chats', [uid1,uid2].sort().join('_'), 'messages'); }
 async function loadSettings() {
   try {
     const snap = await getDocs(collection(db, 'users', currentUser.uid, 'meta'));
@@ -3904,14 +3982,12 @@ function renderMyFriends() {
   el.innerHTML = friendsList.map(f => {
     const init = (f.displayName || f.username || '?')[0].toUpperCase();
     const sid = jsStr(f.id), sdn = jsStr(f.displayName || f.username);
-    return '<div class="friend-card" data-friend-id="' + esc(f.id) + '">'
+    return '<div class="friend-card" data-friend-id="' + esc(f.id) + '" style="cursor:pointer" onclick="openFriendDetails(\'' + sid + '\',\'' + sdn + '\')">'
       + '<div class="friend-avatar">' + esc(init) + '</div>'
       + '<div class="friend-info"><div class="friend-name">' + esc(f.displayName || f.username) + '</div>'
       + '<div class="friend-username">@' + esc(f.username) + '</div></div>'
-      + '<div class="friend-actions">'
-      + '<button class="btn-edit" onclick="openFriendLibrary(\'' + sid + '\',\'' + sdn + '\')" title="View library"><i data-lucide="book-open"></i></button>'
-      + '<button class="btn-edit" style="color:var(--danger);border-color:var(--danger)" onclick="confirmRemoveFriend(\'' + sid + '\')" title="Remove friend"><i data-lucide="user-x"></i></button>'
-      + '</div></div>';
+      + '<div class="friend-actions"><i data-lucide="chevron-right" style="color:var(--text3);width:16px;height:16px;flex-shrink:0"></i></div>'
+      + '</div>';
   }).join('');
   refreshIcons();
 }
@@ -4055,128 +4131,339 @@ window.declineFriendRequest = async (fromUid) => {
 };
 
 window.confirmRemoveFriend = (friendUid) => {
+  // Works from both the friend list card (data-attr) and the details page header button
   const actionsEl = document.querySelector('.friend-card[data-friend-id="' + friendUid + '"] .friend-actions');
-  if (!actionsEl) return;
-  const sid = jsStr(friendUid);
-  actionsEl.innerHTML = '<span style="font-size:12px;color:var(--text2);white-space:nowrap;margin-right:4px">Unfriend?</span>'
-    + '<button class="btn-add-collection" style="background:var(--danger);border-color:var(--danger);color:#fff" onclick="removeFriend(\'' + sid + '\')">Yes</button>'
-    + '<button class="btn-edit" onclick="cancelRemoveFriend(\'' + sid + '\')">No</button>';
+  if (actionsEl) {
+    const sid = jsStr(friendUid);
+    actionsEl.innerHTML = '<span style="font-size:12px;color:var(--text2);white-space:nowrap;margin-right:4px">Unfriend?</span>'
+      + '<button class="btn-add-collection" style="background:var(--danger);border-color:var(--danger);color:#fff;font-size:11px" onclick="removeFriendAndClose(\'' + sid + '\')">Yes</button>'
+      + '<button class="btn-edit" onclick="cancelRemoveFriend(\'' + sid + '\')">No</button>';
+  } else {
+    // Triggered from inside the friend details page — use a simple prompt style
+    if (confirm('Remove ' + (friendDetailsName || 'this friend') + ' from your friends?')) removeFriendAndClose(friendUid);
+  }
 };
 
 window.cancelRemoveFriend = (friendUid) => {
-  const f = friendsList.find(x => x.id === friendUid);
-  if (!f) return;
   const actionsEl = document.querySelector('.friend-card[data-friend-id="' + friendUid + '"] .friend-actions');
   if (!actionsEl) return;
-  const sid = jsStr(f.id), sdn = jsStr(f.displayName || f.username);
-  actionsEl.innerHTML =
-    '<button class="btn-edit" onclick="openFriendLibrary(\'' + sid + '\',\'' + sdn + '\')" title="View library"><i data-lucide="book-open"></i></button>'
-    + '<button class="btn-edit" style="color:var(--danger);border-color:var(--danger)" onclick="confirmRemoveFriend(\'' + sid + '\')" title="Remove friend"><i data-lucide="user-x"></i></button>';
+  actionsEl.innerHTML = '<i data-lucide="chevron-right" style="color:var(--text3);width:16px;height:16px;flex-shrink:0"></i>';
   refreshIcons();
 };
 
-window.removeFriend = async (friendUid) => {
+window.removeFriendAndClose = async (friendUid) => {
   try {
     await deleteDoc(friendDoc(currentUser.uid, friendUid));
     try { await deleteDoc(friendDoc(friendUid, currentUser.uid)); } catch(_) {}
     friendsList = friendsList.filter(f => f.id !== friendUid);
+    closeFriendDetails();
     renderMyFriends();
     showStatus('Friend removed.', 'success');
     setTimeout(hideStatus, 2000);
   } catch(e) { showStatus('Error: ' + e.message, 'error'); }
 };
 
-// ── FRIEND LIBRARY ────────────────────────────────────────────────────────────
-function renderFriendLibStats() {
-  const el = document.getElementById('friendLibStats');
-  if (!el) return;
-  const isWishlist = friendLibTab === 'wishlist';
-  const base = isWishlist
-    ? friendLibBooks.filter(b => b.location === 'Wishlist')
-    : friendLibBooks.filter(b => b.location !== 'Wishlist');
-  const stats = isWishlist
-    ? [
-        { num: base.length,                        label: 'Wishlist' },
-        { num: base.filter(b => b.read).length,    label: 'Read' },
-        { num: base.filter(b => !b.read).length,   label: 'Unread' },
-      ]
-    : [
-        { num: base.length,                                          label: 'Books' },
-        { num: base.filter(b => b.read).length,                     label: 'Read' },
-        { num: base.filter(b => !b.read).length,                    label: 'Unread' },
-        { num: base.filter(b => b.location === 'Borrowed').length,  label: 'Borrowed' },
-      ];
-  el.innerHTML = stats.map(s =>
-    '<div class="stat"><div class="stat-num">' + s.num + '</div><div class="stat-label">' + s.label + '</div></div>'
-  ).join('');
-}
+// ── FRIEND DETAILS PAGE ───────────────────────────────────────────────────────
+const FLIB_SORT_OPTS = [
+  {val:'title-asc', label:'Title A→Z'}, {val:'title-desc', label:'Title Z→A'},
+  {val:'author-asc', label:'Author A→Z'}, {val:'author-desc', label:'Author Z→A'},
+  {val:'added-desc', label:'Recently Added'},
+];
 
-window.openFriendLibrary = async (uid, name) => {
-  friendLibUid = uid; friendLibName = name; friendLibTab = 'library';
-  document.getElementById('friendLibTitle').textContent = name + "'s Library";
-  document.getElementById('flib-tab-lib').classList.add('active');
-  document.getElementById('flib-tab-wish').classList.remove('active');
+window.openFriendDetails = async (uid, name) => {
+  friendDetailsUid = uid; friendDetailsName = name; friendDetailsTab = 'library';
+  document.getElementById('friendDetailsTitle').textContent = name + "'s Library";
+  document.getElementById('friendDetailsModal').classList.add('open');
+  ['library','chat','clubs'].forEach(t => {
+    document.getElementById('fdet-tab-' + t).classList.toggle('active', t === 'library');
+    document.getElementById('fdet-' + t).style.display = t === 'library' ? '' : 'none';
+  });
   document.getElementById('friendLibSearch').value = '';
   document.getElementById('friendLibList').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3)">Loading…</div>';
-  document.getElementById('friendLibModal').classList.add('open');
+  flibGenreFilters = []; flibTopFilter = 'all'; flibSort = 'title-asc'; flibView = 'card';
+  flibFilterOpen = false; flibSortOpen = false;
+  document.getElementById('flibFilterPanel').style.display = 'none';
+  document.getElementById('flibSortPanel').style.display = 'none';
+  document.getElementById('flibFilterBtn').classList.remove('active');
+  document.getElementById('flibSortBtn').classList.remove('active');
   refreshIcons();
   try {
     const snap = await getDocs(query(collection(db, 'users', uid, 'books'), orderBy('addedAt', 'asc')));
     friendLibBooks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    buildFlibGenreFilters();
+    buildFlibSortOptions();
     renderFriendLibStats();
-    renderFriendBooks();
+    applyFriendLibFilters();
   } catch(e) {
     document.getElementById('friendLibList').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3)">Could not load library.</div>';
   }
 };
 
-window.closeFriendLibrary = () => {
-  document.getElementById('friendLibModal').classList.remove('open');
-  friendLibBooks = []; friendLibUid = null;
+window.closeFriendDetails = () => {
+  document.getElementById('friendDetailsModal').classList.remove('open');
+  stopChatListener();
+  friendLibBooks = []; friendDetailsUid = null;
 };
 
-window.setFriendLibTab = (tab) => {
-  friendLibTab = tab;
-  document.getElementById('flib-tab-lib').classList.toggle('active', tab === 'library');
-  document.getElementById('flib-tab-wish').classList.toggle('active', tab === 'wishlist');
-  document.getElementById('friendLibSearch').value = '';
-  renderFriendLibStats();
-  renderFriendBooks();
-};
-
-window.renderFriendBooks = () => {
-  const q = (document.getElementById('friendLibSearch')?.value || '').toLowerCase().trim();
-  const isWishlist = friendLibTab === 'wishlist';
-  let list = friendLibBooks.filter(b => {
-    if (isWishlist) return b.location === 'Wishlist';
-    return b.location !== 'Wishlist';
+window.setFriendDetailsTab = (tab) => {
+  friendDetailsTab = tab;
+  ['library','chat','clubs'].forEach(t => {
+    document.getElementById('fdet-tab-' + t).classList.toggle('active', t === tab);
+    document.getElementById('fdet-' + t).style.display = t === tab ? (t === 'chat' ? 'flex' : '') : 'none';
   });
+  if (tab === 'library') {
+    renderFriendLibStats(); applyFriendLibFilters();
+  } else if (tab === 'chat') {
+    document.getElementById('chatUnreadBadge').style.display = 'none';
+    startChatListener(currentUser.uid, friendDetailsUid);
+  }
+  refreshIcons();
+};
+
+function renderFriendLibStats() {
+  const el = document.getElementById('friendLibStats');
+  if (!el) return;
+  const owned = friendLibBooks.filter(b => b.location !== 'Wishlist');
+  const stats = [
+    { id:'flibAll',      num: owned.length,                                        label: 'Books',    top: 'all' },
+    { id:'flibRead',     num: owned.filter(b => b.read).length,                   label: 'Read',     top: 'read' },
+    { id:'flibUnread',   num: owned.filter(b => !b.read).length,                  label: 'Unread',   top: 'unread' },
+    { id:'flibBorrowed', num: owned.filter(b => b.location === 'Borrowed').length, label: 'Borrowed', top: 'borrowed' },
+  ];
+  el.innerHTML = stats.map(s =>
+    '<div class="stat stat-clickable' + (flibTopFilter === s.top ? ' active' : '') + '" onclick="setFlibTopFilter(\'' + s.top + '\')">'
+    + '<div class="stat-num">' + s.num + '</div><div class="stat-label">' + s.label + '</div></div>'
+  ).join('');
+}
+
+window.setFlibTopFilter = (f) => { flibTopFilter = f; renderFriendLibStats(); applyFriendLibFilters(); };
+
+function buildFlibGenreFilters() {
+  const allGenres = [...new Set(friendLibBooks.flatMap(b => b.genres||[]))].sort();
+  const el = document.getElementById('flibGenreFilters');
+  if (!el) return;
+  el.innerHTML = allGenres.map(g =>
+    '<button class="filter-pill' + (flibGenreFilters.includes(g) ? ' active' : '') + '" onclick="toggleFlibGenre(\'' + jsStr(g) + '\')">' + esc(g) + '</button>'
+  ).join('');
+}
+
+window.toggleFlibGenre = (g) => {
+  flibGenreFilters = flibGenreFilters.includes(g) ? flibGenreFilters.filter(x => x !== g) : [...flibGenreFilters, g];
+  buildFlibGenreFilters();
+  applyFriendLibFilters();
+};
+
+function buildFlibSortOptions() {
+  const el = document.getElementById('flibSortOptions');
+  if (!el) return;
+  el.innerHTML = FLIB_SORT_OPTS.map(o =>
+    '<button class="sort-option' + (flibSort === o.val ? ' active' : '') + '" onclick="setFlibSort(\'' + o.val + '\')">' + o.label + '</button>'
+  ).join('');
+}
+
+window.setFlibSort = (s) => {
+  flibSort = s; flibSortOpen = false;
+  document.getElementById('flibSortPanel').style.display = 'none';
+  document.getElementById('flibSortBtn').classList.remove('active');
+  buildFlibSortOptions(); applyFriendLibFilters();
+};
+
+window.toggleFlibPanel = (which) => {
+  const isFilter = which === 'filter';
+  const panelId = isFilter ? 'flibFilterPanel' : 'flibSortPanel';
+  const btnId   = isFilter ? 'flibFilterBtn'  : 'flibSortBtn';
+  const otherId = isFilter ? 'flibSortPanel'  : 'flibFilterPanel';
+  const otherBtn= isFilter ? 'flibSortBtn'    : 'flibFilterBtn';
+  if (isFilter) { flibFilterOpen = !flibFilterOpen; flibSortOpen = false; }
+  else          { flibSortOpen = !flibSortOpen;   flibFilterOpen = false; }
+  document.getElementById(panelId).style.display = (isFilter ? flibFilterOpen : flibSortOpen) ? '' : 'none';
+  document.getElementById(btnId).classList.toggle('active', isFilter ? flibFilterOpen : flibSortOpen);
+  document.getElementById(otherId).style.display = 'none';
+  document.getElementById(otherBtn).classList.remove('active');
+};
+
+window.cycleFlibView = () => {
+  const views = ['card','grid','list'], icons = { card:'layout-list', grid:'layout-grid', list:'list' };
+  flibView = views[(views.indexOf(flibView) + 1) % views.length];
+  document.getElementById('flibViewIcon').setAttribute('data-lucide', icons[flibView]);
+  refreshIcons();
+  applyFriendLibFilters();
+};
+
+window.applyFriendLibFilters = () => {
+  const q = (document.getElementById('friendLibSearch')?.value || '').toLowerCase().trim();
+  let list = friendLibBooks.filter(b => b.location !== 'Wishlist');
+  if (flibTopFilter === 'read')     list = list.filter(b => b.read);
+  if (flibTopFilter === 'unread')   list = list.filter(b => !b.read);
+  if (flibTopFilter === 'borrowed') list = list.filter(b => b.location === 'Borrowed');
+  if (flibGenreFilters.length) list = list.filter(b => flibGenreFilters.some(g => (b.genres||[]).includes(g)));
   if (q) list = list.filter(b =>
     (b.title||'').toLowerCase().includes(q) ||
     (b.author||'').toLowerCase().includes(q) ||
     (b.series||'').toLowerCase().includes(q)
   );
+  // Sort
+  list = [...list];
+  if (flibSort === 'added-desc') { /* already in load order */ }
+  else {
+    const [field, dir] = flibSort.split('-');
+    list.sort((a, b) => {
+      let av = (a[field]||'').toLowerCase(), bv = (b[field]||'').toLowerCase();
+      return dir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+    });
+  }
   const el = document.getElementById('friendLibList');
+  if (!el) return;
+  el.className = 'fdet-list' + (flibView === 'grid' ? ' grid-view' : flibView === 'list' ? ' list-view' : '');
   if (!list.length) {
     el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px">'
-      + (q ? 'No results for "' + esc(q) + '"' : isWishlist ? 'No wishlist books' : 'No books in library') + '</div>';
+      + (q || flibGenreFilters.length || flibTopFilter !== 'all' ? 'No books match your filters' : 'No books in library') + '</div>';
     return;
   }
   el.innerHTML = list.map(b => {
     const genres = (b.genres||[]).slice(0,2).map(g => '<span class="tag genre">' + esc(g) + '</span>').join('');
     const series = b.series ? '<span class="tag series"><i data-lucide="book-open" class="tag-icon"></i> ' + esc(b.series) + (b.seriesNumber ? ' #'+b.seriesNumber : '') + '</span>' : '';
-    const borrowBtn = !isWishlist
-      ? '<button class="btn-edit" onclick="requestBorrow(\'' + jsStr(friendLibUid) + '\',\'' + jsStr(b.id) + '\',\'' + jsStr(b.title||'') + '\')" title="Request to borrow" style="flex-shrink:0"><i data-lucide="hand"></i></button>'
-      : '';
     return '<div class="book-card' + (b.read ? ' is-read' : '') + '">'
       + '<div class="book-check"><span class="check-icon">✓</span></div>'
       + '<div class="book-info"><div class="book-title">' + esc(b.title||'') + '</div>'
       + '<div class="book-author">' + esc(b.author||'') + '</div>'
       + '<div class="book-tags">' + genres + series + '</div></div>'
-      + borrowBtn
+      + '<button class="btn-edit" onclick="requestBorrow(\'' + jsStr(friendDetailsUid) + '\',\'' + jsStr(b.id) + '\',\'' + jsStr(b.title||'') + '\')" title="Request to borrow" style="flex-shrink:0"><i data-lucide="hand"></i></button>'
       + '</div>';
   }).join('');
   refreshIcons();
+};
+
+// ── CHAT ──────────────────────────────────────────────────────────────────────
+function startChatListener(uid1, uid2) {
+  stopChatListener();
+  document.getElementById('chatMessages').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3)">Loading…</div>';
+  const q = query(chatColRef(uid1, uid2), orderBy('createdAt', 'asc'));
+  chatListener = onSnapshot(q, snap => {
+    const msgs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderChatMessages(msgs);
+  }, () => {
+    document.getElementById('chatMessages').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3)">Could not load chat.</div>';
+  });
+}
+
+function stopChatListener() {
+  if (chatListener) { chatListener(); chatListener = null; }
+}
+
+function renderChatMessages(msgs) {
+  const el = document.getElementById('chatMessages');
+  if (!el) return;
+  if (!msgs.length) {
+    el.innerHTML = '<div style="padding:40px 0;text-align:center;color:var(--text3);font-size:13px">No messages yet. Say hello!</div>';
+    return;
+  }
+  el.innerHTML = msgs.map(m => {
+    const mine = m.fromUid === currentUser.uid;
+    const side = mine ? 'mine' : 'theirs';
+    const ts = m.createdAt?.toDate ? m.createdAt.toDate().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '';
+    if (m.type === 'borrow_request') {
+      return '<div class="chat-wrap ' + side + '">'
+        + (!mine ? '<div class="chat-sender">' + esc(m.displayName||m.fromUsername) + '</div>' : '')
+        + '<div class="borrow-req-card ' + side + '">'
+        + '<div style="font-size:10px;color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:5px">📚 Borrow Request</div>'
+        + '<div class="chat-book-title">' + esc(m.bookTitle||'') + '</div>'
+        + (m.bookAuthor ? '<div class="chat-book-author">' + esc(m.bookAuthor) + '</div>' : '')
+        + '<div style="font-size:12px;color:var(--text2);margin-top:6px">' + (mine ? 'You requested to borrow this' : esc(m.displayName||m.fromUsername) + ' wants to borrow this') + '</div>'
+        + '</div>'
+        + '<div class="chat-time">' + ts + '</div>'
+        + '</div>';
+    }
+    if (m.type === 'book_ref') {
+      return '<div class="chat-wrap ' + side + '">'
+        + (!mine ? '<div class="chat-sender">' + esc(m.displayName||m.fromUsername) + '</div>' : '')
+        + '<div class="chat-book-card ' + side + '">'
+        + (m.text ? '<div style="font-size:13px;color:var(--text2);margin-bottom:6px;font-style:italic">' + esc(m.text) + '</div>' : '')
+        + '<div class="chat-book-title">' + esc(m.bookTitle||'') + '</div>'
+        + (m.bookAuthor ? '<div class="chat-book-author">' + esc(m.bookAuthor) + '</div>' : '')
+        + '<div class="chat-book-badge">📖 Book Reference</div>'
+        + '</div>'
+        + '<div class="chat-time">' + ts + '</div>'
+        + '</div>';
+    }
+    return '<div class="chat-wrap ' + side + '">'
+      + (!mine ? '<div class="chat-sender">' + esc(m.displayName||m.fromUsername) + '</div>' : '')
+      + '<div class="chat-bubble ' + side + '">' + esc(m.text||'') + '</div>'
+      + '<div class="chat-time">' + ts + '</div>'
+      + '</div>';
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+window.sendChatMessage = async () => {
+  const input = document.getElementById('chatTextInput');
+  const text = input.value.trim();
+  if (!text || !friendDetailsUid) return;
+  input.value = ''; input.style.height = 'auto';
+  closeBookPicker();
+  try {
+    await addDoc(chatColRef(currentUser.uid, friendDetailsUid), {
+      type: 'text', text,
+      fromUid: currentUser.uid, fromUsername: userUsername,
+      displayName: currentUser.displayName || userUsername,
+      createdAt: serverTimestamp()
+    });
+    await addDoc(notifsCol(friendDetailsUid), {
+      type: 'chat_message', fromUid: currentUser.uid,
+      fromUsername: userUsername, displayName: currentUser.displayName || userUsername,
+      text: text.slice(0, 60), read: false, createdAt: serverTimestamp()
+    });
+  } catch(e) { showStatus('Failed to send: ' + e.message, 'error'); }
+};
+
+window.toggleBookPicker = () => {
+  bookPickerOpen = !bookPickerOpen;
+  const el = document.getElementById('bookPicker');
+  if (!el) return;
+  el.style.display = bookPickerOpen ? '' : 'none';
+  if (bookPickerOpen) { filterBookPicker(''); document.getElementById('bookPickerSearch').focus(); }
+};
+
+function closeBookPicker() {
+  bookPickerOpen = false;
+  const el = document.getElementById('bookPicker');
+  if (el) el.style.display = 'none';
+}
+
+window.filterBookPicker = (q) => {
+  const lower = (q||'').toLowerCase().trim();
+  const list = books.filter(b => b.location !== 'Wishlist' &&
+    (!lower || (b.title||'').toLowerCase().includes(lower) || (b.author||'').toLowerCase().includes(lower))
+  ).slice(0, 20);
+  const el = document.getElementById('bookPickerList');
+  if (!el) return;
+  if (!list.length) { el.innerHTML = '<div style="padding:8px;color:var(--text3);font-size:13px">No books found</div>'; return; }
+  el.innerHTML = list.map(b =>
+    '<div class="book-picker-item" onclick="sendBookRef(\'' + jsStr(b.id) + '\',\'' + jsStr(b.title||'') + '\',\'' + jsStr(b.author||'') + '\')">'
+    + '<div style="font-size:13px;font-weight:600;color:var(--text)">' + esc(b.title||'') + '</div>'
+    + '<div style="font-size:11px;color:var(--text3)">' + esc(b.author||'') + '</div>'
+    + '</div>'
+  ).join('');
+};
+
+window.sendBookRef = async (bookId, bookTitle, bookAuthor) => {
+  if (!friendDetailsUid) return;
+  closeBookPicker();
+  const note = document.getElementById('chatTextInput').value.trim();
+  document.getElementById('chatTextInput').value = ''; document.getElementById('chatTextInput').style.height = 'auto';
+  try {
+    await addDoc(chatColRef(currentUser.uid, friendDetailsUid), {
+      type: 'book_ref', bookId, bookTitle, bookAuthor, text: note,
+      fromUid: currentUser.uid, fromUsername: userUsername,
+      displayName: currentUser.displayName || userUsername,
+      createdAt: serverTimestamp()
+    });
+    await addDoc(notifsCol(friendDetailsUid), {
+      type: 'chat_message', fromUid: currentUser.uid,
+      fromUsername: userUsername, displayName: currentUser.displayName || userUsername,
+      text: '📖 Shared a book: ' + bookTitle, read: false, createdAt: serverTimestamp()
+    });
+  } catch(e) { showStatus('Failed: ' + e.message, 'error'); }
 };
 
 // ── NOTIFICATIONS ─────────────────────────────────────────────────────────────
@@ -4214,11 +4501,13 @@ function renderNotifList() {
     return;
   }
   el.innerHTML = notifications.map(n => {
-    const icon = n.type === 'friend_request' ? 'user-plus' : 'book-open';
+    const icon = n.type === 'friend_request' ? 'user-plus' : n.type === 'chat_message' ? 'message-circle' : 'book-open';
     const title = n.type === 'friend_request'
       ? '<strong>' + esc(n.displayName || n.fromUsername) + '</strong> sent you a friend request'
-      : '<strong>' + esc(n.displayName || n.fromUsername) + '</strong> wants to borrow <em>' + esc(n.bookTitle||'') + '</em>';
-    return '<div class="notif-item' + (!n.read ? ' unread' : '') + '" onclick="handleNotifClick(\'' + jsStr(n.type) + '\')">'
+      : n.type === 'chat_message'
+        ? '<strong>' + esc(n.displayName || n.fromUsername) + '</strong>: ' + esc(n.text||'New message')
+        : '<strong>' + esc(n.displayName || n.fromUsername) + '</strong> wants to borrow <em>' + esc(n.bookTitle||'') + '</em>';
+    return '<div class="notif-item' + (!n.read ? ' unread' : '') + '" onclick="handleNotifClick(\'' + jsStr(n.type) + '\',\'' + jsStr(n.fromUid||'') + '\',\'' + jsStr(n.displayName||n.fromUsername||'') + '\')">'
       + '<div class="notif-icon"><i data-lucide="' + icon + '"></i></div>'
       + '<div class="notif-text"><div class="notif-title">' + title + '</div>'
       + '<div class="notif-sub">@' + esc(n.fromUsername||'') + '</div></div>'
@@ -4227,30 +4516,43 @@ function renderNotifList() {
   refreshIcons();
 }
 
-window.handleNotifClick = (type) => {
+window.handleNotifClick = (type, fromUid, fromName) => {
   closeModal('notifModal');
   if (type === 'friend_request') {
     setPage('community');
     setTimeout(() => { setCommunityTab('friends'); setFriendsView('requests'); }, 120);
+  } else if (type === 'chat_message' || type === 'borrow_request') {
+    const friend = friendsList.find(f => f.id === fromUid);
+    if (friend) {
+      openFriendDetails(fromUid, fromName || friend.displayName || friend.username);
+      setTimeout(() => setFriendDetailsTab('chat'), 200);
+    }
   }
 };
 
 window.requestBorrow = async (ownerUid, bookId, bookTitle) => {
   if (!currentUser) return;
   if (!userUsername) { showStatus('Set your username first (Settings → Account)', 'error'); return; }
+  // Find the book's author from friendLibBooks
+  const book = friendLibBooks.find(b => b.id === bookId);
+  const bookAuthor = book?.author || '';
   try {
-    await addDoc(notifsCol(ownerUid), {
-      type: 'borrow_request',
-      fromUid: currentUser.uid,
-      fromUsername: userUsername,
+    // Post as a chat message so it appears inline
+    await addDoc(chatColRef(currentUser.uid, ownerUid), {
+      type: 'borrow_request', bookId, bookTitle, bookAuthor,
+      fromUid: currentUser.uid, fromUsername: userUsername,
       displayName: currentUser.displayName || userUsername,
-      bookId,
-      bookTitle,
-      read: false,
       createdAt: serverTimestamp()
+    });
+    // Also send a notification bell entry
+    await addDoc(notifsCol(ownerUid), {
+      type: 'borrow_request', fromUid: currentUser.uid,
+      fromUsername: userUsername, displayName: currentUser.displayName || userUsername,
+      bookId, bookTitle, read: false, createdAt: serverTimestamp()
     });
     showStatus('Borrow request sent!', 'success');
     setTimeout(hideStatus, 2500);
+    // If chat tab is already open, the listener will pick it up automatically
   } catch(e) { showStatus('Failed: ' + e.message, 'error'); }
 };
 
