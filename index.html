@@ -225,6 +225,20 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .fdet-tab-btn { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text3); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s; flex-shrink: 0; }
 .fdet-tab-btn.active { background: var(--accent); color: #1a1612; border-color: var(--accent); }
 .fdet-tab-btn .lucide { width: 15px; height: 15px; }
+.club-avatar { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+.club-avatar-lg { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
+.admin-badge { font-size: 9px; background: var(--accent); color: #1a1612; border-radius: 4px; padding: 1px 4px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-left: 4px; vertical-align: middle; }
+.club-color-swatch { width: 28px; height: 28px; border-radius: 8px; cursor: pointer; border: 2px solid transparent; transition: border-color 0.15s; flex-shrink: 0; }
+.club-color-swatch.selected { border-color: var(--accent); }
+.club-emoji-btn { font-size: 20px; width: 36px; height: 36px; border-radius: 8px; border: 2px solid transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; background: var(--surface2); transition: border-color 0.15s; }
+.club-emoji-btn.selected { border-color: var(--accent); }
+.club-emoji-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
+.club-color-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.club-member-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.club-member-row:last-child { border-bottom: none; }
+.club-member-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--surface3); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 14px; color: var(--accent); font-family: 'Playfair Display', serif; flex-shrink: 0; }
+.system-msg { text-align: center; padding: 8px 0; }
+.system-msg span { font-size: 12px; color: var(--text3); background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 4px 12px; }
 
 /* SEARCH & FILTERS */
 .search-wrap { position: relative; }
@@ -1046,11 +1060,12 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 
     <!-- Chats -->
     <div id="comm-chats">
-      <div style="padding:12px 16px 4px">
-        <div class="search-wrap">
+      <div style="padding:12px 16px 4px;display:flex;gap:8px;align-items:center">
+        <div class="search-wrap" style="flex:1">
           <span class="search-icon">🔍</span>
           <input class="search-input" id="chatSearch" placeholder="Search chats…" oninput="filterChats(this.value)">
         </div>
+        <button class="btn-add-collection" onclick="openCreateClubModal()" style="flex-shrink:0;white-space:nowrap">+ Club</button>
       </div>
       <div id="comm-chats-list" class="friends-list"></div>
     </div>
@@ -1067,10 +1082,22 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 
     <!-- Discover -->
     <div id="comm-discover" style="display:none">
-      <div style="padding:14px 16px 4px">
-        <div class="search-wrap">
-          <span class="search-icon">🔍</span>
-          <input class="search-input" id="friendSearchInput" placeholder="Search by username…" oninput="debounceFriendSearch(this.value)">
+      <div style="padding:12px 16px 4px">
+        <div class="friends-nav" style="margin-bottom:10px">
+          <button class="fnav-btn active" id="disc-btn-friends" onclick="setDiscoverMode('friends')">People</button>
+          <button class="fnav-btn" id="disc-btn-clubs" onclick="setDiscoverMode('clubs')">Clubs</button>
+        </div>
+        <div id="disc-friends-search">
+          <div class="search-wrap">
+            <span class="search-icon">🔍</span>
+            <input class="search-input" id="friendSearchInput" placeholder="Search by username…" oninput="debounceFriendSearch(this.value)">
+          </div>
+        </div>
+        <div id="disc-clubs-search" style="display:none">
+          <div class="search-wrap">
+            <span class="search-icon">🔍</span>
+            <input class="search-input" id="clubSearchInput" placeholder="Search clubs by name or keywords…" oninput="debounceClubSearch(this.value)">
+          </div>
         </div>
       </div>
       <div class="find-results" id="findResults">
@@ -1186,6 +1213,95 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
       <div id="friendUnfriendSection" style="margin-top:24px">
         <button id="friendUnfriendBtn" onclick="confirmRemoveFriendFromSettings()" style="background:none;border:1px solid var(--danger);color:var(--danger);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;padding:9px 14px;border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;width:100%;justify-content:center"><i data-lucide="user-x" style="width:15px;height:15px"></i> <span id="friendUnfriendLabel">Unfriend</span></button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- CREATE CLUB MODAL -->
+<div class="modal-overlay" id="createClubModal" onclick="closeOnOverlay(event,'createClubModal')">
+  <div class="modal full-sheet" id="createClubSheet">
+    <div class="modal-header">
+      <div class="modal-handle"></div>
+      <div class="modal-header-row">
+        <div class="modal-title">Create a Club</div>
+        <button class="modal-close" onclick="closeModal('createClubModal')"><i data-lucide="x"></i></button>
+      </div>
+    </div>
+    <div class="modal-body" style="padding-bottom:40px">
+      <div class="form-group">
+        <label class="form-label">Club Name *</label>
+        <input class="form-input" id="clubNameInput" placeholder="e.g. Harry Potter Fan Club" maxlength="60">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea class="form-input" id="clubDescInput" placeholder="What is this club about?" rows="3" style="resize:none"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Club Icon</label>
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div id="clubIconPreview" class="club-avatar-lg" style="background:#2d2520;font-size:26px">📚</div>
+          <div style="flex:1">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase">Emoji</div>
+            <div class="club-emoji-grid" id="createClubEmojiGrid"></div>
+            <div style="font-size:11px;color:var(--text3);margin:8px 0 6px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase">Color</div>
+            <div class="club-color-row" id="createClubColorRow"></div>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <div class="form-label" style="margin:0">Public Club</div>
+            <div style="font-size:12px;color:var(--text3);margin-top:2px">Anyone can discover and request to join</div>
+          </div>
+          <label class="ios-toggle"><input type="checkbox" id="clubPublicToggle" checked><span class="ios-slider"></span></label>
+        </div>
+      </div>
+      <button class="btn-submit" onclick="submitCreateClub()" style="width:100%;margin-top:8px">Create Club</button>
+    </div>
+  </div>
+</div>
+
+<!-- CLUB DETAIL SHEET -->
+<div class="modal-overlay" id="clubDetailModal">
+  <div class="modal full-sheet" id="clubDetailSheet">
+    <div class="modal-header">
+      <div class="modal-handle"></div>
+      <div class="modal-header-row" style="align-items:center;gap:10px">
+        <button style="background:none;border:none;color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;padding:0;font-family:'DM Sans',sans-serif;flex-shrink:0" onclick="closeClubDetails()"><i data-lucide="chevron-left"></i> Back</button>
+        <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
+          <div id="clubDetailIcon" class="club-avatar" style="background:#2d2520">📚</div>
+          <div style="min-width:0">
+            <div id="clubDetailName" style="font-family:'Playfair Display',serif;font-size:16px;font-weight:700;color:var(--text);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+            <div id="clubDetailSub" style="font-size:11px;color:var(--text3);margin-top:2px"></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:4px;flex-shrink:0">
+          <button class="fdet-tab-btn active" id="club-btn-chat" onclick="setClubTab('chat')" title="Chat"><i data-lucide="message-circle"></i></button>
+          <button class="fdet-tab-btn" id="club-btn-settings" onclick="setClubTab('settings')" title="Settings"><i data-lucide="settings"></i></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Club Chat tab -->
+    <div id="club-tab-chat" class="chat-body">
+      <div class="chat-messages" id="clubChatMessages"></div>
+      <div id="clubBookPicker" class="book-picker" style="display:none">
+        <input class="book-picker-search" id="clubBookPickerSearch" placeholder="Search your books…" oninput="filterClubBookPicker(this.value)">
+        <div id="clubBookPickerList" style="margin-top:6px"></div>
+      </div>
+      <div class="chat-input-row">
+        <button class="chat-plus-btn" onclick="toggleClubBookPicker()"><i data-lucide="plus"></i></button>
+        <textarea class="chat-textarea" id="clubChatInput" placeholder="Message…" rows="1"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendClubMessage()}"
+          oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
+        <button class="chat-send-btn" onclick="sendClubMessage()"><i data-lucide="send"></i></button>
+      </div>
+    </div>
+
+    <!-- Club Settings tab -->
+    <div id="club-tab-settings" style="display:none;flex-direction:column;flex:1;overflow-y:auto;padding:16px 20px 40px">
+      <div id="clubSettingsContent"></div>
     </div>
   </div>
 </div>
@@ -1612,7 +1728,7 @@ All columns other than Author, Title, Series and Genres should be left empty or 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as fbSignOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, getDocsFromCache, query, where, limit, orderBy, onSnapshot, serverTimestamp, increment } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, getDocsFromCache, query, where, limit, orderBy, onSnapshot, serverTimestamp, increment, arrayUnion, arrayRemove } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 // ── CONFIG ───────────────────────────────────────────────────────────────────
 const firebaseConfig = {
@@ -1676,6 +1792,13 @@ function friendDoc(uid, fid) { return doc(db, 'users', uid, 'friends', fid); }
 function friendsCol(uid) { return collection(db, 'users', uid, 'friends'); }
 function notifsCol(uid) { return collection(db, 'users', uid, 'notifications'); }
 function chatColRef(uid1, uid2) { return collection(db, 'chats', [uid1,uid2].sort().join('_'), 'messages'); }
+function clubDoc(clubId) { return doc(db, 'clubs', clubId); }
+function clubsCol() { return collection(db, 'clubs'); }
+function clubMemberDoc(clubId, uid) { return doc(db, 'clubs', clubId, 'members', uid); }
+function clubMembersCol(clubId) { return collection(db, 'clubs', clubId, 'members'); }
+function clubMsgCol(clubId) { return collection(db, 'clubs', clubId, 'messages'); }
+function clubJoinReqCol(clubId) { return collection(db, 'clubs', clubId, 'joinRequests'); }
+function clubJoinReqDoc(clubId, uid) { return doc(db, 'clubs', clubId, 'joinRequests', uid); }
 async function loadSettings() {
   try {
     const snap = await getDocs(collection(db, 'users', currentUser.uid, 'meta'));
@@ -3970,6 +4093,16 @@ async function loadFriends() {
 
 // ── COMMUNITY PAGE ────────────────────────────────────────────────────────────
 let requestFilter = 'all';
+let clubsList = [];
+let clubLastMessages = {};
+let currentClubId = null, currentClubData = null, currentClubRole = null;
+let clubChatListener = null;
+let clubBookPickerOpen = false;
+let discoverMode = 'friends';
+let clubSearchTimer = null;
+let createClubEmoji = '📚', createClubColor = '#2d2520';
+const CLUB_COLORS = ['#2d2520','#1e2d3a','#1a2e24','#2e1e28','#261e2e','#1e1e1e','#2a2206','#1a2a2a'];
+const CLUB_EMOJIS = ['📚','📖','✨','🌟','🏛️','🔮','🌙','⚡','🦋','🌿','🎭','🎪','🗺️','⚔️','🧙','🐉','🦁','🐺','🌸','☕','🎵','🎨','🔥','💎'];
 
 function initCommunityPage() {
   communitySubtab = 'chats';
@@ -3978,7 +4111,7 @@ function initCommunityPage() {
     const el = document.getElementById('comm-' + t);
     if (el) el.style.display = t === 'chats' ? '' : 'none';
   });
-  loadFriends().then(() => { renderChats(); loadLastChatMessages(); });
+  loadFriends().then(() => loadClubs().then(() => { renderChats(); loadLastChatMessages(); loadLastClubMessages(); }));
 }
 
 window.setCommunityTab = (tab) => {
@@ -4025,43 +4158,70 @@ function chatMsgTimestamp(fid) {
   return m.createdAt?.toDate?.()?.getTime?.() || m.createdAt?.seconds * 1000 || 0;
 }
 
-function renderChatList(list) {
+function clubMsgTimestamp(cid) {
+  const m = clubLastMessages[cid];
+  if (!m) return 0;
+  return m.createdAt?.toDate?.()?.getTime?.() || m.createdAt?.seconds * 1000 || 0;
+}
+
+function renderChatList(friendsFiltered) {
   const el = document.getElementById('comm-chats-list');
   if (!el) return;
-  if (!list.length) {
-    el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px">No chats found</div>';
+  // Build combined list: friends + clubs
+  const friendItems = friendsFiltered.map(f => ({
+    _type: 'friend', id: f.id, displayName: f.displayName, username: f.username,
+    ts: chatMsgTimestamp(f.id)
+  }));
+  const clubItems = clubsList.map(c => ({
+    _type: 'club', id: c.id, name: c.name, emoji: c.emoji||'📚', bgColor: c.bgColor||'#2d2520',
+    memberCount: (c.memberUids||[]).length, ts: clubMsgTimestamp(c.id)
+  }));
+  const all = [...friendItems, ...clubItems].sort((a, b) => b.ts - a.ts);
+  if (!all.length) {
+    el.innerHTML = '<div class="empty" style="padding:40px 0"><div class="empty-icon"><i data-lucide="message-circle"></i></div><div class="empty-title">No chats yet</div><div class="empty-sub">Add friends or create a club</div></div>';
     refreshIcons(); return;
   }
-  const sorted = [...list].sort((a, b) => chatMsgTimestamp(b.id) - chatMsgTimestamp(a.id));
-  el.innerHTML = sorted.map(f => {
-    const init = (f.displayName || f.username || '?')[0].toUpperCase();
-    const sid = jsStr(f.id), sdn = jsStr(f.displayName || f.username);
-    const lastMsg = chatLastMessages[f.id];
-    let preview = '';
-    if (lastMsg) {
-      if (lastMsg.type === 'friend_added') preview = '👋 New friend';
-      else if (lastMsg.type === 'book_ref') preview = '📖 ' + (lastMsg.bookTitle || 'Book').slice(0, 10);
-      else if (lastMsg.type === 'borrow_request') preview = '📚 Borrow req';
-      else { const t = lastMsg.text || ''; preview = t.slice(0, 10) + (t.length > 10 ? '…' : ''); }
+  el.innerHTML = all.map(item => {
+    if (item._type === 'friend') {
+      const sid = jsStr(item.id), sdn = jsStr(item.displayName || item.username);
+      const lastMsg = chatLastMessages[item.id];
+      let preview = '';
+      if (lastMsg) {
+        if (lastMsg.type === 'friend_added') preview = '👋 New friend';
+        else if (lastMsg.type === 'book_ref') preview = '📖 ' + (lastMsg.bookTitle || 'Book').slice(0, 10);
+        else if (lastMsg.type === 'borrow_request') preview = '📚 Borrow req';
+        else { const t = lastMsg.text || ''; preview = t.slice(0, 10) + (t.length > 10 ? '…' : ''); }
+      }
+      const init = (item.displayName || item.username || '?')[0].toUpperCase();
+      return '<div class="friend-card" data-friend-id="' + esc(item.id) + '" style="cursor:pointer" onclick="openFriendDetails(\'' + sid + '\',\'' + sdn + '\')">'
+        + '<div class="friend-avatar">' + esc(init) + '</div>'
+        + '<div class="friend-info" style="flex:1;min-width:0">'
+        + '<div class="friend-name">' + esc(item.displayName || item.username) + '</div>'
+        + '<div class="friend-username">@' + esc(item.username) + '</div></div>'
+        + (preview ? '<div style="font-size:11px;color:var(--text3);flex-shrink:0;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right">' + esc(preview) + '</div>' : '')
+        + '</div>';
+    } else {
+      const sid = jsStr(item.id);
+      const lastMsg = clubLastMessages[item.id];
+      let preview = '';
+      if (lastMsg) {
+        if (lastMsg.type === 'system') preview = lastMsg.text ? lastMsg.text.slice(0,12)+'…' : '💬';
+        else if (lastMsg.type === 'book_ref') preview = '📖 ' + (lastMsg.bookTitle||'Book').slice(0,10);
+        else { const t = lastMsg.text||''; preview = t.slice(0,10) + (t.length>10?'…':''); }
+      }
+      return '<div class="friend-card" style="cursor:pointer" onclick="openClubDetails(\'' + sid + '\')">'
+        + '<div class="club-avatar" style="background:' + esc(item.bgColor) + ';font-size:20px;border-radius:12px">' + esc(item.emoji) + '</div>'
+        + '<div class="friend-info" style="flex:1;min-width:0">'
+        + '<div class="friend-name">' + esc(item.name) + '</div>'
+        + '<div class="friend-username">Group · ' + item.memberCount + ' members</div></div>'
+        + (preview ? '<div style="font-size:11px;color:var(--text3);flex-shrink:0;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right">' + esc(preview) + '</div>' : '')
+        + '</div>';
     }
-    return '<div class="friend-card" data-friend-id="' + esc(f.id) + '" style="cursor:pointer" onclick="openFriendDetails(\'' + sid + '\',\'' + sdn + '\')">'
-      + '<div class="friend-avatar">' + esc(init) + '</div>'
-      + '<div class="friend-info" style="flex:1;min-width:0">'
-      + '<div class="friend-name">' + esc(f.displayName || f.username) + '</div>'
-      + '<div class="friend-username">@' + esc(f.username) + '</div></div>'
-      + (preview ? '<div style="font-size:11px;color:var(--text3);flex-shrink:0;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right">' + esc(preview) + '</div>' : '')
-      + '</div>';
   }).join('');
   refreshIcons();
 }
 
 function renderChats() {
-  const el = document.getElementById('comm-chats-list');
-  if (!el) return;
-  if (!friendsList.length) {
-    el.innerHTML = '<div class="empty" style="padding:40px 0"><div class="empty-icon"><i data-lucide="message-circle"></i></div><div class="empty-title">No chats yet</div><div class="empty-sub">Add friends to start chatting</div></div>';
-    refreshIcons(); return;
-  }
   const q = (document.getElementById('chatSearch')?.value || '').toLowerCase().trim();
   const list = q ? friendsList.filter(f => (f.displayName||'').toLowerCase().includes(q) || (f.username||'').toLowerCase().includes(q)) : friendsList;
   renderChatList(list);
@@ -4074,6 +4234,26 @@ window.filterChats = (q) => {
 };
 
 function renderMyFriends() { renderChats(); } // alias used by removeFriendAndClose
+
+// ── CLUBS ─────────────────────────────────────────────────────────────────────
+async function loadClubs() {
+  if (!currentUser) return;
+  try {
+    const snap = await getDocs(query(clubsCol(), where('memberUids', 'array-contains', currentUser.uid)));
+    clubsList = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch(e) { clubsList = []; }
+}
+
+async function loadLastClubMessages() {
+  if (!currentUser || !clubsList.length) return;
+  await Promise.allSettled(clubsList.map(async c => {
+    try {
+      const snap = await getDocs(query(clubMsgCol(c.id), orderBy('createdAt', 'desc'), limit(1)));
+      if (!snap.empty) clubLastMessages[c.id] = snap.docs[0].data();
+    } catch(_) {}
+  }));
+  renderChats();
+}
 
 // ── RENDER REQUESTS ───────────────────────────────────────────────────────────
 window.setRequestFilter = (f) => {
@@ -4635,6 +4815,517 @@ window.addToWishlist = async (title, author, genres, series, seriesNumber, btnEl
     showStatus('Added to wishlist ★', 'success');
     await loadBooks();
   } catch(e) { showStatus('Failed: ' + e.message, 'error'); }
+};
+
+// ── CREATE CLUB ────────────────────────────────────────────────────────────────
+window.openCreateClubModal = () => {
+  createClubEmoji = '📚'; createClubColor = '#2d2520';
+  document.getElementById('clubNameInput').value = '';
+  document.getElementById('clubDescInput').value = '';
+  document.getElementById('clubPublicToggle').checked = true;
+  renderClubEmojiGrid('createClubEmojiGrid', 'createClubIconPreview', true);
+  renderClubColorRow('createClubColorRow', 'createClubIconPreview', true);
+  updateClubIconPreview('createClubIconPreview');
+  document.getElementById('createClubModal').classList.add('open');
+  refreshIcons();
+};
+
+function renderClubEmojiGrid(gridId, previewId, isCreate) {
+  const el = document.getElementById(gridId);
+  if (!el) return;
+  el.innerHTML = CLUB_EMOJIS.map(e =>
+    '<button class="club-emoji-btn' + ((isCreate ? createClubEmoji : editClubEmoji) === e ? ' selected' : '') + '" onclick="pickClubEmoji(\'' + jsStr(e) + '\',\'' + gridId + '\',\'' + previewId + '\',' + isCreate + ')">' + e + '</button>'
+  ).join('');
+}
+
+function renderClubColorRow(rowId, previewId, isCreate) {
+  const el = document.getElementById(rowId);
+  if (!el) return;
+  el.innerHTML = CLUB_COLORS.map(c =>
+    '<div class="club-color-swatch' + ((isCreate ? createClubColor : editClubColor) === c ? ' selected' : '') + '" style="background:' + c + '" onclick="pickClubColor(\'' + jsStr(c) + '\',\'' + rowId + '\',\'' + previewId + '\',' + isCreate + ')"></div>'
+  ).join('');
+}
+
+let editClubEmoji = '📚', editClubColor = '#2d2520';
+
+window.pickClubEmoji = (emoji, gridId, previewId, isCreate) => {
+  if (isCreate) createClubEmoji = emoji; else editClubEmoji = emoji;
+  renderClubEmojiGrid(gridId, previewId, isCreate);
+  updateClubIconPreview(previewId);
+};
+
+window.pickClubColor = (color, rowId, previewId, isCreate) => {
+  if (isCreate) createClubColor = color; else editClubColor = color;
+  renderClubColorRow(rowId, previewId, isCreate);
+  updateClubIconPreview(previewId);
+};
+
+function updateClubIconPreview(previewId) {
+  const el = document.getElementById(previewId);
+  if (!el) return;
+  const isCreate = previewId === 'createClubIconPreview';
+  el.textContent = isCreate ? createClubEmoji : editClubEmoji;
+  el.style.background = isCreate ? createClubColor : editClubColor;
+}
+
+window.submitCreateClub = async () => {
+  const name = document.getElementById('clubNameInput').value.trim();
+  const desc = document.getElementById('clubDescInput').value.trim();
+  const isPublic = document.getElementById('clubPublicToggle').checked;
+  if (!name) { showStatus('Please enter a club name.', 'error'); return; }
+  try {
+    const clubData = {
+      name, description: desc, emoji: createClubEmoji, bgColor: createClubColor,
+      isPublic, createdBy: currentUser.uid, createdAt: serverTimestamp(),
+      memberUids: [currentUser.uid], adminUids: [currentUser.uid], memberCount: 1
+    };
+    const ref = await addDoc(clubsCol(), clubData);
+    await setDoc(clubMemberDoc(ref.id, currentUser.uid), {
+      uid: currentUser.uid, displayName: currentUser.displayName || userUsername,
+      username: userUsername, role: 'admin', joinedAt: serverTimestamp()
+    });
+    // System message
+    await addDoc(clubMsgCol(ref.id), {
+      type: 'system', text: '📚 Club created! Welcome to ' + name,
+      fromUid: currentUser.uid, createdAt: serverTimestamp()
+    });
+    clubsList.push({ id: ref.id, ...clubData, memberUids: [currentUser.uid], adminUids: [currentUser.uid] });
+    closeModal('createClubModal');
+    showStatus('Club created!', 'success');
+    setTimeout(hideStatus, 2000);
+    renderChats();
+    openClubDetails(ref.id);
+  } catch(e) { showStatus('Error: ' + e.message, 'error'); }
+};
+
+// ── CLUB DETAILS ──────────────────────────────────────────────────────────────
+window.openClubDetails = async (clubId) => {
+  currentClubId = clubId;
+  const snap = await getDoc(clubDoc(clubId));
+  if (!snap.exists()) { showStatus('Club not found', 'error'); return; }
+  currentClubData = { id: clubId, ...snap.data() };
+  currentClubRole = (currentClubData.adminUids||[]).includes(currentUser.uid) ? 'admin' : 'member';
+  document.getElementById('clubDetailIcon').textContent = currentClubData.emoji || '📚';
+  document.getElementById('clubDetailIcon').style.background = currentClubData.bgColor || '#2d2520';
+  document.getElementById('clubDetailName').textContent = currentClubData.name || '';
+  document.getElementById('clubDetailSub').textContent = 'Group · ' + (currentClubData.memberUids||[]).length + ' members';
+  document.getElementById('club-btn-chat').classList.add('active');
+  document.getElementById('club-btn-settings').classList.remove('active');
+  document.getElementById('club-tab-chat').style.display = 'flex';
+  document.getElementById('club-tab-settings').style.display = 'none';
+  document.getElementById('clubDetailModal').classList.add('open');
+  refreshIcons();
+  startClubChatListener(clubId);
+};
+
+window.closeClubDetails = () => {
+  document.getElementById('clubDetailModal').classList.remove('open');
+  stopClubChatListener();
+  currentClubId = null; currentClubData = null; currentClubRole = null;
+};
+
+window.setClubTab = (tab) => {
+  document.getElementById('club-btn-chat').classList.toggle('active', tab === 'chat');
+  document.getElementById('club-btn-settings').classList.toggle('active', tab === 'settings');
+  document.getElementById('club-tab-chat').style.display = tab === 'chat' ? 'flex' : 'none';
+  document.getElementById('club-tab-settings').style.display = tab === 'settings' ? 'flex' : 'none';
+  if (tab === 'chat') startClubChatListener(currentClubId);
+  else { stopClubChatListener(); renderClubSettingsContent(); }
+};
+
+// ── CLUB CHAT ─────────────────────────────────────────────────────────────────
+function startClubChatListener(clubId) {
+  stopClubChatListener();
+  document.getElementById('clubChatMessages').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3)">Loading…</div>';
+  const q = query(clubMsgCol(clubId), orderBy('createdAt', 'asc'));
+  clubChatListener = onSnapshot(q, snap => {
+    renderClubMessages(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+  }, () => {
+    document.getElementById('clubChatMessages').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3)">Could not load chat.</div>';
+  });
+}
+
+function stopClubChatListener() {
+  if (clubChatListener) { clubChatListener(); clubChatListener = null; }
+}
+
+function renderClubMessages(msgs) {
+  const el = document.getElementById('clubChatMessages');
+  if (!el) return;
+  if (!msgs.length) {
+    el.innerHTML = '<div style="padding:40px 0;text-align:center;color:var(--text3);font-size:13px">No messages yet. Say hello! 👋</div>';
+    return;
+  }
+  el.innerHTML = msgs.map(m => {
+    const mine = m.fromUid === currentUser.uid;
+    const side = mine ? 'mine' : 'theirs';
+    const ts = m.createdAt?.toDate ? m.createdAt.toDate().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '';
+    if (m.type === 'system') {
+      return '<div class="system-msg"><span>' + esc(m.text||'') + '</span></div>';
+    }
+    const isAdmin = (currentClubData?.adminUids||[]).includes(m.fromUid);
+    const adminBadge = isAdmin ? '<span class="admin-badge">admin</span>' : '';
+    const senderLine = !mine ? '<div class="chat-sender">' + esc(m.displayName||m.fromUsername||'') + adminBadge + '</div>' : '';
+    if (m.type === 'book_ref') {
+      const gbId = createGlobalBookId(m.bookTitle||'', m.bookAuthor||'');
+      const gb = globalBookCache.find(x => x.id === gbId);
+      const ratingStr = gb ? renderStars(gb.ratingTotal||0, gb.ratingCount||0) : '';
+      const bookGenres = m.bookGenres || (gb ? gb.genres : []) || [];
+      const genrePills = bookGenres.slice(0,3).map(g => '<span class="tag genre">' + esc(g) + '</span>').join('');
+      const seriesStr = m.bookSeries ? '<span class="tag series">' + esc(m.bookSeries) + (m.bookSeriesNumber ? ' #'+m.bookSeriesNumber : '') + '</span>' : '';
+      const alreadyWishlisted = books.some(b => b.location === 'Wishlist' && (b.title||'').toLowerCase() === (m.bookTitle||'').toLowerCase());
+      const starBtn = '<button class="wishlist-star-btn' + (alreadyWishlisted ? ' in-wishlist' : '') + '" onclick="addToWishlist(\'' + jsStr(m.bookTitle||'') + '\',\'' + jsStr(m.bookAuthor||'') + '\',' + JSON.stringify(bookGenres) + ',\'' + jsStr(m.bookSeries||'') + '\',\'' + jsStr(m.bookSeriesNumber||'') + '\',this)">★</button>';
+      return '<div class="chat-wrap ' + side + '">' + senderLine
+        + '<div class="chat-book-card ' + side + '">'
+        + (m.text ? '<div style="font-size:13px;color:var(--text2);margin-bottom:6px;font-style:italic">' + esc(m.text) + '</div>' : '')
+        + '<div class="chat-book-title">' + esc(m.bookTitle||'') + '</div>'
+        + (m.bookAuthor ? '<div class="chat-book-author">' + esc(m.bookAuthor) + '</div>' : '')
+        + (ratingStr ? '<div style="margin-top:3px">' + ratingStr + '</div>' : '')
+        + '<div class="chat-book-footer"><div class="chat-book-tags">' + genrePills + seriesStr + '</div>' + starBtn + '</div>'
+        + '</div><div class="chat-time">' + ts + '</div></div>';
+    }
+    return '<div class="chat-wrap ' + side + '">' + senderLine
+      + '<div class="chat-bubble ' + side + '">' + esc(m.text||'') + '</div>'
+      + '<div class="chat-time">' + ts + '</div></div>';
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+
+window.sendClubMessage = async () => {
+  const input = document.getElementById('clubChatInput');
+  const text = input.value.trim();
+  if (!text || !currentClubId) return;
+  input.value = ''; input.style.height = 'auto';
+  closeClubBookPicker();
+  try {
+    await addDoc(clubMsgCol(currentClubId), {
+      type: 'text', text,
+      fromUid: currentUser.uid, fromUsername: userUsername,
+      displayName: currentUser.displayName || userUsername,
+      createdAt: serverTimestamp()
+    });
+  } catch(e) { showStatus('Failed: ' + e.message, 'error'); }
+};
+
+window.toggleClubBookPicker = () => {
+  clubBookPickerOpen = !clubBookPickerOpen;
+  const el = document.getElementById('clubBookPicker');
+  if (!el) return;
+  el.style.display = clubBookPickerOpen ? '' : 'none';
+  if (clubBookPickerOpen) { filterClubBookPicker(''); document.getElementById('clubBookPickerSearch').focus(); }
+};
+
+function closeClubBookPicker() {
+  clubBookPickerOpen = false;
+  const el = document.getElementById('clubBookPicker');
+  if (el) el.style.display = 'none';
+}
+
+window.filterClubBookPicker = (q) => {
+  const lower = (q||'').toLowerCase().trim();
+  const list = books.filter(b => b.location !== 'Wishlist' &&
+    (!lower || (b.title||'').toLowerCase().includes(lower) || (b.author||'').toLowerCase().includes(lower))
+  ).slice(0, 20);
+  const el = document.getElementById('clubBookPickerList');
+  if (!el) return;
+  if (!list.length) { el.innerHTML = '<div style="padding:8px;color:var(--text3);font-size:13px">No books found</div>'; return; }
+  el.innerHTML = list.map(b =>
+    '<div class="book-picker-item" onclick="sendClubBookRef(\'' + jsStr(b.id) + '\',\'' + jsStr(b.title||'') + '\',\'' + jsStr(b.author||'') + '\',' + JSON.stringify(b.genres||[]) + ',\'' + jsStr(b.series||'') + '\',\'' + jsStr(b.seriesNumber||'') + '\')">'
+    + '<div style="font-size:13px;font-weight:600;color:var(--text)">' + esc(b.title||'') + '</div>'
+    + '<div style="font-size:11px;color:var(--text3)">' + esc(b.author||'') + '</div>'
+    + '</div>'
+  ).join('');
+};
+
+window.sendClubBookRef = async (bookId, bookTitle, bookAuthor, bookGenres, bookSeries, bookSeriesNumber) => {
+  if (!currentClubId) return;
+  closeClubBookPicker();
+  const note = document.getElementById('clubChatInput').value.trim();
+  document.getElementById('clubChatInput').value = ''; document.getElementById('clubChatInput').style.height = 'auto';
+  try {
+    await addDoc(clubMsgCol(currentClubId), {
+      type: 'book_ref', bookId, bookTitle, bookAuthor,
+      bookGenres: bookGenres||[], bookSeries: bookSeries||'', bookSeriesNumber: bookSeriesNumber||'',
+      text: note,
+      fromUid: currentUser.uid, fromUsername: userUsername,
+      displayName: currentUser.displayName || userUsername,
+      createdAt: serverTimestamp()
+    });
+  } catch(e) { showStatus('Failed: ' + e.message, 'error'); }
+};
+
+// ── CLUB SETTINGS ─────────────────────────────────────────────────────────────
+async function renderClubSettingsContent() {
+  const el = document.getElementById('clubSettingsContent');
+  if (!el || !currentClubId || !currentClubData) return;
+  // Load members
+  const memSnap = await getDocs(clubMembersCol(currentClubId));
+  const members = memSnap.docs.map(d => d.data());
+  const isAdmin = currentClubRole === 'admin';
+
+  if (isAdmin) {
+    // Load join requests
+    let requests = [];
+    try {
+      const reqSnap = await getDocs(clubJoinReqCol(currentClubId));
+      requests = reqSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch(_) {}
+
+    editClubEmoji = currentClubData.emoji || '📚';
+    editClubColor = currentClubData.bgColor || '#2d2520';
+
+    el.innerHTML = '<div style="font-size:12px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Edit Club</div>'
+      + '<div class="form-group" style="margin-bottom:10px"><label class="form-label">Name</label>'
+      + '<input class="form-input" id="editClubName" value="' + esc(currentClubData.name||'') + '" maxlength="60"></div>'
+      + '<div class="form-group" style="margin-bottom:10px"><label class="form-label">Description</label>'
+      + '<textarea class="form-input" id="editClubDesc" rows="2" style="resize:none">' + esc(currentClubData.description||'') + '</textarea></div>'
+      + '<div class="form-group" style="margin-bottom:10px"><label class="form-label">Icon</label>'
+      + '<div style="display:flex;gap:12px;align-items:flex-start">'
+      + '<div id="editClubIconPreview" class="club-avatar-lg" style="background:' + esc(editClubColor) + '">' + esc(editClubEmoji) + '</div>'
+      + '<div style="flex:1"><div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:600;text-transform:uppercase">Emoji</div>'
+      + '<div class="club-emoji-grid" id="editClubEmojiGrid"></div>'
+      + '<div style="font-size:11px;color:var(--text3);margin:8px 0 6px;font-weight:600;text-transform:uppercase">Color</div>'
+      + '<div class="club-color-row" id="editClubColorRow"></div></div></div></div>'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'
+      + '<div><div class="form-label" style="margin:0">Public Club</div></div>'
+      + '<label class="ios-toggle"><input type="checkbox" id="editClubPublic"' + (currentClubData.isPublic ? ' checked' : '') + '><span class="ios-slider"></span></label></div>'
+      + '<button class="btn-submit" style="width:100%;margin-bottom:20px" onclick="saveClubEdit()">Save Changes</button>'
+      + (requests.length ? '<div style="font-size:12px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Join Requests (' + requests.length + ')</div>'
+        + requests.map(r => '<div class="club-member-row">'
+          + '<div class="club-member-avatar">' + esc((r.displayName||r.username||'?')[0].toUpperCase()) + '</div>'
+          + '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">' + esc(r.displayName||r.username) + '</div><div style="font-size:11px;color:var(--text3)">@' + esc(r.username||'') + '</div></div>'
+          + '<button class="btn-add-collection" onclick="acceptClubJoin(\'' + jsStr(r.id) + '\',\'' + jsStr(r.displayName||r.username) + '\',\'' + jsStr(r.username||'') + '\')">Accept</button>'
+          + '<button class="btn-edit" style="color:var(--danger);border-color:var(--danger)" onclick="declineClubJoin(\'' + jsStr(r.id) + '\')" title="Decline"><i data-lucide="x"></i></button>'
+          + '</div>').join('') : '')
+      + '<div style="font-size:12px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Members (' + members.length + ')</div>'
+      + members.map(m => {
+          const isMe = m.uid === currentUser.uid;
+          const mIsAdmin = (currentClubData.adminUids||[]).includes(m.uid);
+          return '<div class="club-member-row">'
+            + '<div class="club-member-avatar">' + esc((m.displayName||m.username||'?')[0].toUpperCase()) + '</div>'
+            + '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">' + esc(m.displayName||m.username) + (mIsAdmin ? '<span class="admin-badge">admin</span>' : '') + '</div><div style="font-size:11px;color:var(--text3)">@' + esc(m.username||'') + '</div></div>'
+            + (!isMe ? '<button class="btn-edit" title="' + (mIsAdmin ? 'Remove admin' : 'Make admin') + '" onclick="toggleClubAdmin(\'' + jsStr(m.uid) + '\',\'' + jsStr(m.username||'') + '\',' + mIsAdmin + ')" style="font-size:10px;width:auto;padding:0 6px">' + (mIsAdmin ? '★' : '☆') + '</button>' : '')
+            + (!isMe ? '<button class="btn-edit" style="color:var(--danger);border-color:var(--danger)" title="Remove" onclick="removeClubMember(\'' + jsStr(m.uid) + '\')"><i data-lucide="x"></i></button>' : '')
+            + '</div>';
+        }).join('')
+      + '<button style="margin-top:24px;background:none;border:1px solid var(--danger);color:var(--danger);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;padding:9px 14px;border-radius:var(--radius-sm);font-family:\'DM Sans\',sans-serif;width:100%;justify-content:center" onclick="confirmDeleteClub()"><i data-lucide="trash-2" style="width:14px;height:14px"></i> Delete Club</button>';
+
+    renderClubEmojiGrid('editClubEmojiGrid', 'editClubIconPreview', false);
+    renderClubColorRow('editClubColorRow', 'editClubIconPreview', false);
+    refreshIcons();
+  } else {
+    // Member view
+    const muted = localStorage.getItem('clubnotif_muted_' + currentClubId) === 'true';
+    el.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0 14px;border-bottom:1px solid var(--border);margin-bottom:14px">'
+      + '<div><div style="font-size:14px;color:var(--text);font-weight:500">Notifications</div><div style="font-size:12px;color:var(--text3);margin-top:2px">New messages in this club</div></div>'
+      + '<label class="ios-toggle"><input type="checkbox" id="clubNotifToggle" onchange="saveClubNotifPref(this.checked)"' + (!muted ? ' checked' : '') + '><span class="ios-slider"></span></label>'
+      + '</div>'
+      + '<button onclick="confirmLeaveClub()" style="margin-bottom:20px;background:none;border:1px solid var(--danger);color:var(--danger);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;padding:9px 14px;border-radius:var(--radius-sm);font-family:\'DM Sans\',sans-serif;width:100%;justify-content:center"><i data-lucide="log-out" style="width:14px;height:14px"></i> Leave Club</button>'
+      + '<div style="font-size:12px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Members (' + members.length + ')</div>'
+      + members.map(m => {
+          const mIsAdmin = (currentClubData.adminUids||[]).includes(m.uid);
+          const isMe = m.uid === currentUser.uid;
+          const isAlreadyFriend = friendsList.some(f => f.id === m.uid);
+          return '<div class="club-member-row">'
+            + '<div class="club-member-avatar">' + esc((m.displayName||m.username||'?')[0].toUpperCase()) + '</div>'
+            + '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">' + esc(m.displayName||m.username) + (mIsAdmin ? '<span class="admin-badge">admin</span>' : '') + '</div><div style="font-size:11px;color:var(--text3)">@' + esc(m.username||'') + '</div></div>'
+            + (!isMe ? '<button class="btn-edit" title="Open chat" onclick="openFriendDetails(\'' + jsStr(m.uid) + '\',\'' + jsStr(m.displayName||m.username||'') + '\');closeClubDetails()"><i data-lucide="message-circle"></i></button>' : '')
+            + (!isMe && !isAlreadyFriend ? '<button class="btn-add-collection" style="font-size:11px;padding:4px 8px" onclick="sendFriendRequestFromClub(\'' + jsStr(m.uid) + '\',\'' + jsStr(m.username||'') + '\')">+ Friend</button>' : '')
+            + '</div>';
+        }).join('');
+    refreshIcons();
+  }
+}
+
+window.saveClubEdit = async () => {
+  const name = document.getElementById('editClubName').value.trim();
+  const desc = document.getElementById('editClubDesc').value.trim();
+  const isPublic = document.getElementById('editClubPublic').checked;
+  if (!name) { showStatus('Name required', 'error'); return; }
+  try {
+    await updateDoc(clubDoc(currentClubId), { name, description: desc, emoji: editClubEmoji, bgColor: editClubColor, isPublic });
+    currentClubData = { ...currentClubData, name, description: desc, emoji: editClubEmoji, bgColor: editClubColor, isPublic };
+    document.getElementById('clubDetailIcon').textContent = editClubEmoji;
+    document.getElementById('clubDetailIcon').style.background = editClubColor;
+    document.getElementById('clubDetailName').textContent = name;
+    const idx = clubsList.findIndex(c => c.id === currentClubId);
+    if (idx >= 0) clubsList[idx] = { ...clubsList[idx], ...currentClubData };
+    renderChats();
+    showStatus('Club updated!', 'success');
+    setTimeout(hideStatus, 2000);
+  } catch(e) { showStatus('Error: ' + e.message, 'error'); }
+};
+
+window.toggleClubAdmin = async (uid, username, isCurrentlyAdmin) => {
+  try {
+    if (isCurrentlyAdmin) {
+      await updateDoc(clubDoc(currentClubId), { adminUids: arrayRemove(uid) });
+      currentClubData.adminUids = (currentClubData.adminUids||[]).filter(x => x !== uid);
+    } else {
+      await updateDoc(clubDoc(currentClubId), { adminUids: arrayUnion(uid) });
+      currentClubData.adminUids = [...(currentClubData.adminUids||[]), uid];
+    }
+    renderClubSettingsContent();
+  } catch(e) { showStatus('Error: ' + e.message, 'error'); }
+};
+
+window.removeClubMember = async (uid) => {
+  if (!confirm('Remove this member from the club?')) return;
+  try {
+    await updateDoc(clubDoc(currentClubId), { memberUids: arrayRemove(uid), adminUids: arrayRemove(uid) });
+    await deleteDoc(clubMemberDoc(currentClubId, uid));
+    currentClubData.memberUids = (currentClubData.memberUids||[]).filter(x => x !== uid);
+    currentClubData.adminUids = (currentClubData.adminUids||[]).filter(x => x !== uid);
+    document.getElementById('clubDetailSub').textContent = 'Group · ' + currentClubData.memberUids.length + ' members';
+    renderClubSettingsContent();
+  } catch(e) { showStatus('Error: ' + e.message, 'error'); }
+};
+
+window.acceptClubJoin = async (uid, displayName, username) => {
+  try {
+    await updateDoc(clubDoc(currentClubId), { memberUids: arrayUnion(uid), memberCount: increment(1) });
+    await setDoc(clubMemberDoc(currentClubId, uid), { uid, displayName, username, role: 'member', joinedAt: serverTimestamp() });
+    await deleteDoc(clubJoinReqDoc(currentClubId, uid));
+    await addDoc(clubMsgCol(currentClubId), { type: 'system', text: '👋 ' + (displayName||username) + ' joined the club', fromUid: currentUser.uid, createdAt: serverTimestamp() });
+    currentClubData.memberUids = [...(currentClubData.memberUids||[]), uid];
+    document.getElementById('clubDetailSub').textContent = 'Group · ' + currentClubData.memberUids.length + ' members';
+    renderClubSettingsContent();
+    showStatus(displayName + ' joined!', 'success');
+    setTimeout(hideStatus, 2000);
+  } catch(e) { showStatus('Error: ' + e.message, 'error'); }
+};
+
+window.declineClubJoin = async (uid) => {
+  try {
+    await deleteDoc(clubJoinReqDoc(currentClubId, uid));
+    renderClubSettingsContent();
+  } catch(e) { showStatus('Error: ' + e.message, 'error'); }
+};
+
+window.confirmLeaveClub = () => {
+  if (!confirm('Leave this club?')) return;
+  leaveClub();
+};
+
+async function leaveClub() {
+  try {
+    await updateDoc(clubDoc(currentClubId), { memberUids: arrayRemove(currentUser.uid), adminUids: arrayRemove(currentUser.uid), memberCount: increment(-1) });
+    await deleteDoc(clubMemberDoc(currentClubId, currentUser.uid));
+    clubsList = clubsList.filter(c => c.id !== currentClubId);
+    closeClubDetails();
+    renderChats();
+    showStatus('You left the club.', 'success');
+    setTimeout(hideStatus, 2000);
+  } catch(e) { showStatus('Error: ' + e.message, 'error'); }
+}
+
+window.confirmDeleteClub = () => {
+  if (!confirm('Delete this club? This cannot be undone.')) return;
+  deleteClub();
+};
+
+async function deleteClub() {
+  try {
+    await deleteDoc(clubDoc(currentClubId));
+    clubsList = clubsList.filter(c => c.id !== currentClubId);
+    closeClubDetails();
+    renderChats();
+    showStatus('Club deleted.', 'success');
+    setTimeout(hideStatus, 2000);
+  } catch(e) { showStatus('Error: ' + e.message, 'error'); }
+}
+
+window.saveClubNotifPref = (enabled) => {
+  if (!currentClubId) return;
+  if (enabled) localStorage.removeItem('clubnotif_muted_' + currentClubId);
+  else localStorage.setItem('clubnotif_muted_' + currentClubId, 'true');
+};
+
+window.sendFriendRequestFromClub = async (uid, username) => {
+  try {
+    await setDoc(friendDoc(uid, currentUser.uid), {
+      status: 'pending', uid: currentUser.uid,
+      username: userUsername, displayName: currentUser.displayName || userUsername,
+      since: serverTimestamp()
+    });
+    await addDoc(notifsCol(uid), {
+      type: 'friend_request', fromUid: currentUser.uid,
+      fromUsername: userUsername, displayName: currentUser.displayName || userUsername,
+      read: false, createdAt: serverTimestamp()
+    });
+    sentRequests.push({ id: uid, username, displayName: '' });
+    showStatus('Friend request sent!', 'success');
+    setTimeout(hideStatus, 2000);
+    renderClubSettingsContent();
+  } catch(e) { showStatus('Error: ' + e.message, 'error'); }
+};
+
+// ── CLUB DISCOVERY ────────────────────────────────────────────────────────────
+window.setDiscoverMode = (mode) => {
+  discoverMode = mode;
+  document.getElementById('disc-btn-friends').classList.toggle('active', mode === 'friends');
+  document.getElementById('disc-btn-clubs').classList.toggle('active', mode === 'clubs');
+  document.getElementById('disc-friends-search').style.display = mode === 'friends' ? '' : 'none';
+  document.getElementById('disc-clubs-search').style.display = mode === 'clubs' ? '' : 'none';
+  document.getElementById('findResults').innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px;text-align:center">Type at least 3 characters</div>';
+  if (mode === 'clubs') {
+    const si = document.getElementById('clubSearchInput');
+    if (si) { si.value = ''; si.focus(); }
+  } else {
+    const si = document.getElementById('friendSearchInput');
+    if (si) { si.value = ''; si.focus(); }
+  }
+};
+
+window.debounceClubSearch = (val) => {
+  clearTimeout(clubSearchTimer);
+  clubSearchTimer = setTimeout(() => doSearchClubs(val), 400);
+};
+
+async function doSearchClubs(rawQuery) {
+  const q = (rawQuery || '').trim().toLowerCase();
+  const el = document.getElementById('findResults');
+  if (!el) return;
+  if (q.length < 3) { el.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px;text-align:center">Type at least 3 characters</div>'; return; }
+  el.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px;text-align:center">Searching…</div>';
+  try {
+    // Search by name prefix (Firestore doesn't support full-text, so search by name range)
+    const snap = await getDocs(query(
+      clubsCol(),
+      where('isPublic', '==', true),
+      where('name', '>=', rawQuery.trim()),
+      where('name', '<=', rawQuery.trim() + ''),
+      limit(20)
+    ));
+    const results = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (!results.length) { el.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px;text-align:center">No clubs found</div>'; return; }
+    el.innerHTML = results.map(c => {
+      const isMember = (c.memberUids||[]).includes(currentUser.uid);
+      return '<div class="friend-card">'
+        + '<div class="club-avatar" style="background:' + esc(c.bgColor||'#2d2520') + ';border-radius:12px;font-size:20px">' + esc(c.emoji||'📚') + '</div>'
+        + '<div class="friend-info" style="flex:1;min-width:0"><div class="friend-name">' + esc(c.name) + '</div>'
+        + '<div class="friend-username">' + (c.memberUids||[]).length + ' members' + (c.description ? ' · ' + esc(c.description.slice(0,40)) : '') + '</div></div>'
+        + '<div class="friend-actions">'
+        + (isMember
+          ? '<button class="btn-add-collection" onclick="openClubDetails(\'' + jsStr(c.id) + '\')" style="font-size:11px">Open</button>'
+          : '<button class="btn-add-collection" onclick="requestJoinClub(\'' + jsStr(c.id) + '\',\'' + jsStr(c.name) + '\')" id="join-btn-' + esc(c.id) + '" style="font-size:11px">Request to Join</button>')
+        + '</div></div>';
+    }).join('');
+  } catch(e) { el.innerHTML = '<div style="padding:16px;color:var(--danger);font-size:13px;text-align:center">Error: ' + esc(e.message) + '</div>'; }
+}
+
+window.requestJoinClub = async (clubId, clubName) => {
+  const btn = document.getElementById('join-btn-' + clubId);
+  if (btn) { btn.disabled = true; btn.textContent = 'Requested'; }
+  try {
+    await setDoc(clubJoinReqDoc(clubId, currentUser.uid), {
+      uid: currentUser.uid, username: userUsername,
+      displayName: currentUser.displayName || userUsername,
+      requestedAt: serverTimestamp()
+    });
+    showStatus('Request sent to join ' + clubName + '!', 'success');
+    setTimeout(hideStatus, 3000);
+  } catch(e) { showStatus('Error: ' + e.message, 'error'); if (btn) { btn.disabled = false; btn.textContent = 'Request to Join'; } }
 };
 
 // ── NOTIFICATIONS ─────────────────────────────────────────────────────────────
