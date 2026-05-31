@@ -107,8 +107,17 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
   cursor: pointer;
   transition: all 0.2s;
   flex-shrink: 0;
+  position: relative;
 }
 .settings-btn:active { background: var(--surface3); border-color: var(--accent); }
+.notif-badge { position: absolute; top: -4px; right: -4px; min-width: 16px; height: 16px; border-radius: 8px; background: var(--danger); color: #fff; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; padding: 0 3px; pointer-events: none; }
+.notif-item { display: flex; align-items: flex-start; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+.notif-item:last-child { border-bottom: none; }
+.notif-item.unread .notif-title { font-weight: 600; }
+.notif-icon { width: 36px; height: 36px; border-radius: 50%; background: var(--surface3); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--accent); }
+.notif-text { flex: 1; min-width: 0; }
+.notif-title { font-size: 13px; color: var(--text); line-height: 1.4; }
+.notif-sub { font-size: 11px; color: var(--text3); margin-top: 3px; }
 .header-nav { display: flex; gap: 0; margin-top: 10px; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; }
 .header-nav::-webkit-scrollbar { display: none; }
 .hnav-btn { padding: 7px 14px; border: none; border-bottom: 2px solid transparent; background: none; color: var(--text3); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all 0.15s; flex-shrink: 0; -webkit-tap-highlight-color: transparent; }
@@ -916,7 +925,13 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
         <div class="header-title" onclick="resetAllFilters()"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 145" fill="none" class="header-logo"><line x1="41" y1="27" x2="70" y2="128" stroke="currentColor" stroke-width="13" stroke-linecap="round"/><line x1="159" y1="27" x2="130" y2="128" stroke="currentColor" stroke-width="13" stroke-linecap="round"/><path d="M41 27 C 92 44,100 95,100 113" stroke="currentColor" stroke-width="7" stroke-linecap="round"/><path d="M159 27 C 108 44,100 95,100 113" stroke="currentColor" stroke-width="7" stroke-linecap="round"/></svg> Miriam's Library</div>
         <div class="header-user" id="headerUser"></div>
       </div>
-      <button class="settings-btn" onclick="openSettings()" title="Settings"><i data-lucide="settings"></i></button>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <button class="settings-btn" onclick="openNotifPanel()" title="Notifications">
+          <i data-lucide="bell"></i>
+          <span class="notif-badge" id="notifBadge" style="display:none">0</span>
+        </button>
+        <button class="settings-btn" onclick="openSettings()" title="Settings"><i data-lucide="settings"></i></button>
+      </div>
     </div>
     <div class="header-nav">
       <button class="hnav-btn active" id="hnav-mylibrary" onclick="setPage('mylibrary')">My Library</button>
@@ -1021,6 +1036,19 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 </div>
 
 <!-- FRIEND LIBRARY MODAL -->
+<div class="modal-overlay" id="notifModal" onclick="closeOnOverlay(event,'notifModal')">
+  <div class="modal full-sheet" id="notifSheet">
+    <div class="modal-header">
+      <div class="modal-handle"></div>
+      <div class="modal-header-row">
+        <div class="modal-title">Notifications</div>
+        <button class="modal-close" onclick="closeModal('notifModal')"><i data-lucide="x"></i></button>
+      </div>
+    </div>
+    <div class="modal-body" id="notifList" style="padding-top:8px"></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="friendLibModal">
   <div class="modal full-sheet" id="friendLibSheet">
     <div class="modal-header">
@@ -1514,6 +1542,7 @@ let friendsList = [], friendRequests = [], sentRequests = [];
 let communitySubtab = 'friends', friendsView = 'myfriends';
 let friendLibUid = null, friendLibName = '', friendLibTab = 'library', friendLibBooks = [];
 let friendSearchTimer = null;
+let notifications = [], unreadNotifCount = 0;
 let checkoutTargetId = null;
 let returnTargetId = null;
 let borrowerLogTab = 'all';
@@ -1526,6 +1555,7 @@ function usernameDoc(username) { return doc(db, 'usernames', username.toLowerCas
 function userProfileDoc(uid) { return doc(db, 'users', uid, 'meta', 'profile'); }
 function friendDoc(uid, fid) { return doc(db, 'users', uid, 'friends', fid); }
 function friendsCol(uid) { return collection(db, 'users', uid, 'friends'); }
+function notifsCol(uid) { return collection(db, 'users', uid, 'notifications'); }
 async function loadSettings() {
   try {
     const snap = await getDocs(collection(db, 'users', currentUser.uid, 'meta'));
@@ -1711,6 +1741,7 @@ onAuthStateChanged(auth, async user => {
     updateHeaderSubtitle();
     checkUsernameOnLogin(); // async, non-blocking — shows modal if new user
     loadBooks();          // don't block on global books
+    loadNotifications();  // async, non-blocking
     preloadGlobalBooks().then(() => syncUserBooksToCache()); // background, merge after
   } else {
     currentUser = null;
@@ -3976,6 +4007,14 @@ window.sendFriendRequest = async (targetUid, targetUsername, targetDisplayName) 
       status: 'pending_received', username: userUsername,
       displayName: currentUser.displayName || userUsername, since: serverTimestamp()
     });
+    await addDoc(notifsCol(targetUid), {
+      type: 'friend_request',
+      fromUid: currentUser.uid,
+      fromUsername: userUsername,
+      displayName: currentUser.displayName || userUsername,
+      read: false,
+      createdAt: serverTimestamp()
+    });
     sentRequests.push({ id: targetUid, status: 'pending_sent', username: targetUsername, displayName: targetDisplayName });
     showStatus('Friend request sent to @' + targetUsername + '!', 'success');
     setTimeout(hideStatus, 2500);
@@ -4016,11 +4055,24 @@ window.declineFriendRequest = async (fromUid) => {
 };
 
 window.confirmRemoveFriend = (friendUid) => {
-  const card = document.querySelector('.friend-card[data-friend-id="' + friendUid + '"] .friend-actions');
-  if (!card) return;
-  card.innerHTML = '<span style="font-size:12px;color:var(--text2);white-space:nowrap;margin-right:4px">Unfriend?</span>'
-    + '<button class="btn-add-collection" style="background:var(--danger);border-color:var(--danger);color:#fff" onclick="removeFriend(\'' + jsStr(friendUid) + '\')">Yes</button>'
-    + '<button class="btn-edit" onclick="renderMyFriends()">No</button>';
+  const actionsEl = document.querySelector('.friend-card[data-friend-id="' + friendUid + '"] .friend-actions');
+  if (!actionsEl) return;
+  const sid = jsStr(friendUid);
+  actionsEl.innerHTML = '<span style="font-size:12px;color:var(--text2);white-space:nowrap;margin-right:4px">Unfriend?</span>'
+    + '<button class="btn-add-collection" style="background:var(--danger);border-color:var(--danger);color:#fff" onclick="removeFriend(\'' + sid + '\')">Yes</button>'
+    + '<button class="btn-edit" onclick="cancelRemoveFriend(\'' + sid + '\')">No</button>';
+};
+
+window.cancelRemoveFriend = (friendUid) => {
+  const f = friendsList.find(x => x.id === friendUid);
+  if (!f) return;
+  const actionsEl = document.querySelector('.friend-card[data-friend-id="' + friendUid + '"] .friend-actions');
+  if (!actionsEl) return;
+  const sid = jsStr(f.id), sdn = jsStr(f.displayName || f.username);
+  actionsEl.innerHTML =
+    '<button class="btn-edit" onclick="openFriendLibrary(\'' + sid + '\',\'' + sdn + '\')" title="View library"><i data-lucide="book-open"></i></button>'
+    + '<button class="btn-edit" style="color:var(--danger);border-color:var(--danger)" onclick="confirmRemoveFriend(\'' + sid + '\')" title="Remove friend"><i data-lucide="user-x"></i></button>';
+  refreshIcons();
 };
 
 window.removeFriend = async (friendUid) => {
@@ -4113,14 +4165,93 @@ window.renderFriendBooks = () => {
   el.innerHTML = list.map(b => {
     const genres = (b.genres||[]).slice(0,2).map(g => '<span class="tag genre">' + esc(g) + '</span>').join('');
     const series = b.series ? '<span class="tag series"><i data-lucide="book-open" class="tag-icon"></i> ' + esc(b.series) + (b.seriesNumber ? ' #'+b.seriesNumber : '') + '</span>' : '';
+    const borrowBtn = !isWishlist
+      ? '<button class="btn-edit" onclick="requestBorrow(\'' + jsStr(friendLibUid) + '\',\'' + jsStr(b.id) + '\',\'' + jsStr(b.title||'') + '\')" title="Request to borrow" style="flex-shrink:0"><i data-lucide="hand"></i></button>'
+      : '';
     return '<div class="book-card' + (b.read ? ' is-read' : '') + '">'
       + '<div class="book-check"><span class="check-icon">✓</span></div>'
       + '<div class="book-info"><div class="book-title">' + esc(b.title||'') + '</div>'
       + '<div class="book-author">' + esc(b.author||'') + '</div>'
       + '<div class="book-tags">' + genres + series + '</div></div>'
+      + borrowBtn
       + '</div>';
   }).join('');
   refreshIcons();
+};
+
+// ── NOTIFICATIONS ─────────────────────────────────────────────────────────────
+async function loadNotifications() {
+  if (!currentUser) return;
+  try {
+    const snap = await getDocs(query(notifsCol(currentUser.uid), orderBy('createdAt', 'desc'), limit(30)));
+    notifications = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    unreadNotifCount = notifications.filter(n => !n.read).length;
+    const badge = document.getElementById('notifBadge');
+    if (badge) { badge.textContent = unreadNotifCount; badge.style.display = unreadNotifCount > 0 ? 'flex' : 'none'; }
+  } catch(e) {}
+}
+
+window.openNotifPanel = async () => {
+  document.getElementById('notifModal').classList.add('open');
+  renderNotifList();
+  refreshIcons();
+  // Mark all unread → read
+  const unread = notifications.filter(n => !n.read);
+  if (!unread.length) return;
+  notifications = notifications.map(n => ({ ...n, read: true }));
+  unreadNotifCount = 0;
+  document.getElementById('notifBadge').style.display = 'none';
+  for (const n of unread) {
+    try { await updateDoc(doc(notifsCol(currentUser.uid), n.id), { read: true }); } catch(e) {}
+  }
+};
+
+function renderNotifList() {
+  const el = document.getElementById('notifList');
+  if (!el) return;
+  if (!notifications.length) {
+    el.innerHTML = '<div style="padding:40px 0;text-align:center;color:var(--text3);font-size:13px">No notifications yet</div>';
+    return;
+  }
+  el.innerHTML = notifications.map(n => {
+    const icon = n.type === 'friend_request' ? 'user-plus' : 'book-open';
+    const title = n.type === 'friend_request'
+      ? '<strong>' + esc(n.displayName || n.fromUsername) + '</strong> sent you a friend request'
+      : '<strong>' + esc(n.displayName || n.fromUsername) + '</strong> wants to borrow <em>' + esc(n.bookTitle||'') + '</em>';
+    return '<div class="notif-item' + (!n.read ? ' unread' : '') + '" onclick="handleNotifClick(\'' + jsStr(n.type) + '\')">'
+      + '<div class="notif-icon"><i data-lucide="' + icon + '"></i></div>'
+      + '<div class="notif-text"><div class="notif-title">' + title + '</div>'
+      + '<div class="notif-sub">@' + esc(n.fromUsername||'') + '</div></div>'
+      + '</div>';
+  }).join('');
+  refreshIcons();
+}
+
+window.handleNotifClick = (type) => {
+  closeModal('notifModal');
+  if (type === 'friend_request') {
+    setPage('community');
+    setTimeout(() => { setCommunityTab('friends'); setFriendsView('requests'); }, 120);
+  }
+};
+
+window.requestBorrow = async (ownerUid, bookId, bookTitle) => {
+  if (!currentUser) return;
+  if (!userUsername) { showStatus('Set your username first (Settings → Account)', 'error'); return; }
+  try {
+    await addDoc(notifsCol(ownerUid), {
+      type: 'borrow_request',
+      fromUid: currentUser.uid,
+      fromUsername: userUsername,
+      displayName: currentUser.displayName || userUsername,
+      bookId,
+      bookTitle,
+      read: false,
+      createdAt: serverTimestamp()
+    });
+    showStatus('Borrow request sent!', 'success');
+    setTimeout(hideStatus, 2500);
+  } catch(e) { showStatus('Failed: ' + e.message, 'error'); }
 };
 
 </script>
