@@ -3929,8 +3929,8 @@ window.debounceFriendSearch = (val) => {
 async function doSearchFriends(rawQuery) {
   const q = rawQuery.trim().toLowerCase();
   const el = document.getElementById('findResults');
-  if (!q || q.length < 2) {
-    el.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px;text-align:center">Type at least 2 characters</div>';
+  if (!q || q.length < 3) {
+    el.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px;text-align:center">Type at least 3 characters</div>';
     return;
   }
   el.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px;text-align:center">Searching…</div>';
@@ -3938,7 +3938,7 @@ async function doSearchFriends(rawQuery) {
     const snap = await getDocs(query(
       collection(db, 'usernames'),
       where('username', '>=', q),
-      where('username', '<=', q + ''),
+      where('username', '<=', q + ''),
       limit(15)
     ));
     const results = snap.docs.map(d => d.data()).filter(u => u.uid !== currentUser.uid);
