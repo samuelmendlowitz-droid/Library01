@@ -121,6 +121,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .fdet-body { display: flex; flex-direction: column; overflow: hidden; flex: 1; min-height: 0; }
 .fdet-controls { padding: 10px 16px 0; display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; }
 .fdet-list { flex: 1; min-height: 0; overflow-y: auto; padding: 10px 16px 80px; display: flex; flex-direction: column; gap: 8px; }
+.fdet-list > * { flex-shrink: 0; }
 .fdet-list.grid-view { display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; align-content: start; align-items: start; }
 .fdet-list.list-view .book-card { flex-direction: row; padding: 8px 10px; }
 .chat-body { display: flex; flex-direction: column; flex: 1; min-height: 0; position: relative; overflow: hidden; }
