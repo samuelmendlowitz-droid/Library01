@@ -120,8 +120,8 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .notif-sub { font-size: 11px; color: var(--text3); margin-top: 3px; }
 .fdet-body { display: flex; flex-direction: column; overflow: hidden; flex: 1; min-height: 0; }
 .fdet-controls { padding: 10px 16px 0; display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; }
-.fdet-list { flex: 1; overflow-y: auto; padding: 10px 16px 80px; display: flex; flex-direction: column; gap: 8px; }
-.fdet-list.grid-view { display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; }
+.fdet-list { flex: 1; min-height: 0; overflow-y: auto; padding: 10px 16px 80px; display: flex; flex-direction: column; gap: 8px; }
+.fdet-list.grid-view { display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; align-content: start; align-items: start; }
 .fdet-list.list-view .book-card { flex-direction: row; padding: 8px 10px; }
 .chat-body { display: flex; flex-direction: column; flex: 1; min-height: 0; position: relative; overflow: hidden; }
 .chat-messages { flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
@@ -214,6 +214,13 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .username-err { font-size: 12px; color: var(--danger); margin-top: 6px; min-height: 16px; }
 
 /* FRIEND LIBRARY MODAL */
+.ios-toggle { position: relative; display: inline-block; width: 40px; height: 22px; flex-shrink: 0; }
+.ios-toggle input { opacity: 0; width: 0; height: 0; }
+.ios-slider { position: absolute; cursor: pointer; inset: 0; background: var(--border); border-radius: 22px; transition: 0.2s; }
+.ios-slider:before { content: ''; position: absolute; width: 16px; height: 16px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: 0.2s; }
+.ios-toggle input:checked + .ios-slider { background: var(--accent); }
+.ios-toggle input:checked + .ios-slider:before { transform: translateX(18px); }
+.hnav-btn .lucide { width: 11px; height: 11px; vertical-align: -1px; }
 .flib-tabs { display: flex; border-bottom: 1px solid var(--border); margin: 0 -20px 12px; padding: 0 20px; }
 
 /* SEARCH & FILTERS */
@@ -972,11 +979,11 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
       </div>
     </div>
     <div class="header-nav">
-      <button class="hnav-btn active" id="hnav-mylibrary" onclick="setPage('mylibrary')">My Library</button>
-      <button class="hnav-btn" id="hnav-wishlist" onclick="setPage('wishlist')">★ Wishlist</button>
-      <button class="hnav-btn" id="hnav-global" onclick="setPage('global')">Global Library</button>
-      <button class="hnav-btn" id="hnav-discover" onclick="setPage('discover')">Discover</button>
-      <button class="hnav-btn" id="hnav-community" onclick="setPage('community')">Community</button>
+      <button class="hnav-btn active" id="hnav-mylibrary" onclick="setPage('mylibrary')"><i data-lucide="book"></i> My Library</button>
+      <button class="hnav-btn" id="hnav-wishlist" onclick="setPage('wishlist')"><i data-lucide="star"></i> Wishlist</button>
+      <button class="hnav-btn" id="hnav-global" onclick="setPage('global')"><i data-lucide="globe"></i> Global Library</button>
+      <button class="hnav-btn" id="hnav-discover" onclick="setPage('discover')"><i data-lucide="compass"></i> Discover</button>
+      <button class="hnav-btn" id="hnav-community" onclick="setPage('community')"><i data-lucide="users"></i> Community</button>
     </div>
   </div><!-- /.header -->
 
@@ -1097,14 +1104,20 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
     <div class="modal-header">
       <div class="modal-handle"></div>
       <div class="modal-header-row">
-        <button style="background:none;border:none;color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;padding:0;font-family:'DM Sans',sans-serif;flex-shrink:0" onclick="closeFriendDetails()"><i data-lucide="chevron-left"></i> Back</button>
-        <div class="modal-title" id="friendDetailsTitle" style="flex:1;text-align:center;padding:0 12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
-        <button onclick="confirmRemoveFriend(friendDetailsUid)" style="background:none;border:none;color:var(--text3);cursor:pointer;display:flex;align-items:center;padding:4px;flex-shrink:0" title="Unfriend"><i data-lucide="user-x" style="width:16px;height:16px"></i></button>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+          <button style="background:none;border:none;color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;padding:0;font-family:'DM Sans',sans-serif" onclick="closeFriendDetails()"><i data-lucide="chevron-left"></i> Back</button>
+          <button class="btn-edit" id="friendLibViewBtn" onclick="toggleFriendLibrary()" title="Library" style="width:32px;height:32px"><i data-lucide="book-open"></i></button>
+          <button class="btn-edit" id="friendChatSettingsBtn" onclick="toggleFriendSettings()" title="Settings" style="width:32px;height:32px"><i data-lucide="settings"></i></button>
+        </div>
+        <div class="modal-title" id="friendDetailsTitle" style="flex:1;text-align:center;padding:0 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+        <div style="width:96px;flex-shrink:0"></div>
       </div>
-      <div class="flib-tabs">
-        <button class="ctab active" id="fdet-tab-library" onclick="setFriendDetailsTab('library')">Library</button>
-        <button class="ctab" id="fdet-tab-chat" onclick="setFriendDetailsTab('chat')">Chat<span id="chatUnreadBadge" style="display:none;margin-left:5px;background:var(--danger);color:#fff;border-radius:8px;padding:0 5px;font-size:10px;font-weight:700"></span></button>
-        <button class="ctab" id="fdet-tab-clubs" onclick="setFriendDetailsTab('clubs')">Clubs</button>
+      <div id="friendSettingsPanel" style="display:none;padding:10px 0 4px;border-top:1px solid var(--border);margin-top:8px">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0 8px">
+          <span style="font-size:13px;color:var(--text2)">Notifications</span>
+          <label class="ios-toggle"><input type="checkbox" id="friendNotifToggle" onchange="saveFriendNotifPref(this.checked)" checked><span class="ios-slider"></span></label>
+        </div>
+        <button style="background:none;border:none;color:var(--danger);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;padding:4px 0;font-family:'DM Sans',sans-serif" onclick="confirmRemoveFriendFromSettings()"><i data-lucide="user-x" style="width:14px;height:14px"></i> Unfriend</button>
       </div>
     </div>
 
@@ -2119,6 +2132,7 @@ async function loadBooks() {
       buildGenreFilters(); buildStatusFilters(); applyFilters(); updateStats();
       syncUserBooksToCache();
       document.getElementById('fabAdd').style.display = ['mylibrary','wishlist'].includes(currentPage) ? 'flex' : 'none';
+      requestAnimationFrame(updateHeaderSpacer);
     } else {
       showStatus('<span class="spinner"></span> Loading your library…', 'loading');
     }
@@ -2132,6 +2146,7 @@ async function loadBooks() {
     buildGenreFilters(); buildStatusFilters(); applyFilters(); updateStats();
     syncUserBooksToCache();
     document.getElementById('fabAdd').style.display = ['mylibrary','wishlist'].includes(currentPage) ? 'flex' : 'none';
+    requestAnimationFrame(updateHeaderSpacer);
   } catch(e) {
     if (!books.length) showStatus('Error loading books. Please refresh.', 'error');
   }
@@ -3944,7 +3959,7 @@ function initCommunityPage() {
     const el = document.getElementById('comm-' + t);
     if (el) el.style.display = t === 'chats' ? '' : 'none';
   });
-  loadFriends().then(() => renderChats());
+  loadFriends().then(() => { renderChats(); loadLastChatMessages(); });
 }
 
 window.setCommunityTab = (tab) => {
@@ -3971,6 +3986,20 @@ window.setFriendsView = (view) => {
 };
 
 // ── RENDER CHATS ──────────────────────────────────────────────────────────────
+let chatLastMessages = {};
+
+async function loadLastChatMessages() {
+  if (!currentUser || !friendsList.length) return;
+  await Promise.allSettled(friendsList.map(async f => {
+    try {
+      const chatId = [currentUser.uid, f.id].sort().join('_');
+      const snap = await getDocs(query(collection(db, 'chats', chatId, 'messages'), orderBy('createdAt', 'desc'), limit(1)));
+      if (!snap.empty) chatLastMessages[f.id] = snap.docs[0].data();
+    } catch(_) {}
+  }));
+  renderChats();
+}
+
 function renderChats() {
   const el = document.getElementById('comm-chats-list');
   if (!el) return;
@@ -3981,15 +4010,20 @@ function renderChats() {
   el.innerHTML = friendsList.map(f => {
     const init = (f.displayName || f.username || '?')[0].toUpperCase();
     const sid = jsStr(f.id), sdn = jsStr(f.displayName || f.username);
-    return '<div class="friend-card" data-friend-id="' + esc(f.id) + '">'
-      + '<div class="friend-avatar" style="cursor:pointer" onclick="openFriendDetails(\'' + sid + '\',\'' + sdn + '\');setTimeout(()=>setFriendDetailsTab(\'chat\'),200)">' + esc(init) + '</div>'
-      + '<div class="friend-info" style="cursor:pointer;flex:1;min-width:0" onclick="openFriendDetails(\'' + sid + '\',\'' + sdn + '\');setTimeout(()=>setFriendDetailsTab(\'chat\'),200)">'
+    const lastMsg = chatLastMessages[f.id];
+    let preview = '';
+    if (lastMsg) {
+      if (lastMsg.type === 'book_ref') preview = '📖 ' + (lastMsg.bookTitle || 'Book').slice(0, 10);
+      else if (lastMsg.type === 'borrow_request') preview = '📚 Borrow req';
+      else { const t = lastMsg.text || ''; preview = t.slice(0, 10) + (t.length > 10 ? '…' : ''); }
+    }
+    return '<div class="friend-card" data-friend-id="' + esc(f.id) + '" style="cursor:pointer" onclick="openFriendDetails(\'' + sid + '\',\'' + sdn + '\')">'
+      + '<div class="friend-avatar">' + esc(init) + '</div>'
+      + '<div class="friend-info" style="flex:1;min-width:0">'
       + '<div class="friend-name">' + esc(f.displayName || f.username) + '</div>'
       + '<div class="friend-username">@' + esc(f.username) + '</div></div>'
-      + '<div class="friend-actions" style="gap:6px;flex-shrink:0">'
-      + '<button class="btn-edit" onclick="openFriendDetails(\'' + sid + '\',\'' + sdn + '\')" title="Library"><i data-lucide="book-open"></i></button>'
-      + '<button class="btn-edit" style="opacity:0.4;cursor:not-allowed" title="Clubs (coming soon)" disabled><i data-lucide="users-round"></i></button>'
-      + '</div></div>';
+      + (preview ? '<div style="font-size:11px;color:var(--text3);flex-shrink:0;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right">' + esc(preview) + '</div>' : '')
+      + '</div>';
   }).join('');
   refreshIcons();
 }
@@ -4189,33 +4223,23 @@ const FLIB_SORT_OPTS = [
   {val:'added-desc', label:'Recently Added'},
 ];
 
-window.openFriendDetails = async (uid, name) => {
-  friendDetailsUid = uid; friendDetailsName = name; friendDetailsTab = 'library';
-  document.getElementById('friendDetailsTitle').textContent = name + "'s Library";
+window.openFriendDetails = (uid, name) => {
+  friendDetailsUid = uid; friendDetailsName = name; friendDetailsTab = 'chat';
+  document.getElementById('friendDetailsTitle').textContent = name;
   document.getElementById('friendDetailsModal').classList.add('open');
-  ['library','chat','clubs'].forEach(t => {
-    document.getElementById('fdet-tab-' + t).classList.toggle('active', t === 'library');
-    document.getElementById('fdet-' + t).style.display = t === 'library' ? '' : 'none';
-  });
-  document.getElementById('friendLibSearch').value = '';
-  document.getElementById('friendLibList').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3)">Loading…</div>';
-  flibGenreFilters = []; flibTopFilter = 'all'; flibSort = 'title-asc'; flibView = 'card';
+  document.getElementById('fdet-library').style.display = 'none';
+  document.getElementById('fdet-chat').style.display = 'flex';
+  document.getElementById('fdet-clubs').style.display = 'none';
+  document.getElementById('friendSettingsPanel').style.display = 'none';
+  const libBtn = document.getElementById('friendLibViewBtn');
+  if (libBtn) libBtn.classList.remove('active');
+  const muted = localStorage.getItem('notif_muted_' + uid) === 'true';
+  const toggle = document.getElementById('friendNotifToggle');
+  if (toggle) toggle.checked = !muted;
+  friendLibBooks = []; flibGenreFilters = []; flibTopFilter = 'all'; flibSort = 'title-asc'; flibView = 'card';
   flibFilterOpen = false; flibSortOpen = false;
-  document.getElementById('flibFilterPanel').style.display = 'none';
-  document.getElementById('flibSortPanel').style.display = 'none';
-  document.getElementById('flibFilterBtn').classList.remove('active');
-  document.getElementById('flibSortBtn').classList.remove('active');
   refreshIcons();
-  try {
-    const snap = await getDocs(query(collection(db, 'users', uid, 'books'), orderBy('addedAt', 'asc')));
-    friendLibBooks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    buildFlibGenreFilters();
-    buildFlibSortOptions();
-    renderFriendLibStats();
-    applyFriendLibFilters();
-  } catch(e) {
-    document.getElementById('friendLibList').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3)">Could not load library.</div>';
-  }
+  startChatListener(currentUser.uid, uid);
 };
 
 window.closeFriendDetails = () => {
@@ -4224,18 +4248,70 @@ window.closeFriendDetails = () => {
   friendLibBooks = []; friendDetailsUid = null;
 };
 
+window.toggleFriendLibrary = () => {
+  const newTab = friendDetailsTab === 'library' ? 'chat' : 'library';
+  setFriendDetailsTab(newTab);
+  document.getElementById('friendSettingsPanel').style.display = 'none';
+  if (newTab === 'library' && !friendLibBooks.length) {
+    document.getElementById('friendLibSearch').value = '';
+    document.getElementById('friendLibList').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3)">Loading…</div>';
+    document.getElementById('flibFilterPanel').style.display = 'none';
+    document.getElementById('flibSortPanel').style.display = 'none';
+    document.getElementById('flibFilterBtn')?.classList.remove('active');
+    document.getElementById('flibSortBtn')?.classList.remove('active');
+    flibFilterOpen = false; flibSortOpen = false;
+    getDocs(query(collection(db, 'users', friendDetailsUid, 'books'), orderBy('addedAt', 'asc'))).then(snap => {
+      friendLibBooks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      buildFlibGenreFilters(); buildFlibSortOptions(); renderFriendLibStats(); applyFriendLibFilters();
+    }).catch(() => {
+      document.getElementById('friendLibList').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3)">Could not load library.</div>';
+    });
+  }
+  refreshIcons();
+};
+
+window.toggleFriendSettings = () => {
+  const panel = document.getElementById('friendSettingsPanel');
+  const opening = panel.style.display === 'none';
+  panel.style.display = opening ? '' : 'none';
+  if (opening) {
+    const muted = localStorage.getItem('notif_muted_' + friendDetailsUid) === 'true';
+    panel.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0 8px">'
+      + '<span style="font-size:13px;color:var(--text2)">Notifications</span>'
+      + '<label class="ios-toggle"><input type="checkbox" id="friendNotifToggle" onchange="saveFriendNotifPref(this.checked)"' + (!muted ? ' checked' : '') + '><span class="ios-slider"></span></label>'
+      + '</div>'
+      + '<button style="background:none;border:none;color:var(--danger);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;padding:4px 0;font-family:\'DM Sans\',sans-serif" onclick="confirmRemoveFriendFromSettings()"><i data-lucide="user-x" style="width:14px;height:14px"></i> Unfriend</button>';
+    refreshIcons();
+  }
+};
+
+window.saveFriendNotifPref = (enabled) => {
+  if (!friendDetailsUid) return;
+  if (enabled) localStorage.removeItem('notif_muted_' + friendDetailsUid);
+  else localStorage.setItem('notif_muted_' + friendDetailsUid, 'true');
+};
+
+window.confirmRemoveFriendFromSettings = () => {
+  const panel = document.getElementById('friendSettingsPanel');
+  if (!panel) return;
+  panel.innerHTML = '<div style="text-align:center;padding:4px 0">'
+    + '<div style="font-size:13px;color:var(--text2);margin-bottom:10px">Remove ' + esc(friendDetailsName) + ' as a friend?</div>'
+    + '<div style="display:flex;gap:8px;justify-content:center">'
+    + '<button class="btn-add-collection" style="background:var(--danger);border-color:var(--danger);color:#fff" onclick="removeFriendAndClose(\'' + jsStr(friendDetailsUid) + '\')">Yes, unfriend</button>'
+    + '<button class="btn-edit" style="padding:0 12px;width:auto" onclick="toggleFriendSettings()">Cancel</button>'
+    + '</div></div>';
+};
+
 window.setFriendDetailsTab = (tab) => {
   friendDetailsTab = tab;
-  ['library','chat','clubs'].forEach(t => {
-    document.getElementById('fdet-tab-' + t).classList.toggle('active', t === tab);
-    document.getElementById('fdet-' + t).style.display = t === tab ? (t === 'chat' ? 'flex' : '') : 'none';
-  });
-  if (tab === 'library') {
-    renderFriendLibStats(); applyFriendLibFilters();
-  } else if (tab === 'chat') {
-    document.getElementById('chatUnreadBadge').style.display = 'none';
-    startChatListener(currentUser.uid, friendDetailsUid);
-  }
+  const isLibrary = tab === 'library';
+  document.getElementById('fdet-library').style.display = isLibrary ? '' : 'none';
+  document.getElementById('fdet-chat').style.display = isLibrary ? 'none' : 'flex';
+  document.getElementById('fdet-clubs').style.display = 'none';
+  const libBtn = document.getElementById('friendLibViewBtn');
+  if (libBtn) libBtn.classList.toggle('active', isLibrary);
+  if (tab === 'chat') startChatListener(currentUser.uid, friendDetailsUid);
+  else stopChatListener();
   refreshIcons();
 };
 
