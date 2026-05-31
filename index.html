@@ -85,18 +85,9 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
   border-bottom: 1px solid rgba(20, 35, 60, 0.4);
   position: fixed; top: 0; left: 0; right: 0; z-index: 100;
 }
-/* Push page content below the fixed header */
-#mainApp > .controls,
-#mainApp > .status-bar,
-#mainApp > .list-header,
-#mainApp > .book-list {
-  margin-top: 0;
-}
-.header-spacer {
-  /* filled in by JS once header height is known */
-  flex-shrink: 0;
-}
-.header-row { display: flex; align-items: flex-start; justify-content: space-between; }
+/* HEADER NAV */
+.header-brand-row { display: flex; align-items: flex-start; justify-content: space-between; }
+.header-brand-info { display: flex; flex-direction: column; }
 .header-title {
   font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700;
   color: var(--accent2); letter-spacing: -0.5px;
@@ -118,23 +109,44 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
   flex-shrink: 0;
 }
 .settings-btn:active { background: var(--surface3); border-color: var(--accent); }
-.header-stats { display: flex; gap: 10px; margin-top: 14px; }
-.stat { display: flex; flex-direction: column; align-items: center; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; min-width: 56px; }
-.stat-num { font-family: 'Playfair Display', serif; font-size: 20px; font-weight: 700; color: var(--accent); line-height: 1; }
-.stat-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 3px; }
+.header-nav { display: flex; gap: 0; margin-top: 10px; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; }
+.header-nav::-webkit-scrollbar { display: none; }
+.hnav-btn { padding: 7px 14px; border: none; border-bottom: 2px solid transparent; background: none; color: var(--text3); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all 0.15s; flex-shrink: 0; -webkit-tap-highlight-color: transparent; }
+.hnav-btn.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+.hnav-btn:active { opacity: 0.7; }
 
+/* SUBHEADER */
+.subheader { position: fixed; left: 0; right: 0; z-index: 90; background: var(--surface); border-bottom: 1px solid var(--border); padding: 10px 16px; display: flex; flex-direction: column; gap: 10px; transition: transform 0.25s ease; }
+.subheader.hidden { transform: translateY(-110%); }
+.subheader-stats { display: flex; gap: 8px; }
+.subheader-stats .stat { flex: 1; min-width: 0; }
+.stat { display: flex; flex-direction: column; align-items: center; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 7px 6px; }
+.stat-num { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; color: var(--accent); line-height: 1; }
+.stat-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 3px; }
 .stat-clickable { cursor:pointer; transition:all 0.2s; }
 .stat-clickable.active { border-color: var(--accent); background:#2a2418; }
 .stat-clickable:active { transform:scale(0.96); }
+.subheader-ctrl { display: flex; gap: 8px; align-items: center; }
+.ctrl-btn { width: 36px; height: 36px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface2); color: var(--text2); font-size: 15px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s; flex-shrink: 0; -webkit-tap-highlight-color: transparent; }
+.ctrl-btn.active { background: var(--accent); border-color: var(--accent); color: #1a1612; }
+.ctrl-btn:active { opacity: 0.75; }
+.filter-panel, .sort-panel { padding-top: 10px; border-top: 1px solid var(--border); }
+.sort-options { display: flex; flex-wrap: wrap; gap: 8px; padding: 2px 0 4px; }
+.sort-option { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface2); color: var(--text2); font-size: 12px; font-family: 'DM Sans', sans-serif; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all 0.15s; }
+.sort-option.active { background: var(--accent); border-color: var(--accent); color: #1a1612; font-weight: 600; }
+.coming-soon { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 50vh; gap: 14px; }
+.coming-soon-icon { width: 52px; height: 52px; color: var(--text3); }
+.coming-soon-title { font-family: 'Playfair Display', serif; font-size: 24px; color: var(--text2); }
+.coming-soon-sub { font-size: 14px; color: var(--text3); }
 
-/* CONTROLS */
-.controls { padding: 14px 20px; display: flex; flex-direction: column; gap: 12px; background: var(--surface); border-bottom: 1px solid var(--border); }
+/* SEARCH & FILTERS */
 .search-wrap { position: relative; }
-.search-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 16px 12px 42px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 15px; outline: none; transition: border-color 0.2s; }
+.search-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 16px 10px 40px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; transition: border-color 0.2s; box-sizing: border-box; }
 .search-input::placeholder { color: var(--text3); }
 .search-input:focus { border-color: var(--accent); }
-.search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 16px; pointer-events: none; }
+.search-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 15px; pointer-events: none; }
 .filter-section-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; font-weight: 500; }
+.filter-hint { font-weight: 300; text-transform: none; letter-spacing: 0; }
 .filter-row { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; flex-wrap: nowrap; }
 .filter-row::-webkit-scrollbar { display: none; }
 .filter-btn { padding: 7px 14px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface2); color: var(--text2); font-size: 12px; font-family: 'DM Sans', sans-serif; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all 0.15s; flex-shrink: 0; }
@@ -142,9 +154,6 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .filter-btn.active-2 { background: var(--surface3); border-color: var(--accent2); color: var(--accent2); }
 .mode-row { display: none; margin-top: 8px; align-items: center; gap: 8px; flex-wrap: wrap; }
 .mode-row.visible { display: flex; }
-.sort-row { display: flex; gap: 8px; align-items: center; }
-.sort-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
-.sort-select { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; outline: none; appearance: none; -webkit-appearance: none; cursor: pointer; }
 
 /* BOOK LIST */
 .list-header { padding: 12px 20px 4px; font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px; font-weight: 500; }
@@ -179,11 +188,6 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .star-rating .star { font-size: 26px; cursor: pointer; color: var(--border); transition: color 0.1s; line-height: 1; user-select: none; }
 .star-rating .star.lit { color: #f5a623; }
 .book-rating { font-size: 11px; color: #f5a623; font-weight: 600; margin-top: 3px; letter-spacing: 0.2px; }
-.view-toggle-btn { padding: 6px 14px; border-radius: 999px; background: var(--surface2); border: 1px solid var(--border); color: var(--accent); font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
-.view-toggle-btn.active { background: var(--accent); color: #1a1612; border-color: var(--accent); }
-.view-btns { display: flex; gap: 3px; flex-shrink: 0; }
-.view-btn { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; color: var(--text2); font-size: 15px; width: 30px; height: 30px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; padding: 0; font-family: 'DM Sans',sans-serif; }
-.view-btn.active { background: var(--accent); border-color: var(--accent); color: #1a1612; }
 
 /* Grid view — 2 columns */
 .book-list.grid-view { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 8px 12px 100px; }
@@ -846,7 +850,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .modal, .modal-header, .full-sheet,
 .settings-sheet, .settings-header, .settings-body,
 .bulk-sheet, .bulk-header,
-.controls {
+.subheader {
   background-color: #0c0d1c !important;
   background-image: var(--grain);
 }
@@ -882,61 +886,56 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 <!-- MAIN APP -->
 <div id="mainApp" style="display:none">
   <div class="header" id="mainHeader">
-    <div class="header-row">
-      <div>
+    <div class="header-brand-row">
+      <div class="header-brand-info">
         <div class="header-title" onclick="resetAllFilters()"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 145" fill="none" class="header-logo"><line x1="41" y1="27" x2="70" y2="128" stroke="currentColor" stroke-width="13" stroke-linecap="round"/><line x1="159" y1="27" x2="130" y2="128" stroke="currentColor" stroke-width="13" stroke-linecap="round"/><path d="M41 27 C 92 44,100 95,100 113" stroke="currentColor" stroke-width="7" stroke-linecap="round"/><path d="M159 27 C 108 44,100 95,100 113" stroke="currentColor" stroke-width="7" stroke-linecap="round"/></svg> Miriam's Library</div>
         <div class="header-user" id="headerUser"></div>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <button class="view-toggle-btn" id="viewToggleBtn" onclick="toggleLibraryView()">Global Library</button>
-        <button class="settings-btn" onclick="openSettings()" title="Settings"><i data-lucide="settings"></i></button>
-      </div>
+      <button class="settings-btn" onclick="openSettings()" title="Settings"><i data-lucide="settings"></i></button>
     </div>
-    <div class="header-stats">
-      <div class="stat stat-clickable active" onclick="setTopFilter('all')"><div class="stat-num" id="statTotal">0</div><div class="stat-label">Books</div></div>
-      <div class="stat stat-clickable" onclick="setTopFilter('read')"><div class="stat-num" id="statRead">0</div><div class="stat-label">Read</div></div>
-      <div class="stat stat-clickable" onclick="setTopFilter('unread')"><div class="stat-num" id="statUnread">0</div><div class="stat-label">Unread</div></div>
-      <div class="stat stat-clickable" onclick="setTopFilter('borrowed')"><div class="stat-num" id="statBorrowed">0</div><div class="stat-label">Out</div></div>
-      <div class="stat stat-clickable" onclick="setTopFilter('wishlist')"><div class="stat-num" id="statWishlist">0</div><div class="stat-label">Wishlist</div></div>
+    <div class="header-nav">
+      <button class="hnav-btn active" id="hnav-mylibrary" onclick="setPage('mylibrary')">My Library</button>
+      <button class="hnav-btn" id="hnav-wishlist" onclick="setPage('wishlist')">Wishlist</button>
+      <button class="hnav-btn" id="hnav-global" onclick="setPage('global')">Global Library</button>
+      <button class="hnav-btn" id="hnav-discover" onclick="setPage('discover')">Discover</button>
+      <button class="hnav-btn" id="hnav-community" onclick="setPage('community')">Community</button>
     </div>
   </div><!-- /.header -->
 
   <div id="headerSpacer"></div>
 
-  <div class="controls">
-    <div class="search-wrap">
-      <span class="search-icon">🔍</span>
-      <input class="search-input" type="text" id="searchInput" placeholder="Search title, author or series…" oninput="applyFilters()">
+  <!-- Scroll-hiding subheader: stats + search + filter/sort/view controls -->
+  <div class="subheader" id="subheader">
+    <div class="subheader-stats" id="subheaderStats">
+      <div class="stat stat-clickable active" id="statCardAll" onclick="setTopFilter('all')"><div class="stat-num" id="statTotal">0</div><div class="stat-label">Books</div></div>
+      <div class="stat stat-clickable" id="statCardRead" onclick="setTopFilter('read')"><div class="stat-num" id="statRead">0</div><div class="stat-label">Read</div></div>
+      <div class="stat stat-clickable" id="statCardUnread" onclick="setTopFilter('unread')"><div class="stat-num" id="statUnread">0</div><div class="stat-label">Unread</div></div>
+      <div class="stat stat-clickable" id="statCardBorrowed" onclick="setTopFilter('borrowed')"><div class="stat-num" id="statBorrowed">0</div><div class="stat-label">Out</div></div>
     </div>
-    <div>
-      <div class="filter-section-label">Filter by Genre <span style="font-weight:300;text-transform:none;letter-spacing:0">(tap up to 3)</span></div>
+    <div class="subheader-ctrl">
+      <div class="search-wrap" style="flex:1;min-width:0">
+        <span class="search-icon">🔍</span>
+        <input class="search-input" type="text" id="searchInput" placeholder="Search title, author or series…" oninput="applyFilters()">
+      </div>
+      <button class="ctrl-btn" id="filterBtn" onclick="toggleFilterPanel()" title="Filter"><i data-lucide="sliders-horizontal"></i></button>
+      <button class="ctrl-btn" id="sortBtn" onclick="toggleSortPanel()" title="Sort"><i data-lucide="arrow-up-down"></i></button>
+      <button class="ctrl-btn" id="viewBtn" onclick="cycleBookView()" title="Change view"><i data-lucide="layout-list" id="viewBtnIcon"></i></button>
+    </div>
+    <div class="filter-panel" id="filterPanel" style="display:none">
+      <div class="filter-section-label">Genre <span class="filter-hint">(tap up to 3)</span></div>
       <div class="filter-row" id="genreFilters"></div>
       <div class="mode-row" id="genreModeRow">
         <span style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;">Match:</span>
         <button class="filter-btn active" id="modeOR" onclick="setGenreMode('OR')">OR</button>
         <button class="filter-btn" id="modeAND" onclick="setGenreMode('AND')">AND</button>
       </div>
-    </div>
-    <div id="locationFilterSection">
-      <div class="filter-section-label">Filter by Location</div>
-      <div class="filter-row" id="statusFilters"></div>
-    </div>
-    <div class="sort-row">
-      <span class="sort-label">Sort</span>
-      <select class="sort-select" id="sortSelect" onchange="applyFilters()">
-        <option value="title-asc">Title A→Z</option>
-        <option value="title-desc">Title Z→A</option>
-        <option value="author-asc">Author A→Z</option>
-        <option value="author-desc">Author Z→A</option>
-        <option value="genre-asc">Genre A→Z</option>
-        <option value="genre-custom">Genre (Custom Order)</option>
-        <option value="added-desc">Recently Added</option>
-      </select>
-      <div class="view-btns">
-        <button class="view-btn active" id="vbCard" onclick="setBookView('card')" title="Card view"><i data-lucide="layout-list"></i></button>
-        <button class="view-btn" id="vbGrid" onclick="setBookView('grid')" title="Grid view"><i data-lucide="layout-grid"></i></button>
-        <button class="view-btn" id="vbList" onclick="setBookView('list')" title="List view"><i data-lucide="list"></i></button>
+      <div id="locationFilterSection">
+        <div class="filter-section-label" style="margin-top:10px">Location</div>
+        <div class="filter-row" id="statusFilters"></div>
       </div>
+    </div>
+    <div class="sort-panel" id="sortPanel" style="display:none">
+      <div class="sort-options" id="sortOptions"></div>
     </div>
   </div>
 
@@ -945,6 +944,14 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
   <div class="book-list" id="bookList"></div>
 
   <button class="fab" id="fabAdd" onclick="openAddModal()" style="display:none"><i data-lucide="plus"></i></button>
+
+  <!-- Coming soon pages -->
+  <div id="page-discover" style="display:none">
+    <div class="coming-soon"><i data-lucide="compass" class="coming-soon-icon"></i><div class="coming-soon-title">Discover</div><div class="coming-soon-sub">Coming soon</div></div>
+  </div>
+  <div id="page-community" style="display:none">
+    <div class="coming-soon"><i data-lucide="users" class="coming-soon-icon"></i><div class="coming-soon-title">Community</div><div class="coming-soon-sub">Coming soon</div></div>
+  </div>
 </div>
 
 <!-- ADD MODAL -->
@@ -1388,8 +1395,11 @@ let customFirstName = '';
 let selectedGenreFilters = [], genreFilterMode = 'OR';
 let selectedStatusFilters = [];
 let topFilters = ['all'];
-let currentView = 'personal';
+let currentPage = 'mylibrary'; // 'mylibrary' | 'wishlist' | 'global' | 'discover' | 'community'
+let currentSort = 'title-asc';
 let currentBookView = 'card'; // 'card' | 'grid' | 'list'
+let filterPanelOpen = false;
+let sortPanelOpen = false;
 let addSelectedGenres = [], editSelectedGenres = [];
 let editingId = null;
 let checkoutTargetId = null;
@@ -1821,7 +1831,7 @@ async function loadBooks() {
       hideStatus();
       buildGenreFilters(); buildStatusFilters(); applyFilters(); updateStats();
       syncUserBooksToCache();
-      document.getElementById('fabAdd').style.display = 'flex';
+      document.getElementById('fabAdd').style.display = ['mylibrary','wishlist'].includes(currentPage) ? 'flex' : 'none';
     } else {
       showStatus('<span class="spinner"></span> Loading your library…', 'loading');
     }
@@ -1834,7 +1844,7 @@ async function loadBooks() {
     hideStatus();
     buildGenreFilters(); buildStatusFilters(); applyFilters(); updateStats();
     syncUserBooksToCache();
-    document.getElementById('fabAdd').style.display = 'flex';
+    document.getElementById('fabAdd').style.display = ['mylibrary','wishlist'].includes(currentPage) ? 'flex' : 'none';
   } catch(e) {
     if (!books.length) showStatus('Error loading books. Please refresh.', 'error');
   }
@@ -1946,32 +1956,38 @@ function buildGenreGrid(gridId, selectedArr) {
 }
 
 function applyFilters() {
-  if (currentView === 'global') { applyGlobalFilters(); return; }
-  const q    = document.getElementById('searchInput').value.toLowerCase().trim();
-  const sort = document.getElementById('sortSelect').value;
+  if (currentPage === 'global') { applyGlobalFilters(); return; }
+  if (currentPage === 'discover' || currentPage === 'community') return;
+  const q    = (document.getElementById('searchInput') || {}).value?.toLowerCase().trim() || '';
+  const sort = currentSort;
+  const isWishlist = currentPage === 'wishlist';
   let filtered = books.filter(b => {
-    if (!topFilters.includes('wishlist') && b.location === 'Wishlist') return false;
+    if (isWishlist) return b.location === 'Wishlist';
+    if (b.location === 'Wishlist') return false;
     if (!topFilters.includes('all')) {
       let topMatch = false;
-      if (topFilters.includes('read')     && b.read && b.location !== 'Wishlist') topMatch = true;
-      if (topFilters.includes('unread')   && !b.read && b.location !== 'Wishlist') topMatch = true;
+      if (topFilters.includes('read')     && b.read) topMatch = true;
+      if (topFilters.includes('unread')   && !b.read) topMatch = true;
       if (topFilters.includes('borrowed') && b.location === 'Borrowed') topMatch = true;
-      if (topFilters.includes('wishlist') && b.location === 'Wishlist') topMatch = true;
       if (!topMatch) return false;
     }
     if (selectedStatusFilters.length > 0) {
-      const matchS = s => b.location.toLowerCase() === s;
-      const ok = selectedStatusFilters.some(matchS);
-      if (!ok) return false;
-    }
-    if (q && !b.title.toLowerCase().includes(q) && !(b.author||'').toLowerCase().includes(q) && !(b.series||'').toLowerCase().includes(q)) return false;
-    if (selectedGenreFilters.length > 0) {
-      const genres = b.genres || [];
-      const ok = genreFilterMode === 'AND' ? selectedGenreFilters.every(g => genres.includes(g)) : selectedGenreFilters.some(g => genres.includes(g));
+      const ok = selectedStatusFilters.some(s => b.location.toLowerCase() === s);
       if (!ok) return false;
     }
     return true;
   });
+  if (q) filtered = filtered.filter(b =>
+    b.title.toLowerCase().includes(q) ||
+    (b.author||'').toLowerCase().includes(q) ||
+    (b.series||'').toLowerCase().includes(q)
+  );
+  if (selectedGenreFilters.length > 0) {
+    filtered = filtered.filter(b => {
+      const genres = b.genres || [];
+      return genreFilterMode === 'AND' ? selectedGenreFilters.every(g => genres.includes(g)) : selectedGenreFilters.some(g => genres.includes(g));
+    });
+  }
 
   if (sort === 'genre-custom') {
     // Sort by position of first genre in orderedGenres; books with no genre go last
@@ -2082,25 +2098,42 @@ function renderBooksList(list) {
 }
 
 function updateStats() {
-  const libraryBooks = books.filter(b => b.location !== 'Wishlist');
-  document.getElementById('statTotal').textContent    = libraryBooks.length;
-  document.getElementById('statRead').textContent     = libraryBooks.filter(b => b.read).length;
-  document.getElementById('statUnread').textContent   = libraryBooks.filter(b => !b.read).length;
-  document.getElementById('statBorrowed').textContent = libraryBooks.filter(b => b.location === 'Borrowed').length;
-  document.getElementById('statWishlist').textContent = books.filter(b => b.location === 'Wishlist').length;
+  if (currentPage === 'wishlist') {
+    const wb = books.filter(b => b.location === 'Wishlist');
+    document.getElementById('statTotal').textContent    = wb.length;
+    document.getElementById('statRead').textContent     = wb.filter(b => b.read).length;
+    document.getElementById('statUnread').textContent   = wb.filter(b => !b.read).length;
+    document.getElementById('statBorrowed').textContent = 0;
+  } else if (currentPage === 'global') {
+    document.getElementById('statTotal').textContent    = globalBookCache.length;
+    document.getElementById('statRead').textContent     = books.filter(b => b.read && b.location !== 'Wishlist').length;
+    document.getElementById('statUnread').textContent   = books.filter(b => !b.read && b.location !== 'Wishlist').length;
+    document.getElementById('statBorrowed').textContent = books.filter(b => b.location === 'Borrowed').length;
+  } else {
+    const lb = books.filter(b => b.location !== 'Wishlist');
+    document.getElementById('statTotal').textContent    = lb.length;
+    document.getElementById('statRead').textContent     = lb.filter(b => b.read).length;
+    document.getElementById('statUnread').textContent   = lb.filter(b => !b.read).length;
+    document.getElementById('statBorrowed').textContent = lb.filter(b => b.location === 'Borrowed').length;
+  }
 }
 
 window.resetAllFilters = () => {
-  if (currentView === 'global') { toggleLibraryView(); return; }
   topFilters = ['all'];
   selectedGenreFilters = [];
   selectedStatusFilters = [];
-  document.getElementById('searchInput').value = '';
-  buildGenreFilters();
-  buildStatusFilters();
+  const si = document.getElementById('searchInput');
+  if (si) si.value = '';
+  filterPanelOpen = false; sortPanelOpen = false;
+  document.getElementById('filterPanel').style.display = 'none';
+  document.getElementById('sortPanel').style.display = 'none';
+  document.getElementById('filterBtn')?.classList.remove('active');
+  document.getElementById('sortBtn')?.classList.remove('active');
   document.querySelectorAll('.stat-clickable').forEach(el => el.classList.remove('active'));
-  document.querySelector('.stat-clickable')?.classList.add('active');
-  applyFilters();
+  document.getElementById('statCardAll')?.classList.add('active');
+  if (currentPage === 'global') { buildGlobalGenreFilters(); applyGlobalFilters(); }
+  else { buildGenreFilters(); buildStatusFilters(); applyFilters(); }
+  updateHeaderSpacer();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
@@ -2112,53 +2145,29 @@ function refreshIcons() {
 // ── GLOBAL LIBRARY VIEW ───────────────────────────────────────────────────────
 window.setBookView = (view) => {
   currentBookView = view;
-  ['card','grid','list'].forEach(v => {
-    const btn = document.getElementById('vb' + v.charAt(0).toUpperCase() + v.slice(1));
-    if (btn) btn.classList.toggle('active', v === view);
-  });
-  if (currentView === 'global') applyGlobalFilters();
+  const icons = { card: 'layout-list', grid: 'layout-grid', list: 'list' };
+  const iconEl = document.getElementById('viewBtnIcon');
+  if (iconEl) { iconEl.dataset.lucide = icons[view]; refreshIcons(); }
+  if (currentPage === 'global') applyGlobalFilters();
   else applyFilters();
 };
 
 window.toggleLibraryView = () => {
-  currentView = currentView === 'personal' ? 'global' : 'personal';
-  const isGlobal = currentView === 'global';
-  const btn = document.getElementById('viewToggleBtn');
-  btn.textContent = isGlobal ? 'My Library' : 'Global Library';
-  btn.classList.toggle('active', isGlobal);
-
-  document.getElementById('locationFilterSection').style.display = isGlobal ? 'none' : '';
-  document.getElementById('fabAdd').style.display = isGlobal ? 'none' : 'flex';
-  document.querySelector('.header-stats').style.display = isGlobal ? 'none' : '';
-
-  selectedGenreFilters = [];
-  document.getElementById('searchInput').value = '';
-
-  if (isGlobal) {
-    preloadGlobalBooks().then(() => { syncUserBooksToCache(); buildGlobalGenreFilters(); applyGlobalFilters(); });
-    buildGlobalGenreFilters();
-    applyGlobalFilters();
-  } else {
-    buildGenreFilters();
-    buildStatusFilters();
-    updateStats();
-    applyFilters();
-  }
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  setPage(currentPage === 'global' ? 'mylibrary' : 'global');
 };
 
 function buildGlobalGenreFilters() {
   const seen = new Set();
   globalBookCache.forEach(b => (b.genres || []).forEach(g => seen.add(g)));
   const genres = [...seen].sort();
-  document.getElementById('genreFilters').innerHTML = genres.map(g => {
+  let html = '<button class="filter-btn ' + (selectedGenreFilters.length === 0 ? 'active' : '') + '" onclick="clearGenreFilter()">All</button>';
+  html += genres.map(g => {
     const active = selectedGenreFilters.includes(g);
-    return `<button class="filter-btn${active ? ' active' : ''}" onclick="toggleGlobalGenreFilter('${g.replace(/'/g, "\\'")}')">
-      ${active ? '✓ ' : ''}${esc(g)}
-    </button>`;
+    return '<button class="filter-btn' + (active ? ' active' : '') + '" onclick="toggleGlobalGenreFilter(\'' + jsStr(g) + '\')">' + esc(g) + '</button>';
   }).join('');
+  document.getElementById('genreFilters').innerHTML = html;
   const mr = document.getElementById('genreModeRow');
-  mr.style.display = selectedGenreFilters.length > 1 ? 'flex' : 'none';
+  mr.classList.toggle('visible', selectedGenreFilters.length >= 2);
   document.getElementById('modeOR').classList.toggle('active', genreFilterMode === 'OR');
   document.getElementById('modeAND').classList.toggle('active', genreFilterMode === 'AND');
 }
@@ -2172,8 +2181,8 @@ window.toggleGlobalGenreFilter = g => {
 };
 
 function applyGlobalFilters() {
-  const q = document.getElementById('searchInput').value.toLowerCase().trim();
-  const sort = document.getElementById('sortSelect').value;
+  const q = (document.getElementById('searchInput') || {}).value?.toLowerCase().trim() || '';
+  const sort = currentSort;
   let list = globalBookCache.filter(b => {
     if (q && !(b.title||'').toLowerCase().includes(q) && !(b.author||'').toLowerCase().includes(q) && !(b.series||'').toLowerCase().includes(q)) return false;
     if (selectedGenreFilters.length > 0) {
@@ -2214,9 +2223,11 @@ function renderGlobalBooks(list) {
     const series = currentBookView === 'grid' ? '' : (b.series ? `<span class="tag series"><i data-lucide="book-open" class="tag-icon"></i> ${esc(b.series)}${b.seriesNumber ? ' #' + b.seriesNumber : ''}</span>` : '');
     const ratingStr = renderStars(b.ratingTotal || 0, b.ratingCount || 0);
     const safeId = (b.id||'').replace(/'/g, "\\'");
+    const isOwner = currentUser && currentUser.email === 'samuelmendlowitz@gmail.com';
     const actionBtn = personal
       ? `<span style="font-size:10px;color:var(--read);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;">✓ Owned</span>`
       : `<button class="btn-add-collection" onclick="addGlobalBookToCollection('${safeId}')"><i data-lucide="plus"></i> Add</button>`;
+    const deleteBtn = isOwner ? `<button class="btn-edit" style="color:var(--danger);border-color:var(--danger)" onclick="deleteGlobalBook('${safeId}')" title="Delete from global library"><i data-lucide="trash-2"></i></button>` : '';
     return `<div class="book-card${isRead ? ' is-read' : ''}">
       <div class="book-check" onclick="toggleGlobalRead('${safeId}')"><span class="check-icon">✓</span></div>
       <div class="book-info">
@@ -2227,6 +2238,7 @@ function renderGlobalBooks(list) {
       </div>
       <div class="book-actions">
         ${actionBtn}
+        ${deleteBtn}
       </div>
     </div>`;
   }).join('');
@@ -2248,9 +2260,11 @@ function renderGlobalBooksList(list) {
     const series = b.series ? esc(b.series) + (b.seriesNumber ? ' #' + b.seriesNumber : '') : '—';
     const genres = (b.genres||[]).slice(0,2).join(', ') || '—';
     const safeId = (b.id||'').replace(/'/g, "\\'");
+    const isOwner = currentUser && currentUser.email === 'samuelmendlowitz@gmail.com';
     const actionBtn = personal
       ? `<span style="font-size:10px;color:var(--read);font-weight:600;">✓ Owned</span>`
       : `<button class="lr-chk-btn" onclick="addGlobalBookToCollection('${safeId}')"><i data-lucide="plus"></i> Add</button>`;
+    const deleteBtn = isOwner ? `<button class="lr-chk-btn" style="color:var(--danger);border-color:var(--danger)" onclick="deleteGlobalBook('${safeId}')" title="Delete"><i data-lucide="trash-2"></i></button>` : '';
     return `<div class="list-row${isRead ? ' is-read' : ''}">
       <div class="lr-check" onclick="toggleGlobalRead('${safeId}')"><span class="lr-check-icon">✓</span></div>
       <div class="lr-cell lr-title">${esc(b.title||'')}</div>
@@ -2259,11 +2273,26 @@ function renderGlobalBooksList(list) {
       <div class="lr-cell lr-genres">${esc(genres)}</div>
       <div class="lr-cell lr-rating">${avgRating}</div>
       <div></div>
-      <div class="lr-actions">${actionBtn}</div>
+      <div class="lr-actions">${actionBtn}${deleteBtn}</div>
     </div>`;
   }).join('');
   refreshIcons();
 }
+
+window.deleteGlobalBook = async (bookId) => {
+  if (!currentUser || currentUser.email !== 'samuelmendlowitz@gmail.com') return;
+  try {
+    await deleteDoc(doc(db, 'globalLibrary', bookId));
+    globalBookCache = globalBookCache.filter(b => b.id !== bookId);
+    syncUserBooksToCache();
+    applyGlobalFilters();
+    updateStats();
+    showStatus('Book removed from global library.', 'success');
+    setTimeout(hideStatus, 2500);
+  } catch(e) {
+    showStatus('Delete failed: ' + e.message, 'error');
+  }
+};
 
 window.toggleGlobalRead = async (globalId) => {
   const personal = books.find(b => createGlobalBookId(b.title||'', b.author||'') === globalId);
@@ -2378,23 +2407,20 @@ window.addGlobalBookToCollection = bookId => {
 };
 
 window.setTopFilter = filter => {
-  if (filter === 'all') {
-    topFilters = ['all'];
-  } else {
-    topFilters = topFilters.filter(f => f !== 'all');
-    if (topFilters.includes(filter)) topFilters = topFilters.filter(f => f !== filter);
-    else topFilters.push(filter);
-    if (topFilters.length === 0) topFilters = ['all'];
-  }
+  if (currentPage === 'global') return;
+  topFilters = [filter === 'all' || !filter ? 'all' : filter];
   document.querySelectorAll('.stat-clickable').forEach(el => el.classList.remove('active'));
-  const map = { all:0, read:1, unread:2, borrowed:3, wishlist:4 };
-  const cards = document.querySelectorAll('.stat-clickable');
-  topFilters.forEach(f => { if (cards[map[f]]) cards[map[f]].classList.add('active'); });
+  const idMap = { all: 'statCardAll', read: 'statCardRead', unread: 'statCardUnread', borrowed: 'statCardBorrowed' };
+  document.getElementById(idMap[filter] || 'statCardAll')?.classList.add('active');
   applyFilters();
 };
 
 // ── FILTER ACTIONS ────────────────────────────────────────────────────────────
-window.clearGenreFilter  = () => { selectedGenreFilters = []; buildGenreFilters(); applyFilters(); };
+window.clearGenreFilter  = () => {
+  selectedGenreFilters = [];
+  if (currentPage === 'global') { buildGlobalGenreFilters(); applyGlobalFilters(); }
+  else { buildGenreFilters(); applyFilters(); }
+};
 window.clearStatusFilter = () => { selectedStatusFilters = []; buildStatusFilters(); applyFilters(); };
 window.toggleGenreFilter = g => {
   const i = selectedGenreFilters.indexOf(g);
@@ -2409,7 +2435,7 @@ window.toggleStatusFilter = s => {
 };
 window.setGenreMode = m => {
   genreFilterMode = m;
-  if (currentView === 'global') { buildGlobalGenreFilters(); applyGlobalFilters(); }
+  if (currentPage === 'global') { buildGlobalGenreFilters(); applyGlobalFilters(); }
   else { buildGenreFilters(); applyFilters(); }
 };
 
@@ -2798,17 +2824,165 @@ function hideStatus() { document.getElementById('statusBar').className = 'status
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function jsStr(s) { return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
 
-// ── HEADER SPACER (fixed header offset) ───────────────────────────────────────
+// ── HEADER SPACER (fixed header + subheader offset) ──────────────────────────
 function updateHeaderSpacer() {
-  const h = document.getElementById('mainHeader');
-  const s = document.getElementById('headerSpacer');
-  if (h && s) s.style.height = h.offsetHeight + 'px';
+  const header = document.getElementById('mainHeader');
+  const sub = document.getElementById('subheader');
+  const spacer = document.getElementById('headerSpacer');
+  if (!header || !spacer) return;
+  const hh = header.offsetHeight;
+  if (sub) sub.style.top = hh + 'px';
+  const sh = sub ? sub.offsetHeight : 0;
+  spacer.style.height = (hh + sh) + 'px';
 }
 
 window.addEventListener('resize', updateHeaderSpacer);
 
+// ── SUBHEADER SCROLL HIDE ────────────────────────────────────────────────────
+(function() {
+  let lastY = 0, ticking = false, hidden = false;
+  function onScroll() {
+    if (!ticking) {
+      window.requestAnimationFrame(() => {
+        const y = window.scrollY;
+        const sub = document.getElementById('subheader');
+        if (sub) {
+          if (y < 10) {
+            if (hidden) { hidden = false; sub.classList.remove('hidden'); }
+          } else if (y > lastY + 8 && !hidden) {
+            hidden = true; sub.classList.add('hidden');
+          } else if (y < lastY - 8 && hidden) {
+            hidden = false; sub.classList.remove('hidden');
+          }
+        }
+        lastY = y; ticking = false;
+      });
+      ticking = true;
+    }
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+})();
+
 // expose for inline HTML handlers
 window.applyFilters = applyFilters;
+
+// ── PAGE NAVIGATION ──────────────────────────────────────────────────────────
+window.setPage = (page) => {
+  currentPage = page;
+  // Update nav tab active states
+  document.querySelectorAll('.hnav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('hnav-' + page)?.classList.add('active');
+  // Reset filters & close panels
+  topFilters = ['all'];
+  selectedGenreFilters = [];
+  selectedStatusFilters = [];
+  const si = document.getElementById('searchInput');
+  if (si) si.value = '';
+  filterPanelOpen = false; sortPanelOpen = false;
+  document.getElementById('filterPanel').style.display = 'none';
+  document.getElementById('sortPanel').style.display = 'none';
+  document.getElementById('filterBtn')?.classList.remove('active');
+  document.getElementById('sortBtn')?.classList.remove('active');
+  // Reset stat card active state
+  document.querySelectorAll('.stat-clickable').forEach(el => el.classList.remove('active'));
+  document.getElementById('statCardAll')?.classList.add('active');
+  // Show/hide location filter (only on My Library)
+  const locFilter = document.getElementById('locationFilterSection');
+  if (locFilter) locFilter.style.display = page === 'mylibrary' ? '' : 'none';
+  // Show/hide subheader stats
+  const stats = document.getElementById('subheaderStats');
+  if (stats) stats.style.display = ['mylibrary','wishlist','global'].includes(page) ? '' : 'none';
+  // Show/hide subheader itself on coming soon pages
+  const sub = document.getElementById('subheader');
+  if (sub) sub.style.display = ['discover','community'].includes(page) ? 'none' : '';
+  // FAB
+  document.getElementById('fabAdd').style.display = ['mylibrary','wishlist'].includes(page) ? 'flex' : 'none';
+  // Coming soon pages
+  document.getElementById('page-discover').style.display = page === 'discover' ? '' : 'none';
+  document.getElementById('page-community').style.display = page === 'community' ? '' : 'none';
+  // Main content area
+  const showMain = ['mylibrary','wishlist','global'].includes(page);
+  document.getElementById('bookList').style.display = showMain ? '' : 'none';
+  document.getElementById('listHeader').style.display = showMain ? '' : 'none';
+  document.getElementById('statusBar').style.display = showMain ? '' : 'none';
+  // Load page content
+  if (page === 'global') {
+    preloadGlobalBooks().then(() => { syncUserBooksToCache(); buildGlobalGenreFilters(); applyGlobalFilters(); updateStats(); });
+    applyGlobalFilters(); updateStats();
+  } else if (showMain) {
+    updateStats(); buildGenreFilters(); buildStatusFilters(); applyFilters();
+  }
+  updateHeaderSpacer();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+window.toggleFilterPanel = () => {
+  filterPanelOpen = !filterPanelOpen;
+  if (filterPanelOpen) {
+    sortPanelOpen = false;
+    document.getElementById('sortPanel').style.display = 'none';
+    document.getElementById('sortBtn').classList.remove('active');
+    if (currentPage === 'global') buildGlobalGenreFilters();
+    else { buildGenreFilters(); if (currentPage === 'mylibrary') buildStatusFilters(); }
+    document.getElementById('filterPanel').style.display = '';
+    document.getElementById('filterBtn').classList.add('active');
+  } else {
+    document.getElementById('filterPanel').style.display = 'none';
+    document.getElementById('filterBtn').classList.remove('active');
+  }
+  updateHeaderSpacer();
+};
+
+window.toggleSortPanel = () => {
+  sortPanelOpen = !sortPanelOpen;
+  if (sortPanelOpen) {
+    filterPanelOpen = false;
+    document.getElementById('filterPanel').style.display = 'none';
+    document.getElementById('filterBtn').classList.remove('active');
+    buildSortOptions();
+    document.getElementById('sortPanel').style.display = '';
+    document.getElementById('sortBtn').classList.add('active');
+  } else {
+    document.getElementById('sortPanel').style.display = 'none';
+    document.getElementById('sortBtn').classList.remove('active');
+  }
+  updateHeaderSpacer();
+};
+
+function buildSortOptions() {
+  const opts = [
+    {val:'title-asc',  label:'Title A→Z'},
+    {val:'title-desc', label:'Title Z→A'},
+    {val:'author-asc', label:'Author A→Z'},
+    {val:'author-desc',label:'Author Z→A'},
+    {val:'genre-asc',  label:'Genre A→Z'},
+    {val:'genre-custom',label:'Genre (Custom)'},
+    {val:'added-desc', label:'Recently Added'},
+  ];
+  document.getElementById('sortOptions').innerHTML = opts.map(o =>
+    '<button class="sort-option' + (currentSort === o.val ? ' active' : '') + '" onclick="setSort(\'' + o.val + '\')">' + o.label + '</button>'
+  ).join('');
+}
+
+window.setSort = (sort) => {
+  currentSort = sort;
+  sortPanelOpen = false;
+  document.getElementById('sortPanel').style.display = 'none';
+  document.getElementById('sortBtn').classList.remove('active');
+  updateHeaderSpacer();
+  if (currentPage === 'global') applyGlobalFilters();
+  else applyFilters();
+};
+
+window.cycleBookView = () => {
+  const views = ['card','grid','list'];
+  currentBookView = views[(views.indexOf(currentBookView) + 1) % views.length];
+  const icons = { card:'layout-list', grid:'layout-grid', list:'list' };
+  const iconEl = document.getElementById('viewBtnIcon');
+  if (iconEl) { iconEl.dataset.lucide = icons[currentBookView]; refreshIcons(); }
+  if (currentPage === 'global') applyGlobalFilters();
+  else applyFilters();
+};
 
 // ── WISHLIST / EDIT change listeners ─────────────────────────────────────────
 document.addEventListener('change', e => {
