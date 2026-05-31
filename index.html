@@ -2295,22 +2295,8 @@ function updateStats() {
 }
 
 window.resetAllFilters = () => {
-  topFilters = ['all'];
-  selectedGenreFilters = [];
-  selectedStatusFilters = [];
-  const si = document.getElementById('searchInput');
-  if (si) si.value = '';
-  filterPanelOpen = false; sortPanelOpen = false;
-  document.getElementById('filterPanel').style.display = 'none';
-  document.getElementById('sortPanel').style.display = 'none';
-  document.getElementById('filterBtn')?.classList.remove('active');
-  document.getElementById('sortBtn')?.classList.remove('active');
-  document.querySelectorAll('.stat-clickable').forEach(el => el.classList.remove('active'));
-  document.getElementById('statCardAll')?.classList.add('active');
-  if (currentPage === 'global') { buildGlobalGenreFilters(); applyGlobalFilters(); }
-  else { buildGenreFilters(); buildStatusFilters(); applyFilters(); }
-  updateHeaderSpacer();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  setPage('mylibrary');
+  loadBooks();
 };
 
 // ── LUCIDE ICON REFRESH ───────────────────────────────────────────────────────
