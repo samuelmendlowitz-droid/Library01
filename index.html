@@ -733,12 +733,8 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
    LEATHER DARK BLUE THEME — grain + deboss
    ════════════════════════════════════════════════ */
 
-/* Grain texture on all major opaque surfaces */
-.book-card        { background-image: var(--grain); }
-.settings-sheet   { background-image: var(--grain); }
-.modal            { background-image: var(--grain); }
-.bulk-sheet       { background-image: var(--grain); }
-.login-btn        { background-image: var(--grain); }
+/* Grain texture only on background and header (dark layer elements) */
+/* foreground cards/sheets intentionally excluded */
 
 /* Debossed display text — pressed-into-leather stamp */
 .login-title {
@@ -852,7 +848,6 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .bulk-sheet, .bulk-header,
 .subheader {
   background-color: #0c0d1c !important;
-  background-image: var(--grain);
 }
 
 /* Book cards — slightly warmer midnight so they float forward */
@@ -1962,7 +1957,14 @@ function applyFilters() {
   const sort = currentSort;
   const isWishlist = currentPage === 'wishlist';
   let filtered = books.filter(b => {
-    if (isWishlist) return b.location === 'Wishlist';
+    if (isWishlist) {
+      if (b.location !== 'Wishlist') return false;
+      if (!topFilters.includes('all')) {
+        if (topFilters.includes('read')   && !b.read) return false;
+        if (topFilters.includes('unread') && b.read)  return false;
+      }
+      return true;
+    }
     if (b.location === 'Wishlist') return false;
     if (!topFilters.includes('all')) {
       let topMatch = false;
@@ -2100,21 +2102,22 @@ function renderBooksList(list) {
 function updateStats() {
   if (currentPage === 'wishlist') {
     const wb = books.filter(b => b.location === 'Wishlist');
-    document.getElementById('statTotal').textContent    = wb.length;
+    document.getElementById('statTotal').textContent    = wb.length;           // Wishlist
     document.getElementById('statRead').textContent     = wb.filter(b => b.read).length;
     document.getElementById('statUnread').textContent   = wb.filter(b => !b.read).length;
-    document.getElementById('statBorrowed').textContent = 0;
+    // statBorrowed is hidden on wishlist page
   } else if (currentPage === 'global') {
-    document.getElementById('statTotal').textContent    = globalBookCache.length;
-    document.getElementById('statRead').textContent     = books.filter(b => b.read && b.location !== 'Wishlist').length;
-    document.getElementById('statUnread').textContent   = books.filter(b => !b.read && b.location !== 'Wishlist').length;
-    document.getElementById('statBorrowed').textContent = books.filter(b => b.location === 'Borrowed').length;
+    const owned = books.filter(b => b.location !== 'Wishlist');
+    document.getElementById('statTotal').textContent    = owned.length;         // Owned
+    document.getElementById('statRead').textContent     = owned.filter(b => b.read).length;
+    document.getElementById('statUnread').textContent   = owned.filter(b => !b.read).length;
+    document.getElementById('statBorrowed').textContent = books.filter(b => b.location === 'Wishlist').length; // Wishlist
   } else {
     const lb = books.filter(b => b.location !== 'Wishlist');
-    document.getElementById('statTotal').textContent    = lb.length;
+    document.getElementById('statTotal').textContent    = lb.length;            // Books
     document.getElementById('statRead').textContent     = lb.filter(b => b.read).length;
     document.getElementById('statUnread').textContent   = lb.filter(b => !b.read).length;
-    document.getElementById('statBorrowed').textContent = lb.filter(b => b.location === 'Borrowed').length;
+    document.getElementById('statBorrowed').textContent = lb.filter(b => b.location === 'Borrowed').length; // Out
   }
 }
 
@@ -2190,6 +2193,12 @@ function applyGlobalFilters() {
         ? selectedGenreFilters.every(g => (b.genres||[]).includes(g))
         : selectedGenreFilters.some(g => (b.genres||[]).includes(g));
       if (!ok) return false;
+    }
+    if (!topFilters.includes('all')) {
+      const personal = books.find(x => createGlobalBookId(x.title||'', x.author||'') === b.id);
+      if (topFilters.includes('read'))     { if (!(personal && personal.read && personal.location !== 'Wishlist')) return false; }
+      else if (topFilters.includes('unread'))   { if (!(personal && !personal.read && personal.location !== 'Wishlist')) return false; }
+      else if (topFilters.includes('borrowed')) { if (!(personal && personal.location === 'Wishlist')) return false; } // 'borrowed' = Wishlist on global page
     }
     return true;
   });
@@ -2407,12 +2416,12 @@ window.addGlobalBookToCollection = bookId => {
 };
 
 window.setTopFilter = filter => {
-  if (currentPage === 'global') return;
-  topFilters = [filter === 'all' || !filter ? 'all' : filter];
+  topFilters = [filter || 'all'];
   document.querySelectorAll('.stat-clickable').forEach(el => el.classList.remove('active'));
   const idMap = { all: 'statCardAll', read: 'statCardRead', unread: 'statCardUnread', borrowed: 'statCardBorrowed' };
   document.getElementById(idMap[filter] || 'statCardAll')?.classList.add('active');
-  applyFilters();
+  if (currentPage === 'global') applyGlobalFilters();
+  else applyFilters();
 };
 
 // ── FILTER ACTIONS ────────────────────────────────────────────────────────────
@@ -2840,26 +2849,50 @@ window.addEventListener('resize', updateHeaderSpacer);
 
 // ── SUBHEADER SCROLL HIDE ────────────────────────────────────────────────────
 (function() {
-  let lastY = 0, ticking = false, hidden = false;
+  let lastY = 0, ticking = false, hidden = false, accum = 0;
+  const HIDE_THRESHOLD = 50;   // px scrolled down before hiding
+  const SHOW_THRESHOLD = 30;   // px scrolled up before revealing
+  const TOP_ZONE      = 60;    // always show near top of page
+
+  function setHidden(val) {
+    if (hidden === val) return;
+    hidden = val;
+    const sub = document.getElementById('subheader');
+    if (sub) sub.classList.toggle('hidden', val);
+  }
+
   function onScroll() {
     if (!ticking) {
       window.requestAnimationFrame(() => {
+        // Never hide while search input is focused (keyboard may cause scroll)
+        const search = document.getElementById('searchInput');
+        if (search && document.activeElement === search) {
+          lastY = window.scrollY; accum = 0; ticking = false; return;
+        }
         const y = window.scrollY;
-        const sub = document.getElementById('subheader');
-        if (sub) {
-          if (y < 10) {
-            if (hidden) { hidden = false; sub.classList.remove('hidden'); }
-          } else if (y > lastY + 8 && !hidden) {
-            hidden = true; sub.classList.add('hidden');
-          } else if (y < lastY - 8 && hidden) {
-            hidden = false; sub.classList.remove('hidden');
-          }
+        const delta = y - lastY;
+        // Reset accumulator on direction change
+        if (delta > 0 && accum < 0) accum = 0;
+        if (delta < 0 && accum > 0) accum = 0;
+        accum += delta;
+        if (y < TOP_ZONE) {
+          setHidden(false); accum = 0;
+        } else if (accum > HIDE_THRESHOLD) {
+          setHidden(true); accum = 0;
+        } else if (accum < -SHOW_THRESHOLD) {
+          setHidden(false); accum = 0;
         }
         lastY = y; ticking = false;
       });
       ticking = true;
     }
   }
+
+  // Keep subheader visible while search is focused
+  document.addEventListener('focusin', e => {
+    if (e.target && e.target.id === 'searchInput') { setHidden(false); accum = 0; }
+  });
+
   window.addEventListener('scroll', onScroll, { passive: true });
 })();
 
@@ -2867,6 +2900,37 @@ window.addEventListener('resize', updateHeaderSpacer);
 window.applyFilters = applyFilters;
 
 // ── PAGE NAVIGATION ──────────────────────────────────────────────────────────
+function updateStatCardLabels(page) {
+  const defs = {
+    mylibrary: [
+      { id:'statCardAll',     label:'Books',    show:true  },
+      { id:'statCardRead',    label:'Read',     show:true  },
+      { id:'statCardUnread',  label:'Unread',   show:true  },
+      { id:'statCardBorrowed',label:'Out',      show:true  },
+    ],
+    wishlist: [
+      { id:'statCardAll',     label:'Wishlist', show:true  },
+      { id:'statCardRead',    label:'Read',     show:true  },
+      { id:'statCardUnread',  label:'Unread',   show:true  },
+      { id:'statCardBorrowed',label:'Out',      show:false },
+    ],
+    global: [
+      { id:'statCardAll',     label:'Owned',    show:true  },
+      { id:'statCardRead',    label:'Read',     show:true  },
+      { id:'statCardUnread',  label:'Unread',   show:true  },
+      { id:'statCardBorrowed',label:'Wishlist', show:true  },
+    ],
+  };
+  const list = defs[page] || defs.mylibrary;
+  list.forEach(({ id, label, show }) => {
+    const card = document.getElementById(id);
+    if (!card) return;
+    card.style.display = show ? '' : 'none';
+    const lbl = card.querySelector('.stat-label');
+    if (lbl) lbl.textContent = label;
+  });
+}
+
 window.setPage = (page) => {
   currentPage = page;
   // Update nav tab active states
@@ -2883,9 +2947,10 @@ window.setPage = (page) => {
   document.getElementById('sortPanel').style.display = 'none';
   document.getElementById('filterBtn')?.classList.remove('active');
   document.getElementById('sortBtn')?.classList.remove('active');
-  // Reset stat card active state
+  // Reset stat card active state and update labels/visibility for this page
   document.querySelectorAll('.stat-clickable').forEach(el => el.classList.remove('active'));
   document.getElementById('statCardAll')?.classList.add('active');
+  updateStatCardLabels(page);
   // Show/hide location filter (only on My Library)
   const locFilter = document.getElementById('locationFilterSection');
   if (locFilter) locFilter.style.display = page === 'mylibrary' ? '' : 'none';
