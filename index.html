@@ -1072,9 +1072,24 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
       <div style="padding:12px 16px 4px;display:flex;gap:8px;align-items:center">
         <div class="search-wrap" style="flex:1">
           <span class="search-icon">🔍</span>
-          <input class="search-input" id="chatSearch" placeholder="Search chats…" oninput="filterChats(this.value)">
+          <input class="search-input" id="chatSearch" placeholder="Search chats…" oninput="renderChats()">
         </div>
+        <button class="ctrl-btn" id="chatFilterBtn" onclick="toggleChatFilter()" title="Filter"><i data-lucide="sliders-horizontal"></i></button>
         <button class="btn-add-collection" onclick="openCreateClubModal()" style="flex-shrink:0;white-space:nowrap">+ Club</button>
+      </div>
+      <div id="chatFilterPanel" class="filter-panel" style="display:none;padding:10px 16px 12px">
+        <div class="filter-section-label">Read Status</div>
+        <div class="filter-row" style="margin-bottom:12px">
+          <button class="filter-btn active" id="cfilt-read-all" onclick="setChatReadFilter('all')">All</button>
+          <button class="filter-btn" id="cfilt-read-unread" onclick="setChatReadFilter('unread')">Unread</button>
+          <button class="filter-btn" id="cfilt-read-read" onclick="setChatReadFilter('read')">Read</button>
+        </div>
+        <div class="filter-section-label">Type</div>
+        <div class="filter-row">
+          <button class="filter-btn active" id="cfilt-type-all" onclick="setChatTypeFilter('all')">All</button>
+          <button class="filter-btn" id="cfilt-type-friends" onclick="setChatTypeFilter('friends')">Friends</button>
+          <button class="filter-btn" id="cfilt-type-clubs" onclick="setChatTypeFilter('clubs')">Clubs</button>
+        </div>
       </div>
       <div id="comm-chats-list" class="friends-list"></div>
     </div>
@@ -4197,6 +4212,9 @@ let clubChatListener = null;
 let clubBookPickerOpen = false;
 let discoverMode = 'friends';
 let clubSearchTimer = null;
+let chatFilterOpen = false;
+let chatReadFilter = 'all';
+let chatTypeFilter = 'all';
 let createClubEmoji = '📚', createClubColor = '#2d2520';
 let createClubPrivacy = 'public';
 let editClubPrivacy = 'public';
@@ -4207,6 +4225,10 @@ const profileCache = {};
 
 function initCommunityPage() {
   communitySubtab = 'chats';
+  chatFilterOpen = false;
+  const fp = document.getElementById('chatFilterPanel');
+  if (fp) fp.style.display = 'none';
+  document.getElementById('chatFilterBtn')?.classList.remove('active');
   ['chats','requests','discover'].forEach(t => {
     document.getElementById('ctab-' + t)?.classList.toggle('active', t === 'chats');
     const el = document.getElementById('comm-' + t);
@@ -4268,19 +4290,36 @@ function clubMsgTimestamp(cid) {
   return m.createdAt?.toDate?.()?.getTime?.() || m.createdAt?.seconds * 1000 || 0;
 }
 
-function renderChatList(friendsFiltered) {
+function renderChatList(friendsFiltered, clubsFiltered) {
   const el = document.getElementById('comm-chats-list');
   if (!el) return;
-  // Build combined list: friends + clubs
-  const friendItems = friendsFiltered.map(f => ({
-    _type: 'friend', id: f.id, displayName: f.displayName, username: f.username,
-    ts: chatMsgTimestamp(f.id)
-  }));
-  const clubItems = clubsList.map(c => ({
-    _type: 'club', id: c.id, name: c.name, emoji: c.emoji||'📚', bgColor: c.bgColor||'#2d2520',
-    memberCount: (c.memberUids||[]).length, ts: clubMsgTimestamp(c.id)
-  }));
-  const all = [...friendItems, ...clubItems].sort((a, b) => b.ts - a.ts);
+  const clubs = clubsFiltered !== undefined ? clubsFiltered : clubsList;
+
+  // Build items, respecting type filter
+  let all = [];
+  if (chatTypeFilter !== 'clubs') {
+    all.push(...friendsFiltered.map(f => ({
+      _type: 'friend', id: f.id, displayName: f.displayName, username: f.username,
+      ts: chatMsgTimestamp(f.id)
+    })));
+  }
+  if (chatTypeFilter !== 'friends') {
+    all.push(...clubs.map(c => ({
+      _type: 'club', id: c.id, name: c.name, emoji: c.emoji||'📚', bgColor: c.bgColor||'#2d2520',
+      memberCount: (c.memberUids||[]).length, ts: clubMsgTimestamp(c.id)
+    })));
+  }
+
+  // Apply read filter: unread = last message exists and wasn't sent by me
+  if (chatReadFilter !== 'all') {
+    all = all.filter(item => {
+      const lastMsg = item._type === 'friend' ? chatLastMessages[item.id] : clubLastMessages[item.id];
+      const isUnread = lastMsg && lastMsg.fromUid !== currentUser?.uid;
+      return chatReadFilter === 'unread' ? isUnread : !isUnread;
+    });
+  }
+
+  all.sort((a, b) => b.ts - a.ts);
   if (!all.length) {
     el.innerHTML = '<div class="empty" style="padding:40px 0"><div class="empty-icon"><i data-lucide="message-circle"></i></div><div class="empty-title">No chats yet</div><div class="empty-sub">Add friends or create a club</div></div>';
     refreshIcons(); return;
@@ -4326,14 +4365,34 @@ function renderChatList(friendsFiltered) {
 
 function renderChats() {
   const q = (document.getElementById('chatSearch')?.value || '').toLowerCase().trim();
-  const list = q ? friendsList.filter(f => (f.displayName||'').toLowerCase().includes(q) || (f.username||'').toLowerCase().includes(q)) : friendsList;
-  renderChatList(list);
+  const friends = q
+    ? friendsList.filter(f => (f.displayName||'').toLowerCase().includes(q) || (f.username||'').toLowerCase().includes(q))
+    : friendsList;
+  const clubs = q
+    ? clubsList.filter(c => (c.name||'').toLowerCase().includes(q))
+    : clubsList;
+  renderChatList(friends, clubs);
 }
 
-window.filterChats = (q) => {
-  const lower = q.toLowerCase().trim();
-  const list = lower ? friendsList.filter(f => (f.displayName||'').toLowerCase().includes(lower) || (f.username||'').toLowerCase().includes(lower)) : friendsList;
-  renderChatList(list);
+window.filterChats = () => renderChats();
+
+window.toggleChatFilter = () => {
+  chatFilterOpen = !chatFilterOpen;
+  document.getElementById('chatFilterPanel').style.display = chatFilterOpen ? '' : 'none';
+  document.getElementById('chatFilterBtn').classList.toggle('active', chatFilterOpen);
+  requestAnimationFrame(updateHeaderSpacer);
+};
+
+window.setChatReadFilter = (val) => {
+  chatReadFilter = val;
+  ['all','unread','read'].forEach(v => document.getElementById('cfilt-read-' + v)?.classList.toggle('active', v === val));
+  renderChats();
+};
+
+window.setChatTypeFilter = (val) => {
+  chatTypeFilter = val;
+  ['all','friends','clubs'].forEach(v => document.getElementById('cfilt-type-' + v)?.classList.toggle('active', v === val));
+  renderChats();
 };
 
 function renderMyFriends() { renderChats(); } // alias used by removeFriendAndClose
