@@ -1403,14 +1403,29 @@ All columns other than Author, Title, Series and Genres should be left empty or 
           <div id="settingsUserEmail" style="font-size:12px;color:var(--text3);margin-top:2px;"></div>
         </div>
         <div class="form-group">
+          <label class="form-label">Display Name</label>
+          <div id="displayNameDisplay" style="display:none;align-items:center;gap:10px;">
+            <span id="displayNameDisplayText" style="font-size:15px;color:var(--text);font-weight:500;"></span>
+            <button onclick="editDisplayName()" style="background:none;border:none;padding:4px;cursor:pointer;color:var(--text3);display:flex;align-items:center;"><i data-lucide="pencil" style="width:14px;height:14px;"></i></button>
+          </div>
+          <div id="displayNameEdit" style="display:flex;gap:8px;">
+            <input class="form-input" id="customFirstNameInput" placeholder="Your name" style="flex:1;" onkeydown="if(event.key==='Enter')saveCustomFirstName()">
+            <button onclick="saveCustomFirstName()" style="padding:9px 16px;background:var(--accent);color:#1a1612;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;">Save</button>
+          </div>
+        </div>
+        <div class="form-group" style="margin-top:14px;">
           <label class="form-label">Username</label>
+          <div style="font-size:12px;color:var(--text3);margin-bottom:8px;">How your friends find you</div>
           <div id="usernameDisplay" style="display:none;align-items:center;gap:10px;">
             <span id="usernameDisplayText" style="font-size:15px;color:var(--text);font-weight:500;"></span>
             <button onclick="editUsername()" style="background:none;border:none;padding:4px;cursor:pointer;color:var(--text3);display:flex;align-items:center;"><i data-lucide="pencil" style="width:14px;height:14px;"></i></button>
           </div>
-          <div id="usernameEdit" style="display:flex;gap:8px;">
-            <input class="form-input" id="customFirstNameInput" placeholder="Your name" style="flex:1;" onkeydown="if(event.key==='Enter')saveCustomFirstName()">
-            <button onclick="saveCustomFirstName()" style="padding:9px 16px;background:var(--accent);color:#1a1612;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;">Save</button>
+          <div id="usernameEdit" style="display:none;flex-direction:column;gap:8px;">
+            <div style="display:flex;gap:8px;">
+              <input class="form-input" id="usernameEditInput" placeholder="e.g. bookworm42" style="flex:1;" maxlength="20" oninput="document.getElementById('usernameEditErr').textContent=''" onkeydown="if(event.key==='Enter')saveSettingsUsername()">
+              <button onclick="saveSettingsUsername()" style="padding:9px 16px;background:var(--accent);color:#1a1612;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap;">Save</button>
+            </div>
+            <div id="usernameEditErr" style="font-size:12px;color:var(--danger);min-height:16px;"></div>
           </div>
         </div>
         <button class="btn-signout-settings" onclick="signOut()"><i data-lucide="log-out"></i> Sign Out</button>
@@ -1551,17 +1566,67 @@ window.saveCustomFirstName = async () => {
     await setDoc(userSettingsDoc(), { customFirstName: firstName }, { merge: true });
   } catch(e) {}
   updateHeaderSubtitle();
-  document.getElementById('usernameDisplayText').textContent = firstName;
-  document.getElementById('usernameDisplay').style.display = 'flex';
-  document.getElementById('usernameEdit').style.display = 'none';
+  document.getElementById('displayNameDisplayText').textContent = firstName;
+  document.getElementById('displayNameDisplay').style.display = 'flex';
+  document.getElementById('displayNameEdit').style.display = 'none';
   showStatus('Name updated.', 'success');
+};
+
+window.editDisplayName = () => {
+  document.getElementById('displayNameDisplay').style.display = 'none';
+  document.getElementById('displayNameEdit').style.display = 'flex';
+  document.getElementById('customFirstNameInput').value = customFirstName;
+  document.getElementById('customFirstNameInput').focus();
 };
 
 window.editUsername = () => {
   document.getElementById('usernameDisplay').style.display = 'none';
   document.getElementById('usernameEdit').style.display = 'flex';
-  document.getElementById('customFirstNameInput').value = customFirstName;
-  document.getElementById('customFirstNameInput').focus();
+  document.getElementById('usernameEditInput').value = userUsername;
+  document.getElementById('usernameEditErr').textContent = '';
+  document.getElementById('usernameEditInput').focus();
+};
+
+window.saveSettingsUsername = async () => {
+  const raw = document.getElementById('usernameEditInput').value.trim();
+  const errEl = document.getElementById('usernameEditErr');
+  if (!raw) { errEl.textContent = 'Please enter a username'; return; }
+  if (!/^[a-zA-Z0-9_]{3,20}$/.test(raw)) {
+    errEl.textContent = '3–20 characters: letters, numbers, underscores only';
+    return;
+  }
+  const lower = raw.toLowerCase();
+  if (lower === userUsername) {
+    document.getElementById('usernameDisplayText').textContent = '@' + lower;
+    document.getElementById('usernameDisplay').style.display = 'flex';
+    document.getElementById('usernameEdit').style.display = 'none';
+    return;
+  }
+  const btn = document.querySelector('#usernameEdit button');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  try {
+    const existing = await getDoc(usernameDoc(lower));
+    if (existing.exists() && existing.data().uid !== currentUser.uid) {
+      errEl.textContent = 'That username is already taken';
+      if (btn) { btn.disabled = false; btn.textContent = 'Save'; }
+      return;
+    }
+    if (userUsername) {
+      try { await deleteDoc(usernameDoc(userUsername)); } catch(e) {}
+    }
+    const profile = { uid: currentUser.uid, username: lower, displayName: currentUser.displayName || '' };
+    await setDoc(usernameDoc(lower), profile);
+    await setDoc(userProfileDoc(currentUser.uid), { username: lower, displayName: currentUser.displayName || '' });
+    await setDoc(userSettingsDoc(), { username: lower }, { merge: true });
+    userUsername = lower;
+    document.getElementById('usernameDisplayText').textContent = '@' + lower;
+    document.getElementById('usernameDisplay').style.display = 'flex';
+    document.getElementById('usernameEdit').style.display = 'none';
+    showStatus('Username updated.', 'success');
+  } catch(e) {
+    errEl.textContent = 'Save failed: ' + e.message;
+  }
+  if (btn) { btn.disabled = false; btn.textContent = 'Save'; }
 };
 
 async function loadBorrowLog() {
@@ -3201,13 +3266,22 @@ window.openSettingsSection = (section) => {
   }
   if (section === 'account') {
     if (customFirstName) {
-      document.getElementById('usernameDisplayText').textContent = customFirstName;
+      document.getElementById('displayNameDisplayText').textContent = customFirstName;
+      document.getElementById('displayNameDisplay').style.display = 'flex';
+      document.getElementById('displayNameEdit').style.display = 'none';
+    } else {
+      document.getElementById('displayNameDisplay').style.display = 'none';
+      document.getElementById('displayNameEdit').style.display = 'flex';
+      document.getElementById('customFirstNameInput').value = '';
+    }
+    if (userUsername) {
+      document.getElementById('usernameDisplayText').textContent = '@' + userUsername;
       document.getElementById('usernameDisplay').style.display = 'flex';
       document.getElementById('usernameEdit').style.display = 'none';
     } else {
       document.getElementById('usernameDisplay').style.display = 'none';
       document.getElementById('usernameEdit').style.display = 'flex';
-      document.getElementById('customFirstNameInput').value = '';
+      document.getElementById('usernameEditInput').value = '';
     }
   }
   refreshIcons();
