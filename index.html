@@ -226,6 +226,8 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .fdet-tab-btn.active { background: var(--accent); color: #1a1612; border-color: var(--accent); }
 .fdet-tab-btn .lucide { width: 15px; height: 15px; }
 .club-avatar { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+.avatar-char-input { width: 52px; height: 52px; text-align: center; font-size: 24px; background: var(--surface2); border: 2px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-family: inherit; cursor: text; }
+.avatar-char-input:focus { outline: none; border-color: var(--accent); }
 .privacy-options { display: flex; gap: 8px; }
 .privacy-opt { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 4px; background: var(--surface2); border: 2px solid transparent; border-radius: var(--radius-sm); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: border-color 0.15s, background 0.15s; }
 .privacy-opt .priv-icon { font-size: 18px; line-height: 1; }
@@ -1248,9 +1250,9 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
         <div style="display:flex;gap:12px;align-items:flex-start">
           <div id="clubIconPreview" class="club-avatar-lg" style="background:#2d2520;font-size:26px">📚</div>
           <div style="flex:1">
-            <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase">Emoji</div>
-            <div class="club-emoji-grid" id="createClubEmojiGrid"></div>
-            <div style="font-size:11px;color:var(--text3);margin:8px 0 6px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase">Color</div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase">Character or Emoji</div>
+            <input class="avatar-char-input" id="createClubIconInput" maxlength="2" placeholder="📚" value="📚" oninput="onClubIconInput(this.value,true)">
+            <div style="font-size:11px;color:var(--text3);margin:12px 0 6px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase">Color</div>
             <div class="club-color-row" id="createClubColorRow"></div>
           </div>
         </div>
@@ -1676,6 +1678,19 @@ All columns other than Author, Title, Series and Genres should be left empty or 
           <div id="settingsUserName" style="font-size:15px;color:var(--text);font-weight:500;"></div>
           <div id="settingsUserEmail" style="font-size:12px;color:var(--text3);margin-top:2px;"></div>
         </div>
+        <div class="form-group" style="margin-bottom:20px">
+          <label class="form-label">Your Icon</label>
+          <div style="display:flex;align-items:flex-start;gap:16px">
+            <div id="userAvatarPreview" class="friend-avatar" style="width:52px;height:52px;font-size:24px;flex-shrink:0;border-radius:14px;"></div>
+            <div style="flex:1">
+              <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Character or Emoji</div>
+              <input class="avatar-char-input" id="userIconCharInput" maxlength="2" placeholder="A" oninput="previewUserIcon()">
+              <div style="font-size:11px;color:var(--text3);margin:12px 0 6px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Color</div>
+              <div class="club-color-row" id="userColorRow" style="gap:8px"></div>
+              <button onclick="saveUserIcon()" style="margin-top:14px;padding:8px 18px;background:var(--accent);color:#1a1612;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Save Icon</button>
+            </div>
+          </div>
+        </div>
         <div class="form-group">
           <label class="form-label">Display Name</label>
           <div id="displayNameDisplay" style="display:none;align-items:center;gap:10px;">
@@ -1824,6 +1839,8 @@ async function loadSettings() {
         borrowerLog = [...data.borrowLog].sort((a, b) => (b.sortKey || 0) - (a.sortKey || 0));
       if (data.customFirstName) customFirstName = data.customFirstName;
       if (data.username) userUsername = data.username;
+      if (data.iconChar) { userIconChar = data.iconChar; profileCache[currentUser.uid] = { iconChar: data.iconChar, iconColor: data.iconColor || '' }; }
+      if (data.iconColor) userIconColor = data.iconColor;
     }
   } catch(e) {}
 }
@@ -1857,6 +1874,50 @@ window.saveCustomFirstName = async () => {
   document.getElementById('displayNameDisplay').style.display = 'flex';
   document.getElementById('displayNameEdit').style.display = 'none';
   showStatus('Name updated.', 'success');
+};
+
+function renderUserAvatarSection() {
+  const char = userIconChar || (currentUser?.displayName || currentUser?.email || '?')[0].toUpperCase();
+  const input = document.getElementById('userIconCharInput');
+  if (input) input.value = userIconChar || '';
+  const rowEl = document.getElementById('userColorRow');
+  if (rowEl) {
+    rowEl.innerHTML = AVATAR_COLORS.map(c =>
+      '<div class="club-color-swatch' + (userIconColor === c ? ' selected' : '') + '" data-color="' + c + '" style="background:' + c + ';width:32px;height:32px;border-radius:8px;cursor:pointer;" onclick="pickUserColor(\'' + c + '\')"></div>'
+    ).join('');
+  }
+  previewUserIcon();
+}
+
+window.previewUserIcon = () => {
+  const input = document.getElementById('userIconCharInput');
+  const char = (input?.value || userIconChar || (currentUser?.displayName || '?')[0]).slice(0,2) || '?';
+  const el = document.getElementById('userAvatarPreview');
+  if (!el) return;
+  el.textContent = char;
+  if (userIconColor) { el.style.background = userIconColor; el.style.color = '#fff'; el.style.borderColor = userIconColor; }
+  else { el.style.background = ''; el.style.color = ''; el.style.borderColor = ''; }
+};
+
+window.pickUserColor = (color) => {
+  userIconColor = color;
+  document.querySelectorAll('#userColorRow .club-color-swatch').forEach(s => {
+    s.classList.toggle('selected', s.dataset.color === color);
+  });
+  previewUserIcon();
+};
+
+window.saveUserIcon = async () => {
+  const input = document.getElementById('userIconCharInput');
+  const char = (input?.value || '').trim() || (currentUser?.displayName || '?')[0].toUpperCase();
+  userIconChar = char;
+  profileCache[currentUser.uid] = { iconChar: char, iconColor: userIconColor };
+  try {
+    await setDoc(userSettingsDoc(), { iconChar: char, iconColor: userIconColor }, { merge: true });
+    showStatus('Icon saved!', 'success');
+    setTimeout(hideStatus, 2000);
+    renderChats();
+  } catch(e) { showStatus('Error: ' + e.message, 'error'); }
 };
 
 window.editDisplayName = () => {
@@ -3532,6 +3593,7 @@ window.openSettingsSection = (section) => {
     document.getElementById('ltab-all').classList.add('active');
     buildBorrowerLog();
   }
+  if (section === 'account') renderUserAvatarSection();
   if (section === 'importexport') {
     const ownerSection = document.getElementById('ownerWipeSection');
     if (ownerSection) ownerSection.style.display = currentUser && currentUser.email === 'samuelmendlowitz@gmail.com' ? '' : 'none';
@@ -4104,6 +4166,28 @@ async function loadFriends() {
   } catch(e) {}
 }
 
+// ── AVATAR HELPERS ────────────────────────────────────────────────────────────
+function renderAvatarHtml(uid, displayName, username) {
+  const p = profileCache[uid] || {};
+  const char = p.iconChar || (displayName || username || '?')[0].toUpperCase();
+  const bg = p.iconColor;
+  const style = bg ? 'background:' + bg + ';color:#fff;border-color:' + bg + ';' : '';
+  return '<div class="friend-avatar"' + (style ? ' style="' + style + '"' : '') + '>' + esc(char) + '</div>';
+}
+
+async function loadFriendProfiles() {
+  if (!currentUser || !friendsList.length) return;
+  await Promise.allSettled(friendsList.map(async f => {
+    try {
+      const snap = await getDoc(doc(db, 'users', f.id, 'meta', 'settings'));
+      if (snap.exists()) {
+        const d = snap.data();
+        if (d.iconChar || d.iconColor) profileCache[f.id] = { iconChar: d.iconChar || '', iconColor: d.iconColor || '' };
+      }
+    } catch(_) {}
+  }));
+}
+
 // ── COMMUNITY PAGE ────────────────────────────────────────────────────────────
 let requestFilter = 'all';
 let clubsList = [];
@@ -4116,8 +4200,10 @@ let clubSearchTimer = null;
 let createClubEmoji = '📚', createClubColor = '#2d2520';
 let createClubPrivacy = 'public';
 let editClubPrivacy = 'public';
-const CLUB_COLORS = ['#2d2520','#1e2d3a','#1a2e24','#2e1e28','#261e2e','#1e1e1e','#2a2206','#1a2a2a'];
-const CLUB_EMOJIS = ['📚','📖','✨','🌟','🏛️','🔮','🌙','⚡','🦋','🌿','🎭','🎪','🗺️','⚔️','🧙','🐉','🦁','🐺','🌸','☕','🎵','🎨','🔥','💎'];
+const CLUB_COLORS = ['#2d2520','#1e2d3a','#1a2e24','#2e1e28','#261e2e','#1e1e1e','#2a2206','#1a2a2a','#1e1a2a','#2a1a1e'];
+const AVATAR_COLORS = ['#8B3A3A','#2F5F9A','#2A7A50','#7A3A8B','#8B6030','#2A7070','#6B3A70','#8B5A30','#2A3A7A','#5A3A2A'];
+let userIconChar = '', userIconColor = '';
+const profileCache = {};
 
 function initCommunityPage() {
   communitySubtab = 'chats';
@@ -4126,7 +4212,10 @@ function initCommunityPage() {
     const el = document.getElementById('comm-' + t);
     if (el) el.style.display = t === 'chats' ? '' : 'none';
   });
-  loadFriends().then(() => loadClubs().then(() => { renderChats(); loadLastChatMessages(); loadLastClubMessages(); }));
+  loadFriends().then(async () => {
+    await loadFriendProfiles();
+    loadClubs().then(() => { renderChats(); loadLastChatMessages(); loadLastClubMessages(); });
+  });
 }
 
 window.setCommunityTab = (tab) => {
@@ -4207,9 +4296,8 @@ function renderChatList(friendsFiltered) {
         else if (lastMsg.type === 'borrow_request') preview = '📚 Borrow req';
         else { const t = lastMsg.text || ''; preview = t.slice(0, 10) + (t.length > 10 ? '…' : ''); }
       }
-      const init = (item.displayName || item.username || '?')[0].toUpperCase();
       return '<div class="friend-card" data-friend-id="' + esc(item.id) + '" style="cursor:pointer" onclick="openFriendDetails(\'' + sid + '\',\'' + sdn + '\')">'
-        + '<div class="friend-avatar">' + esc(init) + '</div>'
+        + renderAvatarHtml(item.id, item.displayName, item.username)
         + '<div class="friend-info" style="flex:1;min-width:0">'
         + '<div class="friend-name">' + esc(item.displayName || item.username) + '</div>'
         + '<div class="friend-username">@' + esc(item.username) + '</div></div>'
@@ -4288,14 +4376,13 @@ function renderRequests() {
     return;
   }
   el.innerHTML = list.map(r => {
-    const init = (r.displayName || r.username || '?')[0].toUpperCase();
     const sid = jsStr(r.id);
     const actions = r.dir === 'received'
       ? '<button class="btn-add-collection" onclick="acceptFriendRequest(\'' + sid + '\')">Accept</button>'
         + '<button class="btn-edit" style="color:var(--danger);border-color:var(--danger)" onclick="declineFriendRequest(\'' + sid + '\')" title="Decline"><i data-lucide="x"></i></button>'
       : '<span style="font-size:11px;color:var(--text3);padding:4px 8px">Pending</span>';
     return '<div class="friend-card">'
-      + '<div class="friend-avatar">' + esc(init) + '</div>'
+      + renderAvatarHtml(r.id, r.displayName, r.username)
       + '<div class="friend-info"><div class="friend-name">' + esc(r.displayName || r.username) + '</div>'
       + '<div class="friend-username">@' + esc(r.username) + '</div>'
       + '<div style="font-size:11px;color:var(--text3);margin-top:2px">'
@@ -4334,7 +4421,6 @@ async function doSearchFriends(rawQuery) {
       return;
     }
     el.innerHTML = results.map(u => {
-      const init = (u.displayName || u.username || '?')[0].toUpperCase();
       const alreadyFriend  = friendsList.some(f => f.id === u.uid);
       const reqSent        = sentRequests.some(r => r.id === u.uid);
       const reqReceived    = friendRequests.some(r => r.id === u.uid);
@@ -4349,7 +4435,7 @@ async function doSearchFriends(rawQuery) {
         actionBtn = '<button class="btn-add-collection" onclick="sendFriendRequest(\'' + jsStr(u.uid) + '\',\'' + jsStr(u.username) + '\',\'' + jsStr(u.displayName || '') + '\')"><i data-lucide="user-plus"></i> Add</button>';
       }
       return '<div class="friend-card">'
-        + '<div class="friend-avatar">' + esc(init) + '</div>'
+        + renderAvatarHtml(u.uid, u.displayName, u.username)
         + '<div class="friend-info"><div class="friend-name">' + esc(u.displayName || u.username) + '</div>'
         + '<div class="friend-username">@' + esc(u.username) + '</div></div>'
         + '<div class="friend-actions">' + actionBtn + '</div></div>';
@@ -4838,8 +4924,9 @@ window.openCreateClubModal = () => {
   document.getElementById('clubNameInput').value = '';
   document.getElementById('clubDescInput').value = '';
   document.getElementById('createClubError').style.display = 'none';
+  const iconInput = document.getElementById('createClubIconInput');
+  if (iconInput) iconInput.value = '📚';
   setClubPrivacy('public', 'createClubPrivacyRow');
-  renderClubEmojiGrid('createClubEmojiGrid', 'createClubIconPreview', true);
   renderClubColorRow('createClubColorRow', 'createClubIconPreview', true);
   updateClubIconPreview('createClubIconPreview');
   document.getElementById('createClubModal').classList.add('open');
@@ -4854,13 +4941,11 @@ window.setClubPrivacy = (val, rowId) => {
   });
 };
 
-function renderClubEmojiGrid(gridId, previewId, isCreate) {
-  const el = document.getElementById(gridId);
-  if (!el) return;
-  el.innerHTML = CLUB_EMOJIS.map(e =>
-    '<button class="club-emoji-btn' + ((isCreate ? createClubEmoji : editClubEmoji) === e ? ' selected' : '') + '" onclick="pickClubEmoji(\'' + jsStr(e) + '\',\'' + gridId + '\',\'' + previewId + '\',' + isCreate + ')">' + e + '</button>'
-  ).join('');
-}
+window.onClubIconInput = (val, isCreate) => {
+  const v = val || (isCreate ? '📚' : editClubEmoji || '📚');
+  if (isCreate) createClubEmoji = v; else editClubEmoji = v;
+  updateClubIconPreview(isCreate ? 'createClubIconPreview' : 'editClubIconPreview');
+};
 
 function renderClubColorRow(rowId, previewId, isCreate) {
   const el = document.getElementById(rowId);
@@ -4871,12 +4956,6 @@ function renderClubColorRow(rowId, previewId, isCreate) {
 }
 
 let editClubEmoji = '📚', editClubColor = '#2d2520';
-
-window.pickClubEmoji = (emoji, gridId, previewId, isCreate) => {
-  if (isCreate) createClubEmoji = emoji; else editClubEmoji = emoji;
-  renderClubEmojiGrid(gridId, previewId, isCreate);
-  updateClubIconPreview(previewId);
-};
 
 window.pickClubColor = (color, rowId, previewId, isCreate) => {
   if (isCreate) createClubColor = color; else editClubColor = color;
@@ -5121,9 +5200,9 @@ async function renderClubSettingsContent() {
       + '<div class="form-group" style="margin-bottom:10px"><label class="form-label">Icon</label>'
       + '<div style="display:flex;gap:12px;align-items:flex-start">'
       + '<div id="editClubIconPreview" class="club-avatar-lg" style="background:' + esc(editClubColor) + '">' + esc(editClubEmoji) + '</div>'
-      + '<div style="flex:1"><div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:600;text-transform:uppercase">Emoji</div>'
-      + '<div class="club-emoji-grid" id="editClubEmojiGrid"></div>'
-      + '<div style="font-size:11px;color:var(--text3);margin:8px 0 6px;font-weight:600;text-transform:uppercase">Color</div>'
+      + '<div style="flex:1"><div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:600;text-transform:uppercase">Character or Emoji</div>'
+      + '<input class="avatar-char-input" id="editClubIconInput" maxlength="2" value="' + esc(editClubEmoji) + '" oninput="onClubIconInput(this.value,false)" placeholder="📚">'
+      + '<div style="font-size:11px;color:var(--text3);margin:12px 0 6px;font-weight:600;text-transform:uppercase">Color</div>'
       + '<div class="club-color-row" id="editClubColorRow"></div></div></div></div>'
       + '<div class="form-group" style="margin-bottom:16px"><label class="form-label">Privacy</label>'
       + '<div class="privacy-options" id="editClubPrivacyRow">'
@@ -5151,7 +5230,6 @@ async function renderClubSettingsContent() {
         }).join('')
       + '<button style="margin-top:24px;background:none;border:1px solid var(--danger);color:var(--danger);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;padding:9px 14px;border-radius:var(--radius-sm);font-family:\'DM Sans\',sans-serif;width:100%;justify-content:center" onclick="confirmDeleteClub()"><i data-lucide="trash-2" style="width:14px;height:14px"></i> Delete Club</button>';
 
-    renderClubEmojiGrid('editClubEmojiGrid', 'editClubIconPreview', false);
     renderClubColorRow('editClubColorRow', 'editClubIconPreview', false);
     refreshIcons();
   } else {
