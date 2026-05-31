@@ -289,6 +289,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .book-actions { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
 .btn-edit { width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text3); font-size: 14px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s; }
 .btn-edit:active { background: var(--accent); color: #1a1612; border-color: var(--accent); }
+.btn-edit.borrow-pending { background: color-mix(in srgb, var(--accent) 18%, var(--surface2)); border-color: var(--accent); color: var(--accent); }
 .btn-checkout { padding: 5px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text2); font-size: 11px; font-family: 'DM Sans', sans-serif; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.15s; text-transform: uppercase; letter-spacing: 0.4px; }
 .btn-checkout.is-borrowed { background: #2a1a10; border-color: var(--borrowed); color: var(--borrowed); }
 .btn-add-collection { padding: 5px 10px; border-radius: 8px; border: 1px solid var(--accent); background: transparent; color: var(--accent); font-size: 11px; font-family: 'DM Sans', sans-serif; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.15s; text-transform: uppercase; letter-spacing: 0.4px; }
@@ -1818,6 +1819,7 @@ let friendsList = [], friendRequests = [], sentRequests = [];
 let communitySubtab = 'friends', friendsView = 'myfriends';
 let friendDetailsUid = null, friendDetailsName = '', friendDetailsTab = 'library';
 let friendLibBooks = [], flibSort = 'title-asc', flibView = 'card';
+const pendingBorrowRequests = {}; // key: "ownerUid:bookId" → Firestore message docId
 let flibGenreFilters = [], flibTopFilter = 'all', flibFilterOpen = false, flibSortOpen = false;
 let chatListener = null, bookPickerOpen = false;
 let friendSearchTimer = null;
@@ -4624,6 +4626,7 @@ window.openFriendDetails = (uid, name) => {
   document.getElementById('friendDetailsModal').classList.add('open');
   friendLibBooks = []; flibGenreFilters = []; flibTopFilter = 'all'; flibSort = 'title-asc'; flibView = 'card';
   flibFilterOpen = false; flibSortOpen = false;
+  Object.keys(pendingBorrowRequests).forEach(k => delete pendingBorrowRequests[k]);
   const muted = localStorage.getItem('notif_muted_' + uid) === 'true';
   const toggle = document.getElementById('friendNotifToggle');
   if (toggle) toggle.checked = !muted;
@@ -4808,7 +4811,7 @@ window.applyFriendLibFilters = () => {
       + '<div class="book-tags">' + genres + series + '</div></div>'
       + '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">'
       + starBtn
-      + '<button class="btn-edit" onclick="requestBorrow(\'' + jsStr(friendDetailsUid) + '\',\'' + jsStr(b.id) + '\',\'' + jsStr(b.title||'') + '\')" title="Request to borrow"><i data-lucide="hand"></i></button>'
+      + (()=>{ const k=friendDetailsUid+':'+b.id, p=!!pendingBorrowRequests[k]; return '<button class="btn-edit'+(p?' borrow-pending':'')+'" onclick="'+(p?'cancelBorrow':'requestBorrow')+'(\''+jsStr(friendDetailsUid)+'\',\''+jsStr(b.id)+'\',\''+jsStr(b.title||'')+'\''+')" title="'+(p?'Cancel request':'Request to borrow')+'"><i data-lucide="hand"></i></button>'; })()
       + '</div>'
       + '</div>';
   }).join('');
@@ -5599,18 +5602,16 @@ window.handleNotifClick = (type, fromUid, fromName) => {
 window.requestBorrow = async (ownerUid, bookId, bookTitle) => {
   if (!currentUser) return;
   if (!userUsername) { showStatus('Set your username first (Settings → Account)', 'error'); return; }
-  // Find the book's author from friendLibBooks
   const book = friendLibBooks.find(b => b.id === bookId);
   const bookAuthor = book?.author || '';
   try {
-    // Post as a chat message so it appears inline
-    await addDoc(chatColRef(currentUser.uid, ownerUid), {
+    const ref = await addDoc(chatColRef(currentUser.uid, ownerUid), {
       type: 'borrow_request', bookId, bookTitle, bookAuthor,
       fromUid: currentUser.uid, fromUsername: userUsername,
       displayName: currentUser.displayName || userUsername,
       createdAt: serverTimestamp()
     });
-    // Also send a notification bell entry
+    pendingBorrowRequests[ownerUid + ':' + bookId] = ref.id;
     await addDoc(notifsCol(ownerUid), {
       type: 'borrow_request', fromUid: currentUser.uid,
       fromUsername: userUsername, displayName: currentUser.displayName || userUsername,
@@ -5618,7 +5619,20 @@ window.requestBorrow = async (ownerUid, bookId, bookTitle) => {
     });
     showStatus('Borrow request sent!', 'success');
     setTimeout(hideStatus, 2500);
-    // If chat tab is already open, the listener will pick it up automatically
+    applyFriendLibFilters();
+  } catch(e) { showStatus('Failed: ' + e.message, 'error'); }
+};
+
+window.cancelBorrow = async (ownerUid, bookId, bookTitle) => {
+  const key = ownerUid + ':' + bookId;
+  const docId = pendingBorrowRequests[key];
+  if (!docId) return;
+  try {
+    await deleteDoc(doc(chatColRef(currentUser.uid, ownerUid), docId));
+    delete pendingBorrowRequests[key];
+    showStatus('Request cancelled', 'success');
+    setTimeout(hideStatus, 2000);
+    applyFriendLibFilters();
   } catch(e) { showStatus('Failed: ' + e.message, 'error'); }
 };
 
