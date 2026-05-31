@@ -226,6 +226,13 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .fdet-tab-btn.active { background: var(--accent); color: #1a1612; border-color: var(--accent); }
 .fdet-tab-btn .lucide { width: 15px; height: 15px; }
 .club-avatar { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+.privacy-options { display: flex; gap: 8px; }
+.privacy-opt { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 4px; background: var(--surface2); border: 2px solid transparent; border-radius: var(--radius-sm); cursor: pointer; font-family: 'DM Sans', sans-serif; transition: border-color 0.15s, background 0.15s; }
+.privacy-opt .priv-icon { font-size: 18px; line-height: 1; }
+.privacy-opt .priv-label { font-size: 12px; font-weight: 700; color: var(--text); }
+.privacy-opt .priv-desc { font-size: 10px; color: var(--text3); text-align: center; line-height: 1.3; }
+.privacy-opt.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface2)); }
+.modal-error { font-size: 12px; color: var(--danger); background: #2a1a18; border-radius: var(--radius-sm); padding: 8px 12px; margin-top: 8px; display: none; }
 .club-avatar-lg { width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
 .admin-badge { font-size: 9px; background: var(--accent); color: #1a1612; border-radius: 4px; padding: 1px 4px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-left: 4px; vertical-align: middle; }
 .club-color-swatch { width: 28px; height: 28px; border-radius: 8px; cursor: pointer; border: 2px solid transparent; transition: border-color 0.15s; flex-shrink: 0; }
@@ -1249,14 +1256,20 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
         </div>
       </div>
       <div class="form-group">
-        <div style="display:flex;align-items:center;justify-content:space-between">
-          <div>
-            <div class="form-label" style="margin:0">Public Club</div>
-            <div style="font-size:12px;color:var(--text3);margin-top:2px">Anyone can discover and request to join</div>
-          </div>
-          <label class="ios-toggle"><input type="checkbox" id="clubPublicToggle" checked><span class="ios-slider"></span></label>
+        <label class="form-label">Privacy</label>
+        <div class="privacy-options" id="createClubPrivacyRow">
+          <button class="privacy-opt" data-val="private" onclick="setClubPrivacy('private','createClubPrivacyRow')">
+            <span class="priv-icon">🔒</span><span class="priv-label">Private</span><span class="priv-desc">Invite only</span>
+          </button>
+          <button class="privacy-opt active" data-val="public" onclick="setClubPrivacy('public','createClubPrivacyRow')">
+            <span class="priv-icon">👁</span><span class="priv-label">Public</span><span class="priv-desc">Request to join</span>
+          </button>
+          <button class="privacy-opt" data-val="open" onclick="setClubPrivacy('open','createClubPrivacyRow')">
+            <span class="priv-icon">🔓</span><span class="priv-label">Open</span><span class="priv-desc">Anyone can join</span>
+          </button>
         </div>
       </div>
+      <div class="modal-error" id="createClubError"></div>
       <button class="btn-submit" onclick="submitCreateClub()" style="width:100%;margin-top:8px">Create Club</button>
     </div>
   </div>
@@ -4101,6 +4114,8 @@ let clubBookPickerOpen = false;
 let discoverMode = 'friends';
 let clubSearchTimer = null;
 let createClubEmoji = '📚', createClubColor = '#2d2520';
+let createClubPrivacy = 'public';
+let editClubPrivacy = 'public';
 const CLUB_COLORS = ['#2d2520','#1e2d3a','#1a2e24','#2e1e28','#261e2e','#1e1e1e','#2a2206','#1a2a2a'];
 const CLUB_EMOJIS = ['📚','📖','✨','🌟','🏛️','🔮','🌙','⚡','🦋','🌿','🎭','🎪','🗺️','⚔️','🧙','🐉','🦁','🐺','🌸','☕','🎵','🎨','🔥','💎'];
 
@@ -4819,15 +4834,24 @@ window.addToWishlist = async (title, author, genres, series, seriesNumber, btnEl
 
 // ── CREATE CLUB ────────────────────────────────────────────────────────────────
 window.openCreateClubModal = () => {
-  createClubEmoji = '📚'; createClubColor = '#2d2520';
+  createClubEmoji = '📚'; createClubColor = '#2d2520'; createClubPrivacy = 'public';
   document.getElementById('clubNameInput').value = '';
   document.getElementById('clubDescInput').value = '';
-  document.getElementById('clubPublicToggle').checked = true;
+  document.getElementById('createClubError').style.display = 'none';
+  setClubPrivacy('public', 'createClubPrivacyRow');
   renderClubEmojiGrid('createClubEmojiGrid', 'createClubIconPreview', true);
   renderClubColorRow('createClubColorRow', 'createClubIconPreview', true);
   updateClubIconPreview('createClubIconPreview');
   document.getElementById('createClubModal').classList.add('open');
   refreshIcons();
+};
+
+window.setClubPrivacy = (val, rowId) => {
+  if (rowId === 'createClubPrivacyRow') createClubPrivacy = val;
+  else editClubPrivacy = val;
+  document.querySelectorAll('#' + rowId + ' .privacy-opt').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.val === val);
+  });
 };
 
 function renderClubEmojiGrid(gridId, previewId, isCreate) {
@@ -4871,12 +4895,16 @@ function updateClubIconPreview(previewId) {
 window.submitCreateClub = async () => {
   const name = document.getElementById('clubNameInput').value.trim();
   const desc = document.getElementById('clubDescInput').value.trim();
-  const isPublic = document.getElementById('clubPublicToggle').checked;
-  if (!name) { showStatus('Please enter a club name.', 'error'); return; }
+  const errEl = document.getElementById('createClubError');
+  errEl.style.display = 'none';
+  if (!name) { errEl.textContent = 'Please enter a club name.'; errEl.style.display = 'block'; return; }
+  const btn = document.querySelector('#createClubSheet .btn-submit');
+  if (btn) { btn.disabled = true; btn.textContent = 'Creating…'; }
   try {
     const clubData = {
       name, description: desc, emoji: createClubEmoji, bgColor: createClubColor,
-      isPublic, createdBy: currentUser.uid, createdAt: serverTimestamp(),
+      privacy: createClubPrivacy, isDiscoverable: createClubPrivacy !== 'private',
+      createdBy: currentUser.uid, createdAt: serverTimestamp(),
       memberUids: [currentUser.uid], adminUids: [currentUser.uid], memberCount: 1
     };
     const ref = await addDoc(clubsCol(), clubData);
@@ -4884,7 +4912,6 @@ window.submitCreateClub = async () => {
       uid: currentUser.uid, displayName: currentUser.displayName || userUsername,
       username: userUsername, role: 'admin', joinedAt: serverTimestamp()
     });
-    // System message
     await addDoc(clubMsgCol(ref.id), {
       type: 'system', text: '📚 Club created! Welcome to ' + name,
       fromUid: currentUser.uid, createdAt: serverTimestamp()
@@ -4895,7 +4922,12 @@ window.submitCreateClub = async () => {
     setTimeout(hideStatus, 2000);
     renderChats();
     openClubDetails(ref.id);
-  } catch(e) { showStatus('Error: ' + e.message, 'error'); }
+  } catch(e) {
+    errEl.textContent = 'Error: ' + e.message;
+    errEl.style.display = 'block';
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Create Club'; }
+  }
 };
 
 // ── CLUB DETAILS ──────────────────────────────────────────────────────────────
@@ -5073,6 +5105,13 @@ async function renderClubSettingsContent() {
 
     editClubEmoji = currentClubData.emoji || '📚';
     editClubColor = currentClubData.bgColor || '#2d2520';
+    editClubPrivacy = currentClubData.privacy || (currentClubData.isPublic ? 'public' : 'private');
+
+    const privOpts = [
+      { val: 'private', icon: '🔒', label: 'Private', desc: 'Invite only' },
+      { val: 'public',  icon: '👁',  label: 'Public',  desc: 'Request to join' },
+      { val: 'open',    icon: '🔓', label: 'Open',    desc: 'Anyone can join' }
+    ];
 
     el.innerHTML = '<div style="font-size:12px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Edit Club</div>'
       + '<div class="form-group" style="margin-bottom:10px"><label class="form-label">Name</label>'
@@ -5086,9 +5125,11 @@ async function renderClubSettingsContent() {
       + '<div class="club-emoji-grid" id="editClubEmojiGrid"></div>'
       + '<div style="font-size:11px;color:var(--text3);margin:8px 0 6px;font-weight:600;text-transform:uppercase">Color</div>'
       + '<div class="club-color-row" id="editClubColorRow"></div></div></div></div>'
-      + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'
-      + '<div><div class="form-label" style="margin:0">Public Club</div></div>'
-      + '<label class="ios-toggle"><input type="checkbox" id="editClubPublic"' + (currentClubData.isPublic ? ' checked' : '') + '><span class="ios-slider"></span></label></div>'
+      + '<div class="form-group" style="margin-bottom:16px"><label class="form-label">Privacy</label>'
+      + '<div class="privacy-options" id="editClubPrivacyRow">'
+      + privOpts.map(o => '<button class="privacy-opt' + (editClubPrivacy === o.val ? ' active' : '') + '" data-val="' + o.val + '" onclick="setClubPrivacy(\'' + o.val + '\',\'editClubPrivacyRow\')">'
+        + '<span class="priv-icon">' + o.icon + '</span><span class="priv-label">' + o.label + '</span><span class="priv-desc">' + o.desc + '</span></button>').join('')
+      + '</div></div>'
       + '<button class="btn-submit" style="width:100%;margin-bottom:20px" onclick="saveClubEdit()">Save Changes</button>'
       + (requests.length ? '<div style="font-size:12px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Join Requests (' + requests.length + ')</div>'
         + requests.map(r => '<div class="club-member-row">'
@@ -5140,11 +5181,11 @@ async function renderClubSettingsContent() {
 window.saveClubEdit = async () => {
   const name = document.getElementById('editClubName').value.trim();
   const desc = document.getElementById('editClubDesc').value.trim();
-  const isPublic = document.getElementById('editClubPublic').checked;
   if (!name) { showStatus('Name required', 'error'); return; }
   try {
-    await updateDoc(clubDoc(currentClubId), { name, description: desc, emoji: editClubEmoji, bgColor: editClubColor, isPublic });
-    currentClubData = { ...currentClubData, name, description: desc, emoji: editClubEmoji, bgColor: editClubColor, isPublic };
+    const updates = { name, description: desc, emoji: editClubEmoji, bgColor: editClubColor, privacy: editClubPrivacy, isDiscoverable: editClubPrivacy !== 'private' };
+    await updateDoc(clubDoc(currentClubId), updates);
+    currentClubData = { ...currentClubData, ...updates };
     document.getElementById('clubDetailIcon').textContent = editClubEmoji;
     document.getElementById('clubDetailIcon').style.background = editClubColor;
     document.getElementById('clubDetailName').textContent = name;
@@ -5289,26 +5330,27 @@ async function doSearchClubs(rawQuery) {
   if (q.length < 3) { el.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px;text-align:center">Type at least 3 characters</div>'; return; }
   el.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px;text-align:center">Searching…</div>';
   try {
-    // Search by name prefix (Firestore doesn't support full-text, so search by name range)
-    const snap = await getDocs(query(
-      clubsCol(),
-      where('isPublic', '==', true),
-      where('name', '>=', rawQuery.trim()),
-      where('name', '<=', rawQuery.trim() + ''),
-      limit(20)
-    ));
-    const results = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    // Fetch discoverable clubs and filter by name client-side (avoids composite index)
+    const snap = await getDocs(query(clubsCol(), where('isDiscoverable', '==', true), limit(100)));
+    const results = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(c => (c.name||'').toLowerCase().includes(q));
     if (!results.length) { el.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px;text-align:center">No clubs found</div>'; return; }
     el.innerHTML = results.map(c => {
       const isMember = (c.memberUids||[]).includes(currentUser.uid);
+      const privacyBadge = c.privacy === 'open'
+        ? '<span style="font-size:10px;color:var(--text3);margin-left:4px">🔓 Open</span>'
+        : '<span style="font-size:10px;color:var(--text3);margin-left:4px">👁 Public</span>';
       return '<div class="friend-card">'
         + '<div class="club-avatar" style="background:' + esc(c.bgColor||'#2d2520') + ';border-radius:12px;font-size:20px">' + esc(c.emoji||'📚') + '</div>'
-        + '<div class="friend-info" style="flex:1;min-width:0"><div class="friend-name">' + esc(c.name) + '</div>'
+        + '<div class="friend-info" style="flex:1;min-width:0"><div class="friend-name">' + esc(c.name) + privacyBadge + '</div>'
         + '<div class="friend-username">' + (c.memberUids||[]).length + ' members' + (c.description ? ' · ' + esc(c.description.slice(0,40)) : '') + '</div></div>'
         + '<div class="friend-actions">'
         + (isMember
           ? '<button class="btn-add-collection" onclick="openClubDetails(\'' + jsStr(c.id) + '\')" style="font-size:11px">Open</button>'
-          : '<button class="btn-add-collection" onclick="requestJoinClub(\'' + jsStr(c.id) + '\',\'' + jsStr(c.name) + '\')" id="join-btn-' + esc(c.id) + '" style="font-size:11px">Request to Join</button>')
+          : c.privacy === 'open'
+            ? '<button class="btn-add-collection" onclick="joinOpenClub(\'' + jsStr(c.id) + '\',\'' + jsStr(c.name) + '\')" id="join-btn-' + esc(c.id) + '" style="font-size:11px">Join</button>'
+            : '<button class="btn-add-collection" onclick="requestJoinClub(\'' + jsStr(c.id) + '\',\'' + jsStr(c.name) + '\')" id="join-btn-' + esc(c.id) + '" style="font-size:11px">Request to Join</button>')
         + '</div></div>';
     }).join('');
   } catch(e) { el.innerHTML = '<div style="padding:16px;color:var(--danger);font-size:13px;text-align:center">Error: ' + esc(e.message) + '</div>'; }
@@ -5326,6 +5368,28 @@ window.requestJoinClub = async (clubId, clubName) => {
     showStatus('Request sent to join ' + clubName + '!', 'success');
     setTimeout(hideStatus, 3000);
   } catch(e) { showStatus('Error: ' + e.message, 'error'); if (btn) { btn.disabled = false; btn.textContent = 'Request to Join'; } }
+};
+
+window.joinOpenClub = async (clubId, clubName) => {
+  const btn = document.getElementById('join-btn-' + clubId);
+  if (btn) { btn.disabled = true; btn.textContent = 'Joining…'; }
+  try {
+    await updateDoc(clubDoc(clubId), { memberUids: arrayUnion(currentUser.uid), memberCount: increment(1) });
+    await setDoc(clubMemberDoc(clubId, currentUser.uid), {
+      uid: currentUser.uid, displayName: currentUser.displayName || userUsername,
+      username: userUsername, role: 'member', joinedAt: serverTimestamp()
+    });
+    await addDoc(clubMsgCol(clubId), {
+      type: 'system', text: '👋 ' + (currentUser.displayName || userUsername) + ' joined the club',
+      fromUid: currentUser.uid, createdAt: serverTimestamp()
+    });
+    // Reload clubs list and open the club
+    await loadClubs();
+    renderChats();
+    showStatus('Joined ' + clubName + '!', 'success');
+    setTimeout(hideStatus, 2000);
+    openClubDetails(clubId);
+  } catch(e) { showStatus('Error: ' + e.message, 'error'); if (btn) { btn.disabled = false; btn.textContent = 'Join'; } }
 };
 
 // ── NOTIFICATIONS ─────────────────────────────────────────────────────────────
