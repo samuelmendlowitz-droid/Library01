@@ -2233,18 +2233,35 @@ let _globalLibraryTotalCount = null; // actual Firestore document count
 const GLOBAL_FETCH_PAGE = 500; // docs fetched per Firestore request
 
 async function preloadGlobalBooks() {
-  // Load only the first page — enough to populate autocomplete and the initial
-  // display. More pages are fetched on demand via loadMoreGlobalBooks().
+  // Fetch popular books (popularity > 0, ordered by score) plus the first
+  // alphabetical page of all books. Popular books are deduplicated out of
+  // the alpha page so they aren't double-listed. The alpha cursor is saved
+  // for pagination via loadMoreGlobalBooks().
   try {
-    const [snap, countSnap] = await Promise.all([
-      getDocs(query(collection(db, 'globalLibrary'), orderBy('normalizedTitle', 'asc'), limit(GLOBAL_FETCH_PAGE))),
+    const [popularSnap, alphaSnap, countSnap] = await Promise.all([
+      getDocs(query(collection(db, 'globalLibrary'),
+        where('popularity', '>', 0),
+        orderBy('popularity', 'desc'),
+        limit(2000))),
+      getDocs(query(collection(db, 'globalLibrary'),
+        orderBy('normalizedTitle', 'asc'),
+        limit(GLOBAL_FETCH_PAGE))),
       getCountFromServer(collection(db, 'globalLibrary'))
     ]);
-    const page = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+
+    const popularBooks = popularSnap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
       .filter(b => !isLikelyTestBook(b.title, b.author));
-    globalBookCache = page;
-    _globalLibraryCursor = snap.docs.length === GLOBAL_FETCH_PAGE ? snap.docs[snap.docs.length - 1] : null;
-    _globalLibraryExhausted = snap.docs.length < GLOBAL_FETCH_PAGE;
+    const popularIds = new Set(popularBooks.map(b => b.id));
+
+    const alphaBooks = alphaSnap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(b => !isLikelyTestBook(b.title, b.author) && !popularIds.has(b.id));
+
+    globalBookCache = [...popularBooks, ...alphaBooks];
+    _globalLibraryCursor = alphaSnap.docs.length === GLOBAL_FETCH_PAGE
+      ? alphaSnap.docs[alphaSnap.docs.length - 1] : null;
+    _globalLibraryExhausted = alphaSnap.docs.length < GLOBAL_FETCH_PAGE;
     _globalLibraryTotalCount = countSnap.data().count;
   } catch(e) {
     // globalLibrary inaccessible — autocomplete will use user's own books
@@ -2254,20 +2271,22 @@ async function preloadGlobalBooks() {
 }
 
 // Called when the user is on the global library page and needs more books.
+// Continues alphabetical pagination; popular books are already fully loaded.
 async function loadMoreGlobalBooks() {
   if (_globalLibraryExhausted || !_globalLibraryCursor) return;
   try {
     const q = query(collection(db, 'globalLibrary'), orderBy('normalizedTitle', 'asc'),
       startAfter(_globalLibraryCursor), limit(GLOBAL_FETCH_PAGE));
     const snap = await getDocs(q);
+    const existingIds = new Set(globalBookCache.map(b => b.id));
     const page = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-      .filter(b => !isLikelyTestBook(b.title, b.author));
+      .filter(b => !isLikelyTestBook(b.title, b.author) && !existingIds.has(b.id));
     globalBookCache.push(...page);
     _globalLibraryCursor = snap.docs.length === GLOBAL_FETCH_PAGE ? snap.docs[snap.docs.length - 1] : null;
     _globalLibraryExhausted = snap.docs.length < GLOBAL_FETCH_PAGE;
     syncUserBooksToCache();
-    // Append only the newly-fetched books to the visible list — do NOT call
-    // applyGlobalFilters() which would reset _globalRenderOffset to 0.
+    // Append only the newly-fetched books — do NOT call applyGlobalFilters()
+    // which would reset _globalRenderOffset to 0.
     const newVisible = page.filter(_matchesGlobalFilters);
     _globalFullList.push(...newVisible);
     _renderNextGlobalPage(true);
@@ -2870,9 +2889,8 @@ function applyGlobalFilters() {
   let list = globalBookCache.filter(_matchesGlobalFilters);
   list = [...list].sort((a, b) => {
     if (sort === 'popularity-desc') {
-      const ap = (a.popularity||0) + (a._userPopularity||0);
-      const bp = (b.popularity||0) + (b._userPopularity||0);
-      return bp !== ap ? bp - ap : (a.title||'').toLowerCase().localeCompare((b.title||'').toLowerCase());
+      const diff = (b.popularity||0) - (a.popularity||0);
+      return diff !== 0 ? diff : (a.title||'').toLowerCase().localeCompare((b.title||'').toLowerCase());
     }
     if (sort === 'author-asc')  return (a.author||'').toLowerCase().localeCompare((b.author||'').toLowerCase());
     if (sort === 'author-desc') return (b.author||'').toLowerCase().localeCompare((a.author||'').toLowerCase());
