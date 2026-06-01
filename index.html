@@ -2120,19 +2120,25 @@ function normalizeSearchTitle(str = '') {
 // always works even when globalLibrary is inaccessible.
 function syncUserBooksToCache() {
   books.forEach(b => {
-    if (!b.title) return;
+    if (!b.title || b.location === 'Wishlist') return;
     const normTitle  = normalizeBookText(b.title);
     const normAuthor = normalizeBookText(b.author || '');
     const id = normTitle + '__' + normAuthor;
-    if (!globalBookCache.find(g => g.id === id) && !deletedGlobalIds.has(id)) {
+    // 1 pt for owned + 2 pts if read
+    const userPop = 1 + (b.read ? 2 : 0);
+    const existing = globalBookCache.find(g => g.id === id);
+    if (existing) {
+      existing._userPopularity = userPop;
+    } else if (!deletedGlobalIds.has(id)) {
       globalBookCache.push({
         id, _localOnly: true,
         title: b.title, normalizedTitle: normTitle,
-        author: b.author || '', series: b.series || '', genres: b.genres || []
+        author: b.author || '', series: b.series || '', genres: b.genres || [],
+        _userPopularity: userPop
       });
     }
   });
-  globalBookCache.sort((a, b) => (a.normalizedTitle || '').localeCompare(b.normalizedTitle || ''));
+  // Do NOT sort here — display order is managed by applyGlobalFilters
 }
 
 // Called once both personal books and global cache are ready.
@@ -2149,9 +2155,15 @@ async function resyncPersonalBooksToGlobal() {
       // Check Firestore directly — more reliable than local 500-doc cache
       const snap = await getDoc(doc(db, 'globalLibrary', globalId));
       if (snap.exists()) {
-        // Already in global library — just mark synced, no API call needed
+        // Already in global library — mark synced and backfill popularity if missing
         await updateDoc(doc(db, 'users', currentUser.uid, 'books', book.id), { globalSynced: true });
         book.globalSynced = true;
+        if (snap.data().popularity == null && book.location !== 'Wishlist') {
+          const score = 1 + (book.read ? 2 : 0);
+          await updateDoc(doc(db, 'globalLibrary', globalId), { popularity: score });
+          const cached = globalBookCache.find(g => g.id === globalId);
+          if (cached) { cached.popularity = score; cached._userPopularity = score; }
+        }
       } else if (await validateWithGoogleBooks(book.title, book.author)) {
         await syncBookToGlobalLibrary(book);
         await updateDoc(doc(db, 'users', currentUser.uid, 'books', book.id), { globalSynced: true });
@@ -2168,7 +2180,7 @@ async function resyncPersonalBooksToGlobal() {
 function _maybeResyncToGlobal() {
   if (_personalBooksLoaded && _globalBooksPreloaded) {
     // Delay start so the app is fully rendered and interactive before background work begins
-    setTimeout(resyncPersonalBooksToGlobal, 8_000);
+    setTimeout(resyncPersonalBooksToGlobal, 2_000);
   }
 }
 
@@ -2487,7 +2499,6 @@ async function saveBook(data, { skipGlobalSync = false } = {}) {
     globalBookCache[existingIndex] = { ...globalBookCache[existingIndex], ...cacheItem };
   } else {
     globalBookCache.push(cacheItem);
-    globalBookCache.sort((a, b) => (a.normalizedTitle||'').localeCompare(b.normalizedTitle||''));
   }
 
   // Validate book exists before contributing to global library
@@ -2817,8 +2828,9 @@ function applyGlobalFilters() {
   let list = globalBookCache.filter(_matchesGlobalFilters);
   list = [...list].sort((a, b) => {
     if (sort === 'popularity-desc') {
-      const diff = (b.popularity||0) - (a.popularity||0);
-      return diff !== 0 ? diff : (a.title||'').toLowerCase().localeCompare((b.title||'').toLowerCase());
+      const ap = (a.popularity||0) + (a._userPopularity||0);
+      const bp = (b.popularity||0) + (b._userPopularity||0);
+      return bp !== ap ? bp - ap : (a.title||'').toLowerCase().localeCompare((b.title||'').toLowerCase());
     }
     if (sort === 'author-asc')  return (a.author||'').toLowerCase().localeCompare((b.author||'').toLowerCase());
     if (sort === 'author-desc') return (b.author||'').toLowerCase().localeCompare((a.author||'').toLowerCase());
