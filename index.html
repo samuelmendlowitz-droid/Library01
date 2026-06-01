@@ -2652,7 +2652,7 @@ function renderBooks(list) {
     const borCls  = isBorrowed ? 'is-borrowed' : '';
     const maxGenres = currentBookView === 'grid' ? 1 : 99;
     const genreTags = (b.genres||[]).slice(0, maxGenres).map(g => '<span class="tag genre">' + esc(g) + '</span>').join('');
-    const seriesTag = currentBookView === 'grid' ? '' : (b.series ? '<span class="tag series"><i data-lucide="book-open" class="tag-icon"></i> ' + esc(b.series) + (b.seriesNumber ? ' #' + b.seriesNumber : '') + '</span>' : '');
+    const seriesTag = currentBookView === 'grid' ? '' : (b.series ? '<span class="tag series">' + seriesIcon(b.seriesNumber) + esc(b.series) + '</span>' : '');
     const locCls = isBorrowed ? 'tag borrowed-tag' : 'tag location';
     const gbId = createGlobalBookId(b.title||'', b.author||'');
     const gb = globalBookCache.find(x => x.id === gbId);
@@ -2698,7 +2698,7 @@ function renderBooksList(list) {
     const avgRating = (gb && gb.ratingCount) ? (gb.ratingTotal/gb.ratingCount).toFixed(1) + ' ★' : '—';
     const chkLabel = isBorrowed ? '<i data-lucide="corner-down-left"></i> In' : (isWishlist ? '+ Add' : '<i data-lucide="arrow-up-right"></i> Out');
     const chkCls = isBorrowed ? 'lr-chk-btn borrowed' : 'lr-chk-btn';
-    const series = b.series ? esc(b.series) + (b.seriesNumber ? ' #' + b.seriesNumber : '') : '—';
+    const series = b.series ? seriesIcon(b.seriesNumber) + esc(b.series) : '—';
     const genres = (b.genres||[]).slice(0,2).join(', ') || '—';
     const loc = b.location && b.location !== 'Wishlist' ? esc(b.location) : '—';
     return '<div class="list-row ' + readCls + '" id="card-' + b.id + '">'
@@ -2901,7 +2901,7 @@ function renderGlobalBooksList(list, append, totalCount) {
     const personal = books.find(x => createGlobalBookId(x.title||'', x.author||'') === b.id);
     const isRead = personal ? !!personal.read : false;
     const avgRating = b.ratingCount ? (b.ratingTotal/b.ratingCount).toFixed(1) + ' ★' : '—';
-    const series = b.series ? esc(b.series) + (b.seriesNumber ? ' #' + b.seriesNumber : '') : '—';
+    const series = b.series ? seriesIcon(b.seriesNumber) + esc(b.series) : '—';
     const genres = (b.genres||[]).slice(0,2).join(', ') || '—';
     const safeId = (b.id||'').replace(/'/g, "\\'");
     const isOwner = currentUser && currentUser.email === 'samuelmendlowitz@gmail.com';
@@ -3469,6 +3469,18 @@ function hideStatus() { document.getElementById('statusBar').className = 'status
 // ── UTILS ─────────────────────────────────────────────────────────────────────
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function jsStr(s) { return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+
+// Three book-spine SVG icon; number (if given) is rendered inside the centre spine.
+function seriesIcon(num) {
+  const n = num != null && num !== '' ? String(num) : '';
+  const fs = n.length > 1 ? 5 : 6.5;
+  return '<svg width="15" height="12" viewBox="0 0 20 15" style="vertical-align:-2px;flex-shrink:0;margin-right:3px" fill="currentColor">'
+    + '<rect x="0"    y="2.5" width="5.5" height="10" rx="1" opacity="0.55"/>'
+    + '<rect x="7"    y="0"   width="6"   height="14" rx="1"/>'
+    + '<rect x="14.5" y="2.5" width="5.5" height="10" rx="1" opacity="0.55"/>'
+    + (n ? '<text x="10" y="7.2" font-size="' + fs + '" text-anchor="middle" dominant-baseline="central" fill="#162030" font-family="DM Sans,sans-serif" font-weight="700">' + n + '</text>' : '')
+    + '</svg>';
+}
 
 // ── HEADER SPACER (fixed header + subheader offset) ──────────────────────────
 function updateHeaderSpacer() {
@@ -4925,7 +4937,7 @@ window.applyFriendLibFilters = () => {
   }
   el.innerHTML = list.map(b => {
     const genres = (b.genres||[]).slice(0,2).map(g => '<span class="tag genre">' + esc(g) + '</span>').join('');
-    const series = b.series ? '<span class="tag series"><i data-lucide="book-open" class="tag-icon"></i> ' + esc(b.series) + (b.seriesNumber ? ' #'+b.seriesNumber : '') + '</span>' : '';
+    const series = b.series ? '<span class="tag series">' + seriesIcon(b.seriesNumber) + esc(b.series) + '</span>' : '';
     const alreadyWishlisted = books.some(w => w.location === 'Wishlist' && (w.title||'').toLowerCase() === (b.title||'').toLowerCase());
     const starBtn = '<button class="wishlist-star-btn' + (alreadyWishlisted ? ' in-wishlist' : '') + '" title="' + (alreadyWishlisted ? 'In wishlist' : 'Add to wishlist') + '" onclick="addToWishlist(\'' + jsStr(b.title||'') + '\',\'' + jsStr(b.author||'') + '\',' + JSON.stringify(b.genres||[]) + ',\'' + jsStr(b.series||'') + '\',\'' + jsStr(b.seriesNumber||'') + '\',this)">★</button>';
     return '<div class="book-card' + (b.read ? ' is-read' : '') + '">'
