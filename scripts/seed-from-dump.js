@@ -9,7 +9,9 @@
  * Run:    node --max-old-space-size=4096 seed-from-dump.js
  *
  * Flags:  --target=N   override book target (default 5000000)
- *         --test       dry-run: process 2000 books, write nothing to Firestore
+ *         --test       dry-run: process books, write nothing to Firestore
+ *         --resume     skip books already in Firestore (count via aggregation)
+ *         --skip=N     manually skip first N valid works (alternative to --resume)
  */
 
 const admin  = require('firebase-admin');
@@ -17,12 +19,17 @@ const zlib   = require('zlib');
 const rl_mod = require('readline');
 const https  = require('https');
 const http   = require('http');
-const path   = require('path');
+
+// Force line-buffered stdout so every log line is flushed immediately,
+// even when piped to a file via nohup redirection.
+process.stdout._handle && process.stdout._handle.setBlocking(true);
 
 // ── Config ────────────────────────────────────────────────────────────────────
 const args        = Object.fromEntries(process.argv.slice(2).map(a => a.replace(/^--/,'').split('=')));
 const TARGET      = parseInt(args.target || '5000000');
 const DRY_RUN     = 'test' in args;
+const RESUME      = 'resume' in args;
+const SKIP        = args.skip ? parseInt(args.skip) : 0;
 const BATCH_SIZE  = 100;   // docs per Firestore batch commit
 const CONCURRENCY = 10;    // parallel batch commits during flush
 const FLUSH_AT    = 2000;  // flush queue when it reaches this size
@@ -79,6 +86,8 @@ async function streamLines(url, label) {
   console.log(`Downloading ${label}…`);
   const stream = await getStream(url);
   const gunzip = zlib.createGunzip();
+  // Propagate stream errors so the for-await loop throws instead of hanging
+  stream.on('error', e => gunzip.destroy(e));
   const rl = rl_mod.createInterface({ input: stream.pipe(gunzip), crlfDelay: Infinity });
   return rl;
 }
@@ -99,7 +108,6 @@ async function flush(queue) {
         .then(() => b.commit())
         .catch(e2 => console.error('  [batch error]', e2.message));
     }));
-    // Limit concurrency
     if (batches.length >= CONCURRENCY) {
       await Promise.all(batches.splice(0));
     }
@@ -116,11 +124,10 @@ async function buildAuthorMap() {
 
   for await (const line of rl) {
     if (!line.startsWith('/type/author\t')) continue;
-    // format: /type/author \t key \t revision \t date \t json
     const parts = line.split('\t');
     if (parts.length < 5) continue;
     try {
-      const data = JSON.parse(parts.slice(4).join('\t')); // rejoin in case JSON has tabs
+      const data = JSON.parse(parts.slice(4).join('\t'));
       if (data.key && data.name && typeof data.name === 'string' && data.name.trim()) {
         map.set(data.key, data.name.trim());
       }
@@ -134,12 +141,17 @@ async function buildAuthorMap() {
 }
 
 // ── Phase 2: Stream works, join authors, write ────────────────────────────────
-async function processWorks(authorMap) {
-  const t   = Date.now();
-  const rl  = await streamLines(WORKS_URL, 'works dump (~2.5 GB)');
-  const seen = new Set();
-  let queue  = [];
-  let skipped = 0;
+async function processWorks(authorMap, skipCount) {
+  const t      = Date.now();
+  const rl     = await streamLines(WORKS_URL, 'works dump (~2.5 GB)');
+  const seen   = new Set();
+  let queue    = [];
+  let skipped  = 0;
+  let skipping = skipCount; // works to skip at the start (resume support)
+
+  if (skipping > 0) {
+    console.log(`  Resuming — skipping first ${skipping.toLocaleString()} already-written works…`);
+  }
 
   for await (const line of rl) {
     if (seen.size >= TARGET) break;
@@ -168,6 +180,9 @@ async function processWorks(authorMap) {
       if (!id || id === '__' || id.length < 4 || seen.has(id)) continue;
       seen.add(id);
 
+      // Skip books already in Firestore on a resumed run
+      if (skipping > 0) { skipping--; continue; }
+
       const rawGenres = (data.subjects || [])
         .filter(s => typeof s === 'string' && s.length <= 40)
         .slice(0, 5);
@@ -190,11 +205,11 @@ async function processWorks(authorMap) {
 
       if (queue.length >= FLUSH_AT) {
         await flush(queue.splice(0));
-        const n = DRY_RUN ? seen.size : totalWritten;
+        const n = DRY_RUN ? seen.size : (skipCount + totalWritten);
         if (n % LOG_EVERY < FLUSH_AT) {
           const elapsed = ((Date.now() - t) / 60000).toFixed(1);
-          const rate    = Math.round((DRY_RUN ? seen.size : totalWritten) / ((Date.now() - t) / 1000));
-          const eta     = rate ? Math.round((TARGET - n) / rate / 60) : '?';
+          const rate    = Math.round(totalWritten / ((Date.now() - t) / 1000)) || 1;
+          const eta     = Math.round((TARGET - n) / rate / 60);
           console.log(`  ${n.toLocaleString().padStart(9)} / ${TARGET.toLocaleString()}  |  ${elapsed} min  |  ~${eta} min left  |  ${rate} books/s`);
         }
       }
@@ -208,16 +223,24 @@ async function processWorks(authorMap) {
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 async function main() {
-  const target = DRY_RUN ? 2000 : TARGET;
-  console.log(`\nOpen Library bulk seed — target: ${target.toLocaleString()} books\n${'─'.repeat(60)}`);
+  console.log(`\nOpen Library bulk seed — target: ${TARGET.toLocaleString()} books\n${'─'.repeat(60)}`);
   const start = Date.now();
 
+  // Determine how many books to skip (resume support)
+  let skipCount = SKIP;
+  if (RESUME && !DRY_RUN) {
+    console.log('Counting existing Firestore docs…');
+    const snap = await db.collection('globalLibrary').count().get();
+    skipCount = snap.data().count;
+    console.log(`  Found ${skipCount.toLocaleString()} existing books — will skip those and continue from there.\n`);
+  }
+
   const authorMap = await buildAuthorMap();
-  await processWorks(authorMap);
+  await processWorks(authorMap, skipCount);
 
   const mins = ((Date.now() - start) / 60000).toFixed(1);
-  const n = DRY_RUN ? '(dry run)' : totalWritten.toLocaleString();
-  console.log(`\n${'─'.repeat(60)}\nDone. ${n} books written in ${mins} minutes.`);
+  const n = DRY_RUN ? '(dry run)' : (skipCount + totalWritten).toLocaleString();
+  console.log(`\n${'─'.repeat(60)}\nDone. ${n} books total in ${mins} minutes.`);
   process.exit(0);
 }
 
