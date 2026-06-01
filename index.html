@@ -2206,7 +2206,11 @@ async function loadMoreGlobalBooks() {
     _globalLibraryCursor = snap.docs.length === GLOBAL_FETCH_PAGE ? snap.docs[snap.docs.length - 1] : null;
     _globalLibraryExhausted = snap.docs.length < GLOBAL_FETCH_PAGE;
     syncUserBooksToCache();
-    applyGlobalFilters();
+    // Append only the newly-fetched books to the visible list — do NOT call
+    // applyGlobalFilters() which would reset _globalRenderOffset to 0.
+    const newVisible = page.filter(_matchesGlobalFilters);
+    _globalFullList.push(...newVisible);
+    _renderNextGlobalPage(true);
   } catch(e) {
     console.error('Failed to load more global books:', e);
   }
@@ -2781,26 +2785,28 @@ window.toggleGlobalGenreFilter = g => {
   applyGlobalFilters();
 };
 
-function applyGlobalFilters() {
+function _matchesGlobalFilters(b) {
   const q = (document.getElementById('searchInput') || {}).value?.toLowerCase().trim() || '';
+  if (b._localOnly) return false;
+  if (q && !(b.title||'').toLowerCase().includes(q) && !(b.author||'').toLowerCase().includes(q) && !(b.series||'').toLowerCase().includes(q)) return false;
+  if (selectedGenreFilters.length > 0) {
+    const ok = genreFilterMode === 'AND'
+      ? selectedGenreFilters.every(g => (b.genres||[]).includes(g))
+      : selectedGenreFilters.some(g => (b.genres||[]).includes(g));
+    if (!ok) return false;
+  }
+  if (!topFilters.includes('all')) {
+    const personal = books.find(x => createGlobalBookId(x.title||'', x.author||'') === b.id);
+    if (topFilters.includes('read'))     { if (!(personal && personal.read && personal.location !== 'Wishlist')) return false; }
+    else if (topFilters.includes('unread'))   { if (!(personal && !personal.read && personal.location !== 'Wishlist')) return false; }
+    else if (topFilters.includes('borrowed')) { if (!(personal && personal.location === 'Wishlist')) return false; }
+  }
+  return true;
+}
+
+function applyGlobalFilters() {
   const sort = currentSort;
-  let list = globalBookCache.filter(b => {
-    if (b._localOnly) return false; // personal books merged for autocomplete only — not for display
-    if (q && !(b.title||'').toLowerCase().includes(q) && !(b.author||'').toLowerCase().includes(q) && !(b.series||'').toLowerCase().includes(q)) return false;
-    if (selectedGenreFilters.length > 0) {
-      const ok = genreFilterMode === 'AND'
-        ? selectedGenreFilters.every(g => (b.genres||[]).includes(g))
-        : selectedGenreFilters.some(g => (b.genres||[]).includes(g));
-      if (!ok) return false;
-    }
-    if (!topFilters.includes('all')) {
-      const personal = books.find(x => createGlobalBookId(x.title||'', x.author||'') === b.id);
-      if (topFilters.includes('read'))     { if (!(personal && personal.read && personal.location !== 'Wishlist')) return false; }
-      else if (topFilters.includes('unread'))   { if (!(personal && !personal.read && personal.location !== 'Wishlist')) return false; }
-      else if (topFilters.includes('borrowed')) { if (!(personal && personal.location === 'Wishlist')) return false; } // 'borrowed' = Wishlist on global page
-    }
-    return true;
-  });
+  let list = globalBookCache.filter(_matchesGlobalFilters);
   list = [...list].sort((a, b) => {
     if (sort === 'author-asc')  return (a.author||'').toLowerCase().localeCompare((b.author||'').toLowerCase());
     if (sort === 'author-desc') return (b.author||'').toLowerCase().localeCompare((a.author||'').toLowerCase());
