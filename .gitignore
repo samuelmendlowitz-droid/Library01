@@ -1,1 +1,4 @@
 scripts/serviceAccountKey.json
+scripts/node_modules/
+scripts/package-lock.json
+scripts/package.json
