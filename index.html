@@ -2096,6 +2096,7 @@ setTimeout(() => {
 
 
 let globalBookCache = [];
+const deletedGlobalIds = new Set();
 
 function normalizeSearchTitle(str = '') {
   return str
@@ -2113,7 +2114,7 @@ function syncUserBooksToCache() {
     const normTitle  = normalizeBookText(b.title);
     const normAuthor = normalizeBookText(b.author || '');
     const id = normTitle + '__' + normAuthor;
-    if (!globalBookCache.find(g => g.id === id)) {
+    if (!globalBookCache.find(g => g.id === id) && !deletedGlobalIds.has(id)) {
       globalBookCache.push({
         id,
         title: b.title,
@@ -2819,6 +2820,7 @@ window.deleteGlobalBook = async (bookId) => {
   if (!currentUser || currentUser.email !== 'samuelmendlowitz@gmail.com') return;
   try {
     await deleteDoc(doc(db, 'globalLibrary', bookId));
+    deletedGlobalIds.add(bookId);
     globalBookCache = globalBookCache.filter(b => b.id !== bookId);
     syncUserBooksToCache();
     applyGlobalFilters();
