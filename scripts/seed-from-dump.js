@@ -2,16 +2,18 @@
 /**
  * Seed Firestore globalLibrary from Open Library bulk data dumps.
  *
- * Downloads ~500 MB (authors) + ~2.5 GB (works) — streamed, not saved to disk.
- * Writes titles, authors, and any subjects/genres available in the works data.
+ * Downloads authors (~500 MB) and works (~2.5 GB) dumps to /tmp/ol_seed/,
+ * then processes them locally. Cached files are reused on restart unless
+ * --redownload is passed.
  *
  * Setup:  serviceAccountKey.json must be in this directory
  * Run:    node --max-old-space-size=4096 seed-from-dump.js
  *
- * Flags:  --target=N   override book target (default 5000000)
- *         --test       dry-run: process books, write nothing to Firestore
- *         --resume     skip books already in Firestore (count via aggregation)
- *         --skip=N     manually skip first N valid works (alternative to --resume)
+ * Flags:  --target=N      override book target (default 5000000)
+ *         --test          dry-run: process books, write nothing to Firestore
+ *         --resume        skip books already in Firestore and continue
+ *         --skip=N        manually skip first N valid works
+ *         --redownload    force re-download even if cached files exist
  */
 
 const admin  = require('firebase-admin');
@@ -19,9 +21,10 @@ const zlib   = require('zlib');
 const rl_mod = require('readline');
 const https  = require('https');
 const http   = require('http');
+const fs     = require('fs');
+const path   = require('path');
 
-// Force line-buffered stdout so every log line is flushed immediately,
-// even when piped to a file via nohup redirection.
+// Force line-buffered stdout so every log line hits disk immediately.
 process.stdout._handle && process.stdout._handle.setBlocking(true);
 
 // ── Config ────────────────────────────────────────────────────────────────────
@@ -29,16 +32,21 @@ const args        = Object.fromEntries(process.argv.slice(2).map(a => a.replace(
 const TARGET      = parseInt(args.target || '5000000');
 const DRY_RUN     = 'test' in args;
 const RESUME      = 'resume' in args;
+const REDOWNLOAD  = 'redownload' in args;
 const SKIP        = args.skip ? parseInt(args.skip) : 0;
-const BATCH_SIZE  = 100;   // docs per Firestore batch commit
-const CONCURRENCY = 10;    // parallel batch commits during flush
-const FLUSH_AT    = 2000;  // flush queue when it reaches this size
-const LOG_EVERY   = 50000; // progress log interval
+const BATCH_SIZE  = 100;
+const CONCURRENCY = 10;
+const FLUSH_AT    = 2000;
+const LOG_EVERY   = 50000;
 
+const CACHE_DIR  = '/tmp/ol_seed';
+const AUTHOR_GZ  = path.join(CACHE_DIR, 'authors.txt.gz');
+const WORKS_GZ   = path.join(CACHE_DIR, 'works.txt.gz');
 const AUTHOR_URL = 'https://openlibrary.org/data/ol_dump_authors_latest.txt.gz';
 const WORKS_URL  = 'https://openlibrary.org/data/ol_dump_works_latest.txt.gz';
 
 if (DRY_RUN) console.log('[DRY RUN — nothing will be written to Firestore]\n');
+if (!fs.existsSync(CACHE_DIR)) fs.mkdirSync(CACHE_DIR, { recursive: true });
 
 // ── Firebase ──────────────────────────────────────────────────────────────────
 admin.initializeApp({ credential: admin.credential.cert(require('./serviceAccountKey.json')) });
@@ -61,7 +69,7 @@ function isMostlyNonLatin(s) {
   return hi > s.length * 0.35;
 }
 
-// ── HTTP with redirect following ──────────────────────────────────────────────
+// ── HTTP download to file ─────────────────────────────────────────────────────
 function getStream(url, hops = 8) {
   return new Promise((resolve, reject) => {
     const mod = url.startsWith('https') ? https : http;
@@ -82,14 +90,37 @@ function getStream(url, hops = 8) {
   });
 }
 
-async function streamLines(url, label) {
-  console.log(`Downloading ${label}…`);
-  const stream = await getStream(url);
+async function downloadToFile(url, destPath, label) {
+  if (!REDOWNLOAD && fs.existsSync(destPath)) {
+    const mb = Math.round(fs.statSync(destPath).size / 1024 / 1024);
+    console.log(`  Using cached ${label} (${mb} MB) — pass --redownload to refresh`);
+    return;
+  }
+  console.log(`  Downloading ${label}…`);
+  const t   = Date.now();
+  const res = await getStream(url);
+  await new Promise((resolve, reject) => {
+    const out = fs.createWriteStream(destPath);
+    let bytes = 0;
+    res.on('data', chunk => { bytes += chunk.length; });
+    res.on('error', reject);
+    out.on('error', reject);
+    out.on('finish', () => {
+      const mb   = Math.round(bytes / 1024 / 1024);
+      const secs = ((Date.now() - t) / 1000).toFixed(1);
+      console.log(`  Downloaded ${mb} MB in ${secs}s`);
+      resolve();
+    });
+    res.pipe(out);
+  });
+}
+
+// ── Read lines from a local .gz file ─────────────────────────────────────────
+function openGzLines(filePath) {
   const gunzip = zlib.createGunzip();
-  // Propagate stream errors so the for-await loop throws instead of hanging
-  stream.on('error', e => gunzip.destroy(e));
-  const rl = rl_mod.createInterface({ input: stream.pipe(gunzip), crlfDelay: Infinity });
-  return rl;
+  const input  = fs.createReadStream(filePath);
+  input.on('error', e => gunzip.destroy(e));
+  return rl_mod.createInterface({ input: input.pipe(gunzip), crlfDelay: Infinity });
 }
 
 // ── Firestore write ───────────────────────────────────────────────────────────
@@ -102,15 +133,12 @@ async function flush(queue) {
     const chunk = queue.slice(i, i + BATCH_SIZE);
     const b = db.batch();
     chunk.forEach(doc => b.set(db.collection('globalLibrary').doc(doc.id), doc.data, { merge: true }));
-    batches.push(b.commit().catch(e => {
-      // On transient error, retry once after 2s
-      return new Promise(r => setTimeout(r, 2000))
+    batches.push(b.commit().catch(e =>
+      new Promise(r => setTimeout(r, 2000))
         .then(() => b.commit())
-        .catch(e2 => console.error('  [batch error]', e2.message));
-    }));
-    if (batches.length >= CONCURRENCY) {
-      await Promise.all(batches.splice(0));
-    }
+        .catch(e2 => console.error('  [batch error]', e2.message))
+    ));
+    if (batches.length >= CONCURRENCY) await Promise.all(batches.splice(0));
   }
   await Promise.all(batches);
   totalWritten += queue.length;
@@ -118,8 +146,8 @@ async function flush(queue) {
 
 // ── Phase 1: Build author key → name map ─────────────────────────────────────
 async function buildAuthorMap() {
-  const t = Date.now();
-  const rl = await streamLines(AUTHOR_URL, 'authors dump (~500 MB)');
+  const t  = Date.now();
+  const rl = openGzLines(AUTHOR_GZ);
   const map = new Map();
 
   for await (const line of rl) {
@@ -143,18 +171,18 @@ async function buildAuthorMap() {
 // ── Phase 2: Stream works, join authors, write ────────────────────────────────
 async function processWorks(authorMap, skipCount) {
   const t      = Date.now();
-  const rl     = await streamLines(WORKS_URL, 'works dump (~2.5 GB)');
+  const rl     = openGzLines(WORKS_GZ);
   const seen   = new Set();
   let queue    = [];
   let skipped  = 0;
-  let skipping = skipCount; // works to skip at the start (resume support)
+  let skipping = skipCount;
 
   if (skipping > 0) {
     console.log(`  Resuming — skipping first ${skipping.toLocaleString()} already-written works…`);
   }
 
   for await (const line of rl) {
-    if (seen.size >= TARGET) break;
+    if (seen.size - skipping >= TARGET - skipCount) break;
     if (!line.startsWith('/type/work\t')) continue;
 
     const tab4 = (() => {
@@ -180,7 +208,6 @@ async function processWorks(authorMap, skipCount) {
       if (!id || id === '__' || id.length < 4 || seen.has(id)) continue;
       seen.add(id);
 
-      // Skip books already in Firestore on a resumed run
       if (skipping > 0) { skipping--; continue; }
 
       const rawGenres = (data.subjects || [])
@@ -205,7 +232,7 @@ async function processWorks(authorMap, skipCount) {
 
       if (queue.length >= FLUSH_AT) {
         await flush(queue.splice(0));
-        const n = DRY_RUN ? seen.size : (skipCount + totalWritten);
+        const n = skipCount + totalWritten;
         if (n % LOG_EVERY < FLUSH_AT) {
           const elapsed = ((Date.now() - t) / 60000).toFixed(1);
           const rate    = Math.round(totalWritten / ((Date.now() - t) / 1000)) || 1;
@@ -226,13 +253,19 @@ async function main() {
   console.log(`\nOpen Library bulk seed — target: ${TARGET.toLocaleString()} books\n${'─'.repeat(60)}`);
   const start = Date.now();
 
-  // Determine how many books to skip (resume support)
+  // Download dumps to disk (skipped if cached files exist)
+  console.log('Downloading dump files to disk…');
+  await downloadToFile(AUTHOR_URL, AUTHOR_GZ, 'authors (~500 MB)');
+  await downloadToFile(WORKS_URL,  WORKS_GZ,  'works (~2.5 GB)');
+  console.log();
+
+  // Resume: count existing Firestore docs and skip that many works
   let skipCount = SKIP;
   if (RESUME && !DRY_RUN) {
     console.log('Counting existing Firestore docs…');
     const snap = await db.collection('globalLibrary').count().get();
     skipCount = snap.data().count;
-    console.log(`  Found ${skipCount.toLocaleString()} existing books — will skip those and continue from there.\n`);
+    console.log(`  Found ${skipCount.toLocaleString()} existing books — resuming from there.\n`);
   }
 
   const authorMap = await buildAuthorMap();
