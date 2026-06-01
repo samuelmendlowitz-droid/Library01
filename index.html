@@ -1774,7 +1774,7 @@ All columns other than Author, Title, Series and Genres should be left empty or 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as fbSignOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, getDocsFromCache, query, where, limit, orderBy, onSnapshot, serverTimestamp, increment, arrayUnion, arrayRemove } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, getDocsFromCache, query, where, limit, orderBy, startAfter, onSnapshot, serverTimestamp, increment, arrayUnion, arrayRemove } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 // ── CONFIG ───────────────────────────────────────────────────────────────────
 const firebaseConfig = {
@@ -2161,22 +2161,46 @@ function _maybeResyncToGlobal() {
   if (_personalBooksLoaded && _globalBooksPreloaded) resyncPersonalBooksToGlobal();
 }
 
+// Cursor used for paginating Firestore global library fetches
+let _globalLibraryCursor = null;
+let _globalLibraryExhausted = false;
+const GLOBAL_FETCH_PAGE = 500; // docs fetched per Firestore request
+
 async function preloadGlobalBooks() {
+  // Load only the first page — enough to populate autocomplete and the initial
+  // display. More pages are fetched on demand via loadMoreGlobalBooks().
   try {
-    const snap = await getDocs(query(collection(db, 'globalLibrary'), orderBy('normalizedTitle', 'asc')));
-    const all = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    // Delete and exclude test/fake books from global library
-    all.forEach(b => {
-      if (isLikelyTestBook(b.title, b.author)) {
-        deleteDoc(doc(db, 'globalLibrary', b.id)).catch(() => {});
-      }
-    });
-    globalBookCache = all.filter(b => !isLikelyTestBook(b.title, b.author));
+    const q = query(collection(db, 'globalLibrary'), orderBy('normalizedTitle', 'asc'), limit(GLOBAL_FETCH_PAGE));
+    const snap = await getDocs(q);
+    const page = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .filter(b => !isLikelyTestBook(b.title, b.author));
+    globalBookCache = page;
+    _globalLibraryCursor = snap.docs.length === GLOBAL_FETCH_PAGE ? snap.docs[snap.docs.length - 1] : null;
+    _globalLibraryExhausted = snap.docs.length < GLOBAL_FETCH_PAGE;
   } catch(e) {
     // globalLibrary inaccessible — autocomplete will use user's own books
   }
   _globalBooksPreloaded = true;
   _maybeResyncToGlobal();
+}
+
+// Called when the user is on the global library page and needs more books.
+async function loadMoreGlobalBooks() {
+  if (_globalLibraryExhausted || !_globalLibraryCursor) return;
+  try {
+    const q = query(collection(db, 'globalLibrary'), orderBy('normalizedTitle', 'asc'),
+      startAfter(_globalLibraryCursor), limit(GLOBAL_FETCH_PAGE));
+    const snap = await getDocs(q);
+    const page = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .filter(b => !isLikelyTestBook(b.title, b.author));
+    globalBookCache.push(...page);
+    _globalLibraryCursor = snap.docs.length === GLOBAL_FETCH_PAGE ? snap.docs[snap.docs.length - 1] : null;
+    _globalLibraryExhausted = snap.docs.length < GLOBAL_FETCH_PAGE;
+    syncUserBooksToCache();
+    applyGlobalFilters();
+  } catch(e) {
+    console.error('Failed to load more global books:', e);
+  }
 }
 
 window.handleGlobalTitleSearch = function() {
@@ -5703,9 +5727,20 @@ window.cancelBorrow = async (ownerUid, bookId, bookTitle) => {
 (function() {
   const sentinel = document.getElementById('globalLoadSentinel');
   if (!sentinel) return;
-  const observer = new IntersectionObserver(entries => {
-    if (entries[0].isIntersecting && currentPage === 'global') {
+  let _fetching = false;
+  const observer = new IntersectionObserver(async entries => {
+    if (!entries[0].isIntersecting || currentPage !== 'global') return;
+    if (_globalRenderOffset < _globalFullList.length) {
+      // Still have in-memory books to render
       _renderNextGlobalPage(true);
+    } else if (!_globalLibraryExhausted && !_fetching) {
+      // In-memory list exhausted — fetch next Firestore page
+      _fetching = true;
+      sentinel.textContent = 'Loading more books…';
+      await loadMoreGlobalBooks();
+      _fetching = false;
+    } else if (_globalLibraryExhausted) {
+      sentinel.style.display = 'none';
     }
   }, { rootMargin: '300px' });
   observer.observe(sentinel);
