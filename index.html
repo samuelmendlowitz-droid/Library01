@@ -1774,7 +1774,7 @@ All columns other than Author, Title, Series and Genres should be left empty or 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as fbSignOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, getDocsFromCache, query, where, limit, orderBy, startAfter, onSnapshot, serverTimestamp, increment, arrayUnion, arrayRemove } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, getDocsFromCache, query, where, limit, orderBy, startAfter, onSnapshot, serverTimestamp, increment, arrayUnion, arrayRemove, getCountFromServer } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 // ── CONFIG ───────────────────────────────────────────────────────────────────
 const firebaseConfig = {
@@ -2173,19 +2173,23 @@ function _maybeResyncToGlobal() {
 // Cursor used for paginating Firestore global library fetches
 let _globalLibraryCursor = null;
 let _globalLibraryExhausted = false;
+let _globalLibraryTotalCount = null; // actual Firestore document count
 const GLOBAL_FETCH_PAGE = 500; // docs fetched per Firestore request
 
 async function preloadGlobalBooks() {
   // Load only the first page — enough to populate autocomplete and the initial
   // display. More pages are fetched on demand via loadMoreGlobalBooks().
   try {
-    const q = query(collection(db, 'globalLibrary'), orderBy('normalizedTitle', 'asc'), limit(GLOBAL_FETCH_PAGE));
-    const snap = await getDocs(q);
+    const [snap, countSnap] = await Promise.all([
+      getDocs(query(collection(db, 'globalLibrary'), orderBy('normalizedTitle', 'asc'), limit(GLOBAL_FETCH_PAGE))),
+      getCountFromServer(collection(db, 'globalLibrary'))
+    ]);
     const page = snap.docs.map(d => ({ id: d.id, ...d.data() }))
       .filter(b => !isLikelyTestBook(b.title, b.author));
     globalBookCache = page;
     _globalLibraryCursor = snap.docs.length === GLOBAL_FETCH_PAGE ? snap.docs[snap.docs.length - 1] : null;
     _globalLibraryExhausted = snap.docs.length < GLOBAL_FETCH_PAGE;
+    _globalLibraryTotalCount = countSnap.data().count;
   } catch(e) {
     // globalLibrary inaccessible — autocomplete will use user's own books
   }
@@ -2836,7 +2840,11 @@ function renderGlobalBooks(list, append, totalCount) {
   if (currentBookView === 'list') { renderGlobalBooksList(list, append, totalCount); return; }
   if (!append) {
     const total = totalCount != null ? totalCount : list.length;
-    document.getElementById('listHeader').textContent = total + ' book' + (total !== 1 ? 's' : '') + ' in global library';
+    const dbTotal = _globalLibraryTotalCount;
+    const countLabel = dbTotal != null
+      ? dbTotal.toLocaleString() + ' book' + (dbTotal !== 1 ? 's' : '') + ' in global library'
+      : total + ' book' + (total !== 1 ? 's' : '') + ' in global library';
+    document.getElementById('listHeader').textContent = countLabel;
     if (!total) {
       const msg = globalBookCache.length === 0
         ? 'Global library not yet accessible — update your Firestore rules to enable it'
