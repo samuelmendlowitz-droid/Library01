@@ -2075,6 +2075,8 @@ onAuthStateChanged(auth, async user => {
     await loadSettings(); // also loads borrowLog
     updateHeaderSubtitle();
     checkUsernameOnLogin(); // async, non-blocking — shows modal if new user
+    _personalBooksLoaded = false;
+    _globalBooksPreloaded = false;
     loadBooks();          // don't block on global books
     loadNotifications();  // async, non-blocking
     preloadGlobalBooks().then(() => syncUserBooksToCache()); // background, merge after
@@ -2097,6 +2099,8 @@ setTimeout(() => {
 
 let globalBookCache = [];
 const deletedGlobalIds = new Set();
+let _personalBooksLoaded = false;
+let _globalBooksPreloaded = false;
 
 function normalizeSearchTitle(str = '') {
   return str
@@ -2125,6 +2129,34 @@ function syncUserBooksToCache() {
   globalBookCache.sort((a, b) => (a.normalizedTitle || '').localeCompare(b.normalizedTitle || ''));
 }
 
+// Called once both personal books and global cache are ready.
+// Validates and syncs any personal books not yet in the global library.
+async function resyncPersonalBooksToGlobal() {
+  if (!books.length) return;
+  const syncedIds = new Set(globalBookCache.filter(b => !b._localOnly).map(b => b.id));
+  for (const book of books) {
+    if (!book.title || !book.author) continue;
+    const globalId = createGlobalBookId(book.title, book.author);
+    if (syncedIds.has(globalId) || deletedGlobalIds.has(globalId)) continue;
+    if (isLikelyTestBook(book.title, book.author)) continue;
+    try {
+      if (await validateWithGoogleBooks(book.title, book.author)) {
+        await syncBookToGlobalLibrary(book);
+        syncedIds.add(globalId);
+        // Promote cache entry from _localOnly to real
+        const idx = globalBookCache.findIndex(b => b.id === globalId);
+        if (idx >= 0) delete globalBookCache[idx]._localOnly;
+      }
+    } catch(e) { /* continue */ }
+    await new Promise(r => setTimeout(r, 300)); // throttle Google Books API
+  }
+  if (currentPage === 'global') applyGlobalFilters();
+}
+
+function _maybeResyncToGlobal() {
+  if (_personalBooksLoaded && _globalBooksPreloaded) resyncPersonalBooksToGlobal();
+}
+
 async function preloadGlobalBooks() {
   try {
     const snap = await getDocs(query(collection(db, 'globalLibrary'), orderBy('normalizedTitle', 'asc')));
@@ -2139,6 +2171,8 @@ async function preloadGlobalBooks() {
   } catch(e) {
     // globalLibrary inaccessible — autocomplete will use user's own books
   }
+  _globalBooksPreloaded = true;
+  _maybeResyncToGlobal();
 }
 
 window.handleGlobalTitleSearch = function() {
@@ -2379,6 +2413,8 @@ async function loadBooks() {
     syncUserBooksToCache();
     document.getElementById('fabAdd').style.display = ['mylibrary','wishlist'].includes(currentPage) ? 'flex' : 'none';
     requestAnimationFrame(updateHeaderSpacer);
+    _personalBooksLoaded = true;
+    _maybeResyncToGlobal();
   } catch(e) {
     if (!books.length) showStatus('Error loading books. Please refresh.', 'error');
   }
