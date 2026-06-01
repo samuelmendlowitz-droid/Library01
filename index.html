@@ -3609,8 +3609,17 @@ window.setPage = (page) => {
   document.getElementById('statusBar').style.display = showMain ? '' : 'none';
   // Load page content
   if (page === 'global') {
-    preloadGlobalBooks().then(() => { syncUserBooksToCache(); buildGlobalGenreFilters(); applyGlobalFilters(); updateStats(); });
-    applyGlobalFilters(); updateStats();
+    if (!_globalBooksPreloaded) {
+      // First visit — fetch from Firestore, then render. Guard against tab switch
+      // happening before the fetch resolves (would overwrite personal library content).
+      preloadGlobalBooks().then(() => {
+        if (currentPage !== 'global') return;
+        syncUserBooksToCache(); buildGlobalGenreFilters(); applyGlobalFilters(); updateStats();
+      });
+    } else {
+      // Already loaded — render immediately from cache, no Firestore round-trip.
+      syncUserBooksToCache(); buildGlobalGenreFilters(); applyGlobalFilters(); updateStats();
+    }
   } else if (page === 'community') {
     initCommunityPage();
   } else if (showMain) {
@@ -5754,18 +5763,20 @@ window.cancelBorrow = async (ownerUid, bookId, bookTitle) => {
   const observer = new IntersectionObserver(async entries => {
     if (!entries[0].isIntersecting || currentPage !== 'global') return;
     if (_globalRenderOffset < _globalFullList.length) {
-      // Still have in-memory books to render
+      // Render next in-memory page — no network needed, no loading text.
+      sentinel.textContent = '';
       _renderNextGlobalPage(true);
     } else if (!_globalLibraryExhausted && !_fetching) {
-      // In-memory list exhausted — fetch next Firestore page
+      // In-memory list exhausted — fetch next Firestore page.
       _fetching = true;
       sentinel.textContent = 'Loading more books…';
       await loadMoreGlobalBooks();
+      sentinel.textContent = '';
       _fetching = false;
     } else if (_globalLibraryExhausted) {
       sentinel.style.display = 'none';
     }
-  }, { rootMargin: '300px' });
+  }, { rootMargin: '200px' });
   observer.observe(sentinel);
 })();
 
