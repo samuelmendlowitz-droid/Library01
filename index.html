@@ -2116,12 +2116,9 @@ function syncUserBooksToCache() {
     const id = normTitle + '__' + normAuthor;
     if (!globalBookCache.find(g => g.id === id) && !deletedGlobalIds.has(id)) {
       globalBookCache.push({
-        id,
-        title: b.title,
-        normalizedTitle: normTitle,
-        author: b.author || '',
-        series: b.series || '',
-        genres: b.genres || []
+        id, _localOnly: true,
+        title: b.title, normalizedTitle: normTitle,
+        author: b.author || '', series: b.series || '', genres: b.genres || []
       });
     }
   });
@@ -2715,6 +2712,7 @@ function applyGlobalFilters() {
   const q = (document.getElementById('searchInput') || {}).value?.toLowerCase().trim() || '';
   const sort = currentSort;
   let list = globalBookCache.filter(b => {
+    if (b._localOnly) return false; // personal books merged for autocomplete only — not for display
     if (q && !(b.title||'').toLowerCase().includes(q) && !(b.author||'').toLowerCase().includes(q) && !(b.series||'').toLowerCase().includes(q)) return false;
     if (selectedGenreFilters.length > 0) {
       const ok = genreFilterMode === 'AND'
