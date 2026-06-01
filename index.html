@@ -3610,8 +3610,12 @@ window.setPage = (page) => {
   // Load page content
   if (page === 'global') {
     if (!_globalBooksPreloaded) {
-      // First visit — fetch from Firestore, then render. Guard against tab switch
-      // happening before the fetch resolves (would overwrite personal library content).
+      // First visit — clear stale content immediately, show spinner, then render
+      // once the Firestore fetch completes. Guard against tab switch happening
+      // before the fetch resolves (would overwrite personal library content).
+      document.getElementById('listHeader').textContent = 'Loading global library…';
+      document.getElementById('bookList').innerHTML = '<div class="empty"><div class="empty-icon"><i data-lucide="loader"></i></div><div class="empty-title">Loading global library…</div></div>';
+      refreshIcons();
       preloadGlobalBooks().then(() => {
         if (currentPage !== 'global') return;
         syncUserBooksToCache(); buildGlobalGenreFilters(); applyGlobalFilters(); updateStats();
