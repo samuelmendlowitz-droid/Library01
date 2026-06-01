@@ -3475,12 +3475,11 @@ function jsStr(s) { return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); 
 function seriesIcon(num) {
   const n = num != null && num !== '' ? String(num) : '';
   const fs = n.length > 1 ? 5.5 : 7;
-  // viewBox 0 0 20 15 (4:3). Top bumps: base y=4, control y=1.5 (shallow).
-  // Bottom bumps mirror top: base y=11, control y=13.5. Z closes the left side.
-  // Number centered in the middle zone (y 4–11).
-  return '<svg width="16" height="12" viewBox="0 0 20 15" style="vertical-align:-2px;margin-right:3px;flex-shrink:0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round">'
-    + '<path d="M0 4Q3.33 1.5 6.67 4Q10 1.5 13.33 4Q16.67 1.5 20 4L20 11Q16.67 13.5 13.33 11Q10 13.5 6.67 11Q3.33 13.5 0 11Z"/>'
-    + (n ? '<text x="10" y="7.5" font-size="' + fs + '" text-anchor="middle" dominant-baseline="central" fill="currentColor" stroke="none" font-family="DM Sans,sans-serif" font-weight="700">' + n + '</text>' : '')
+  // viewBox 0 0 20 20 (1:1). Top bumps: base y=5, control y=3.5 (small).
+  // Bottom bumps mirror: base y=15, control y=16.5. Number centred at (10,10).
+  return '<svg width="13" height="13" viewBox="0 0 20 20" style="vertical-align:-2px;margin-right:3px;flex-shrink:0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round">'
+    + '<path d="M0 5Q3.33 3.5 6.67 5Q10 3.5 13.33 5Q16.67 3.5 20 5L20 15Q16.67 16.5 13.33 15Q10 16.5 6.67 15Q3.33 16.5 0 15Z"/>'
+    + (n ? '<text x="10" y="10" font-size="' + fs + '" text-anchor="middle" dominant-baseline="central" fill="currentColor" stroke="none" font-family="DM Sans,sans-serif" font-weight="700">' + n + '</text>' : '')
     + '</svg>';
 }
 
