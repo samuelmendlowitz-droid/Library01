@@ -14,6 +14,11 @@
  *         --resume        skip books already in Firestore and continue
  *         --skip=N        manually skip first N valid works
  *         --redownload    force re-download even if cached files exist
+ *
+ * Books are written without genres (Open Library subjects are too noisy).
+ * User-verified genres come from personal library syncs in the app.
+ * Each book gets popularity: 0; run migrate-popularity.js afterwards to
+ * apply correct scores from existing user libraries.
  */
 
 const admin  = require('firebase-admin');
@@ -132,7 +137,7 @@ async function flush(queue) {
   for (let i = 0; i < queue.length; i += BATCH_SIZE) {
     const chunk = queue.slice(i, i + BATCH_SIZE);
     const b = db.batch();
-    chunk.forEach(doc => b.set(db.collection('globalLibrary').doc(doc.id), doc.data, { merge: true }));
+    chunk.forEach(doc => b.set(db.collection('globalLibrary').doc(doc.id), doc.data));
     batches.push(b.commit().catch(e =>
       new Promise(r => setTimeout(r, 2000))
         .then(() => b.commit())
@@ -210,10 +215,6 @@ async function processWorks(authorMap, skipCount) {
 
       if (skipping > 0) { skipping--; continue; }
 
-      const rawGenres = (data.subjects || [])
-        .filter(s => typeof s === 'string' && s.length <= 40)
-        .slice(0, 5);
-
       queue.push({
         id,
         data: {
@@ -222,11 +223,11 @@ async function processWorks(authorMap, skipCount) {
           author,
           normalizedAuthor: norm(author),
           series:           '',
-          genres:           rawGenres,
-          primaryGenre:     rawGenres[0] || '',
-          secondaryGenres:  rawGenres.slice(1, 3),
+          genres:           [],
+          primaryGenre:     '',
+          secondaryGenres:  [],
           genreScores:      {},
-          popularity:       admin.firestore.FieldValue.increment(0),
+          popularity:       0,
           updatedAt:        admin.firestore.FieldValue.serverTimestamp()
         }
       });
