@@ -226,6 +226,7 @@ async function processWorks(authorMap, skipCount) {
           primaryGenre:     rawGenres[0] || '',
           secondaryGenres:  rawGenres.slice(1, 3),
           genreScores:      {},
+          popularity:       admin.firestore.FieldValue.increment(0),
           updatedAt:        admin.firestore.FieldValue.serverTimestamp()
         }
       });

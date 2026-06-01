@@ -1809,7 +1809,9 @@ let selectedGenreFilters = [], genreFilterMode = 'OR';
 let selectedStatusFilters = [];
 let topFilters = ['all'];
 let currentPage = 'mylibrary'; // 'mylibrary' | 'wishlist' | 'global' | 'discover' | 'community'
-let currentSort = 'title-asc';
+let currentSort = 'popularity-desc';
+let _personalSort = 'title-asc';
+let _globalSort   = 'popularity-desc';
 let currentBookView = 'card'; // 'card' | 'grid' | 'list'
 let filterPanelOpen = false;
 let sortPanelOpen = false;
@@ -2419,6 +2421,8 @@ async function syncBookToGlobalLibrary(bookData) {
       primaryGenre: rankedGenres[0] || genres[0] || '',
       secondaryGenres: rankedGenres.slice(1, 3),
       genreScores,
+      // +1 owned point only on first sync (new book entering global library)
+      ...(existingSnap.exists() ? {} : { popularity: increment(1) }),
       updatedAt: serverTimestamp()
     }, { merge: true });
 
@@ -2812,6 +2816,10 @@ function applyGlobalFilters() {
   const sort = currentSort;
   let list = globalBookCache.filter(_matchesGlobalFilters);
   list = [...list].sort((a, b) => {
+    if (sort === 'popularity-desc') {
+      const diff = (b.popularity||0) - (a.popularity||0);
+      return diff !== 0 ? diff : (a.title||'').toLowerCase().localeCompare((b.title||'').toLowerCase());
+    }
     if (sort === 'author-asc')  return (a.author||'').toLowerCase().localeCompare((b.author||'').toLowerCase());
     if (sort === 'author-desc') return (b.author||'').toLowerCase().localeCompare((a.author||'').toLowerCase());
     if (sort === 'title-desc')  return (b.title||'').toLowerCase().localeCompare((a.title||'').toLowerCase());
@@ -2947,8 +2955,13 @@ window.toggleGlobalRead = async (globalId) => {
     personal.read = !personal.read;
     applyGlobalFilters();
     updateStats();
-    try { await updateBook(personal.id, { read: personal.read }); }
-    catch(e) { personal.read = !personal.read; applyGlobalFilters(); }
+    const readDelta = personal.read ? 2 : -2;
+    try {
+      await updateBook(personal.id, { read: personal.read });
+      await updateDoc(doc(db, 'globalLibrary', globalId), { popularity: increment(readDelta) });
+      const cached = globalBookCache.find(b => b.id === globalId);
+      if (cached) cached.popularity = (cached.popularity || 0) + readDelta;
+    } catch(e) { personal.read = !personal.read; applyGlobalFilters(); }
   } else {
     // Book not in personal library — add it as read
     const gb = globalBookCache.find(b => b.id === globalId);
@@ -2958,6 +2971,8 @@ window.toggleGlobalRead = async (globalId) => {
       genres: gb.genres||[], location: orderedLocations[0]||'Bookshelf 1',
       read: true, checkoutDate: '', borrowedBy: ''
     }, { skipGlobalSync: true });
+    await updateDoc(doc(db, 'globalLibrary', globalId), { popularity: increment(2) });
+    if (gb) gb.popularity = (gb.popularity || 0) + 2;
     await loadBooks();
     applyGlobalFilters();
   }
@@ -3582,6 +3597,10 @@ function updateStatCardLabels(page) {
 }
 
 window.setPage = (page) => {
+  // Save current sort for the page we're leaving, restore for the page we're entering
+  if (currentPage === 'global') _globalSort = currentSort;
+  else _personalSort = currentSort;
+  currentSort = (page === 'global') ? _globalSort : _personalSort;
   currentPage = page;
   // Update nav tab active states
   document.querySelectorAll('.hnav-btn').forEach(b => b.classList.remove('active'));
@@ -3682,6 +3701,7 @@ window.toggleSortPanel = () => {
 
 function buildSortOptions() {
   const opts = [
+    ...(currentPage === 'global' ? [{val:'popularity-desc', label:'Most Popular'}] : []),
     {val:'title-asc',  label:'Title A→Z'},
     {val:'title-desc', label:'Title Z→A'},
     {val:'author-asc', label:'Author A→Z'},
@@ -3697,6 +3717,8 @@ function buildSortOptions() {
 
 window.setSort = (sort) => {
   currentSort = sort;
+  if (currentPage === 'global') _globalSort = sort;
+  else _personalSort = sort;
   sortPanelOpen = false;
   document.getElementById('sortPanel').style.display = 'none';
   document.getElementById('sortBtn').classList.remove('active');
