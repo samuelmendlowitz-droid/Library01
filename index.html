@@ -283,7 +283,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .book-tags { display: flex; gap: 5px; margin-top: 7px; flex-wrap: wrap; }
 .tag { font-size: 10px; padding: 3px 8px; border-radius: 10px; background: var(--surface3); color: var(--text3); border: 1px solid var(--border); font-weight: 500; }
 .tag.genre { color: var(--accent); border-color: #3a3220; background: #2a2418; }
-.tag.series { color: #8ab4c9; border-color: #1e3040; background: #162030; }
+.tag.series { color: var(--accent); border-color: #3a3220; background: #2a2418; }
 .tag.location { color: var(--text2); }
 .tag.borrowed-tag { color: var(--borrowed); border-color: #3a2010; background: #2a1a10; }
 .book-actions { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
@@ -3470,15 +3470,16 @@ function hideStatus() { document.getElementById('statusBar').className = 'status
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function jsStr(s) { return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
 
-// Three book-spine SVG icon; number (if given) is rendered inside the centre spine.
+// Hollow 4:3 rectangle with three book-spine bumps on top.
+// The series number (if any) is drawn as filled text inside the hollow shape.
 function seriesIcon(num) {
   const n = num != null && num !== '' ? String(num) : '';
-  const fs = n.length > 1 ? 5 : 6.5;
-  return '<svg width="15" height="12" viewBox="0 0 20 15" style="vertical-align:-2px;flex-shrink:0;margin-right:3px" fill="currentColor">'
-    + '<rect x="0"    y="2.5" width="5.5" height="10" rx="1" opacity="0.55"/>'
-    + '<rect x="7"    y="0"   width="6"   height="14" rx="1"/>'
-    + '<rect x="14.5" y="2.5" width="5.5" height="10" rx="1" opacity="0.55"/>'
-    + (n ? '<text x="10" y="7.2" font-size="' + fs + '" text-anchor="middle" dominant-baseline="central" fill="#162030" font-family="DM Sans,sans-serif" font-weight="700">' + n + '</text>' : '')
+  const fs = n.length > 1 ? 5.5 : 7;
+  // viewBox 0 0 20 15 (4:3). Three quadratic-bezier bumps along the top edge,
+  // each peaking at y=0, base at y=4.5; sides and bottom are straight lines.
+  return '<svg width="16" height="12" viewBox="0 0 20 15" style="vertical-align:-2px;margin-right:3px;flex-shrink:0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round">'
+    + '<path d="M0 15L0 4.5Q3.33 0 6.67 4.5Q10 0 13.33 4.5Q16.67 0 20 4.5L20 15Z"/>'
+    + (n ? '<text x="10" y="10.5" font-size="' + fs + '" text-anchor="middle" dominant-baseline="central" fill="currentColor" stroke="none" font-family="DM Sans,sans-serif" font-weight="700">' + n + '</text>' : '')
     + '</svg>';
 }
 
