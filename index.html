@@ -2179,8 +2179,50 @@ async function resyncPersonalBooksToGlobal() {
 
 function _maybeResyncToGlobal() {
   if (_personalBooksLoaded && _globalBooksPreloaded) {
-    // Delay start so the app is fully rendered and interactive before background work begins
+    // Pull personal books into the cache immediately (no delay needed — targeted reads only)
+    ensurePersonalBooksInGlobalCache();
+    // Delay the heavier resync loop so the app is fully interactive first
     setTimeout(resyncPersonalBooksToGlobal, 2_000);
+  }
+}
+
+// Fetch each personal book's globalLibrary doc by ID so they appear in the
+// global library view regardless of alphabetical fetch position, and backfill
+// any missing popularity scores in Firestore.
+async function ensurePersonalBooksInGlobalCache() {
+  const toFetch = books.filter(b => {
+    if (!b.title || !b.author || b.location === 'Wishlist') return false;
+    const id = createGlobalBookId(b.title, b.author);
+    if (deletedGlobalIds.has(id)) return false;
+    const cached = globalBookCache.find(g => g.id === id);
+    return !cached || cached._localOnly;
+  });
+  if (!toFetch.length) return;
+
+  let changed = false;
+  for (const book of toFetch) {
+    const globalId = createGlobalBookId(book.title, book.author);
+    try {
+      const snap = await getDoc(doc(db, 'globalLibrary', globalId));
+      if (snap.exists()) {
+        const data = { id: globalId, ...snap.data() };
+        // Backfill popularity if the field has never been set
+        if (data.popularity == null) {
+          const score = 1 + (book.read ? 2 : 0);
+          await updateDoc(doc(db, 'globalLibrary', globalId), { popularity: score });
+          data.popularity = score;
+        }
+        const idx = globalBookCache.findIndex(g => g.id === globalId);
+        if (idx >= 0) globalBookCache[idx] = data;
+        else globalBookCache.push(data);
+        changed = true;
+      }
+    } catch(e) { /* skip on error */ }
+  }
+
+  if (changed) {
+    syncUserBooksToCache();
+    if (currentPage === 'global') applyGlobalFilters();
   }
 }
 
@@ -3664,10 +3706,12 @@ window.setPage = (page) => {
       preloadGlobalBooks().then(() => {
         if (currentPage !== 'global') return;
         syncUserBooksToCache(); buildGlobalGenreFilters(); applyGlobalFilters(); updateStats();
+        if (_personalBooksLoaded) ensurePersonalBooksInGlobalCache();
       });
     } else {
       // Already loaded — render immediately from cache, no Firestore round-trip.
       syncUserBooksToCache(); buildGlobalGenreFilters(); applyGlobalFilters(); updateStats();
+      ensurePersonalBooksInGlobalCache();
     }
   } else if (page === 'community') {
     initCommunityPage();
