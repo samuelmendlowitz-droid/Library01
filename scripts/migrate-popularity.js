@@ -28,31 +28,30 @@ function createGlobalBookId(title = '', author = '') {
 async function main() {
   console.log('\nPopularity migration\n' + '─'.repeat(60));
 
-  // Step 1: List all users
-  console.log('Loading users…');
-  const usersSnap = await db.collection('users').get();
-  console.log(`  Found ${usersSnap.size} user(s)\n`);
+  // Step 1: Query all books across every user via collectionGroup
+  // (user docs may not exist — only their books subcollections do)
+  console.log('Loading all personal books via collectionGroup…');
+  const allBooksSnap = await db.collectionGroup('books').get();
+  console.log(`  Found ${allBooksSnap.size} total book entries\n`);
 
-  // Step 2: Walk each user's books and accumulate scores
+  // Step 2: Accumulate popularity scores
   const scores = new Map(); // globalId → popularity score
   let totalEntries = 0;
+  const userCounts = {};
 
-  for (const userDoc of usersSnap.docs) {
-    const uid = userDoc.id;
-    const booksSnap = await db.collection('users').doc(uid).collection('books').get();
-    let counted = 0;
-    for (const bookDoc of booksSnap.docs) {
-      const b = bookDoc.data();
-      if (!b.title || !b.author) continue;
-      if ((b.location || '') === 'Wishlist') continue;
-      const id = createGlobalBookId(b.title, b.author);
-      scores.set(id, (scores.get(id) || 0) + 1 + (b.read ? 2 : 0));
-      counted++;
-    }
-    totalEntries += counted;
-    if (booksSnap.size) {
-      console.log(`  ${uid}  ${booksSnap.size} books in library, ${counted} counted`);
-    }
+  for (const bookDoc of allBooksSnap.docs) {
+    const b = bookDoc.data();
+    if (!b.title || !b.author) continue;
+    if ((b.location || '') === 'Wishlist') continue;
+    const uid = bookDoc.ref.parent.parent.id;
+    const id = createGlobalBookId(b.title, b.author);
+    scores.set(id, (scores.get(id) || 0) + 1 + (b.read ? 2 : 0));
+    userCounts[uid] = (userCounts[uid] || 0) + 1;
+    totalEntries++;
+  }
+
+  for (const [uid, count] of Object.entries(userCounts)) {
+    console.log(`  ${uid}: ${count} books counted`);
   }
 
   const nonZero = [...scores.values()].filter(s => s > 0);
