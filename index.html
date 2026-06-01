@@ -2134,31 +2134,40 @@ function syncUserBooksToCache() {
 }
 
 // Called once both personal books and global cache are ready.
-// Validates and syncs any personal books not yet in the global library.
+// Uses globalSynced flag on each book so each book is only ever checked once —
+// after the first pass, subsequent logins skip all books immediately.
 async function resyncPersonalBooksToGlobal() {
-  if (!books.length) return;
-  const syncedIds = new Set(globalBookCache.filter(b => !b._localOnly).map(b => b.id));
-  for (const book of books) {
-    if (!book.title || !book.author) continue;
+  const unsynced = books.filter(b => b.title && b.author && !b.globalSynced && !isLikelyTestBook(b.title, b.author));
+  if (!unsynced.length) return;
+
+  for (const book of unsynced) {
     const globalId = createGlobalBookId(book.title, book.author);
-    if (syncedIds.has(globalId) || deletedGlobalIds.has(globalId)) continue;
-    if (isLikelyTestBook(book.title, book.author)) continue;
+    if (deletedGlobalIds.has(globalId)) continue;
     try {
-      if (await validateWithGoogleBooks(book.title, book.author)) {
+      // Check Firestore directly — more reliable than local 500-doc cache
+      const snap = await getDoc(doc(db, 'globalLibrary', globalId));
+      if (snap.exists()) {
+        // Already in global library — just mark synced, no API call needed
+        await updateDoc(doc(db, 'users', currentUser.uid, 'books', book.id), { globalSynced: true });
+        book.globalSynced = true;
+      } else if (await validateWithGoogleBooks(book.title, book.author)) {
         await syncBookToGlobalLibrary(book);
-        syncedIds.add(globalId);
-        // Promote cache entry from _localOnly to real
+        await updateDoc(doc(db, 'users', currentUser.uid, 'books', book.id), { globalSynced: true });
+        book.globalSynced = true;
         const idx = globalBookCache.findIndex(b => b.id === globalId);
         if (idx >= 0) delete globalBookCache[idx]._localOnly;
       }
-    } catch(e) { /* continue */ }
-    await new Promise(r => setTimeout(r, 300)); // throttle Google Books API
+    } catch(e) { /* continue on any error */ }
+    await new Promise(r => setTimeout(r, 1500)); // relaxed throttle — don't stress mobile
   }
   if (currentPage === 'global') applyGlobalFilters();
 }
 
 function _maybeResyncToGlobal() {
-  if (_personalBooksLoaded && _globalBooksPreloaded) resyncPersonalBooksToGlobal();
+  if (_personalBooksLoaded && _globalBooksPreloaded) {
+    // Delay start so the app is fully rendered and interactive before background work begins
+    setTimeout(resyncPersonalBooksToGlobal, 8_000);
+  }
 }
 
 // Cursor used for paginating Firestore global library fetches
