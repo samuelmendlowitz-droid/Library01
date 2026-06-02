@@ -296,6 +296,11 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .btn-add-collection:active { background: var(--accent); color: #1a1612; }
 .series-num-btn { padding: 5px 10px; border-radius: 8px; background: var(--surface2); border: 1px solid var(--border); color: var(--accent); font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; flex-shrink: 0; display: flex; align-items: center; gap: 4px; }
 .series-num-btn:active { background: var(--surface3); }
+.series-num-slider { -webkit-appearance: none; appearance: none; flex: 1; height: 4px; border-radius: 2px; background: rgba(106,174,245,0.2); outline: none; border: none; cursor: pointer; }
+.series-num-slider::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: rgba(106,174,245,0.2); }
+.series-num-slider::-moz-range-track { height: 4px; border-radius: 2px; background: rgba(106,174,245,0.2); }
+.series-num-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); cursor: pointer; border: none; margin-top: -7px; box-shadow: 0 1px 6px rgba(0,0,0,0.5); }
+.series-num-slider::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--accent); cursor: pointer; border: none; }
 .star-rating { display: flex; gap: 5px; margin: 4px 0; }
 .star-rating .star { font-size: 26px; cursor: pointer; color: var(--border); transition: color 0.1s; line-height: 1; user-select: none; }
 .star-rating .star.lit { color: #f5a623; }
@@ -1379,8 +1384,8 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
         <div id="newSeriesSlider" style="display:none;padding:8px 0 2px;">
           <div style="display:flex;align-items:center;gap:10px;">
             <span style="font-size:12px;color:var(--text3);white-space:nowrap;">Book #</span>
-            <input type="range" id="newSeriesNum" min="1" max="50" value="1" style="flex:1;accent-color:#6aaef5;" oninput="onSeriesSlider('new')">
-            <span style="font-size:13px;font-weight:600;color:#6aaef5;min-width:20px;text-align:right;" id="newSeriesNumLabel">1</span>
+            <input type="range" id="newSeriesNum" min="1" max="50" value="1" class="series-num-slider" oninput="onSeriesSlider('new')">
+            <span style="font-size:13px;font-weight:600;color:var(--accent);min-width:20px;text-align:right;" id="newSeriesNumLabel">1</span>
             <button onclick="clearSeriesNum('new')" style="padding:2px 8px;font-size:11px;color:var(--text3);background:none;border:1px solid var(--border);border-radius:4px;cursor:pointer;white-space:nowrap;font-family:'DM Sans',sans-serif;" title="Remove series number">✕ clear</button>
           </div>
         </div>
@@ -1437,8 +1442,8 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
         <div id="editSeriesSlider" style="display:none;padding:8px 0 2px;">
           <div style="display:flex;align-items:center;gap:10px;">
             <span style="font-size:12px;color:var(--text3);white-space:nowrap;">Book #</span>
-            <input type="range" id="editSeriesNum" min="1" max="50" value="1" style="flex:1;accent-color:#6aaef5;" oninput="onSeriesSlider('edit')">
-            <span style="font-size:13px;font-weight:600;color:#6aaef5;min-width:20px;text-align:right;" id="editSeriesNumLabel">1</span>
+            <input type="range" id="editSeriesNum" min="1" max="50" value="1" class="series-num-slider" oninput="onSeriesSlider('edit')">
+            <span style="font-size:13px;font-weight:600;color:var(--accent);min-width:20px;text-align:right;" id="editSeriesNumLabel">1</span>
             <button onclick="clearSeriesNum('edit')" style="padding:2px 8px;font-size:11px;color:var(--text3);background:none;border:1px solid var(--border);border-radius:4px;cursor:pointer;white-space:nowrap;font-family:'DM Sans',sans-serif;" title="Remove series number">✕ clear</button>
           </div>
         </div>
