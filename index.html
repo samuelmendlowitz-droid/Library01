@@ -227,6 +227,27 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .disc-books .book-card { border-bottom: 1px solid var(--border); border-radius: 0; }
 .disc-books .book-card:last-child { border-bottom: none; }
 .disc-empty { text-align: center; padding: 48px 16px; color: var(--text3); font-size: 13px; }
+
+/* FIND MY NEXT BOOK */
+.rec-refresh-bar { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px 6px; }
+.rec-timestamp { font-size: 11px; color: var(--text3); }
+.rec-refresh-btn { display: flex; align-items: center; gap: 5px; background: none; border: 1px solid var(--border); border-radius: 14px; padding: 5px 12px; color: var(--accent); font-size: 12px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.15s; }
+.rec-refresh-btn .lucide { width: 12px; height: 12px; }
+.rec-refresh-btn:disabled { opacity: 0.5; cursor: default; }
+.rec-section { margin-bottom: 4px; }
+.rec-section-header { display: flex; align-items: center; gap: 8px; padding: 14px 16px 6px; border-top: 1px solid var(--border); }
+.rec-section-icon { width: 18px; height: 18px; color: var(--accent); flex-shrink: 0; }
+.rec-section-title { font-family: 'Playfair Display', serif; font-size: 15px; font-weight: 700; color: var(--text); }
+.rec-section-count { font-size: 11px; color: var(--text3); margin-left: 4px; }
+.rec-reason-tag { display: inline-flex; align-items: center; gap: 4px; background: var(--surface3); border: 1px solid var(--border); border-radius: 10px; padding: 2px 8px; font-size: 10px; color: var(--text3); font-style: italic; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rec-books { padding: 0 16px 16px; }
+.rec-books .book-card { border-bottom: 1px solid var(--border); border-radius: 0; }
+.rec-books .book-card:last-child { border-bottom: none; }
+.rec-loading { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 50vh; gap: 14px; color: var(--text3); font-size: 13px; }
+.rec-empty { text-align: center; padding: 60px 24px; }
+.rec-empty-icon { width: 48px; height: 48px; color: var(--text3); margin: 0 auto 14px; }
+.rec-empty-title { font-family: 'Playfair Display', serif; font-size: 18px; color: var(--text2); margin-bottom: 8px; }
+.rec-empty-sub { font-size: 13px; color: var(--text3); line-height: 1.6; }
 .friends-nav { display: flex; gap: 8px; padding: 14px 16px 4px; overflow-x: auto; scrollbar-width: none; }
 .friends-nav::-webkit-scrollbar { display: none; }
 .fnav-btn { padding: 7px 16px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface2); color: var(--text2); font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all 0.15s; position: relative; flex-shrink: 0; }
@@ -1171,9 +1192,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 
   <!-- Discover page: non-global tab panels (tab bar lives in subheader above) -->
   <div id="page-discover" style="display:none">
-    <div id="dtab-panel-find">
-      <div class="coming-soon"><i data-lucide="wand-2" class="coming-soon-icon"></i><div class="coming-soon-title">Find My Next Book</div><div class="coming-soon-sub">Coming soon</div></div>
-    </div>
+    <div id="dtab-panel-find"></div>
     <div id="dtab-panel-authors" style="display:none"></div>
     <div id="dtab-panel-genres" style="display:none"></div>
   </div>
@@ -4242,6 +4261,264 @@ function _renderHighlightsPanel(el, highlights, aboutMe) {
   refreshIcons();
 }
 
+// ── FIND MY NEXT BOOK — RECOMMENDATION ENGINE ────────────────────────────────
+
+const _recCache = { recs: null, ts: null };
+const _REC_TTL = 10 * 60 * 1000; // 10 minutes
+
+function _pearsonSim(ra, rb) {
+  const common = Object.keys(ra).filter(id => rb[id] !== undefined);
+  if (common.length < 2) return 0;
+  const n = common.length;
+  const meanA = common.reduce((s, id) => s + ra[id], 0) / n;
+  const meanB = common.reduce((s, id) => s + rb[id], 0) / n;
+  let num = 0, denA = 0, denB = 0;
+  common.forEach(id => {
+    const da = ra[id] - meanA, db = rb[id] - meanB;
+    num += da * db; denA += da * da; denB += db * db;
+  });
+  const den = Math.sqrt(denA * denB);
+  if (den === 0) return 0;
+  const confidence = Math.min(common.length / 5, 1);
+  return Math.max(0, num / den) * confidence;
+}
+
+async function _runRecommendationAlgorithm() {
+  if (!currentUser) return { collab: [], byAuthor: [], byGenre: [], friendSims: [] };
+
+  // Ensure global cache is loaded
+  if (!_globalBooksPreloaded) {
+    await preloadGlobalBooks();
+    syncUserBooksToCache();
+  }
+
+  // User's rating map: globalId → rating
+  const userRatings = {};
+  const userRead = new Set();
+  books.forEach(b => {
+    const gid = createGlobalBookId(b.title || '', b.author || '');
+    userRead.add(gid);
+    if (b.rating) userRatings[gid] = b.rating;
+  });
+
+  // Fetch accepted friends' books
+  const accepted = (friendsList || []).filter(f => f.status === 'accepted');
+  const friendResults = await Promise.allSettled(
+    accepted.map(async f => {
+      const snap = await getDocs(collection(db, 'users', f.id, 'books'));
+      const ratings = {};
+      snap.docs.forEach(d => {
+        const b = d.data();
+        const gid = createGlobalBookId(b.title || '', b.author || '');
+        if (b.rating) ratings[gid] = b.rating;
+      });
+      return { friend: f, ratings };
+    })
+  );
+
+  // Build globalId → book lookup (no local-only)
+  const globalById = {};
+  globalBookCache.forEach(b => { if (!b._localOnly) globalById[b.id] = b; });
+
+  // ── Collaborative filtering ──
+  const scoreMap = {}; // globalId → { score, friends[] }
+  const friendSims = [];
+  friendResults.forEach(res => {
+    if (res.status !== 'fulfilled') return;
+    const { friend, ratings } = res.value;
+    const sim = _pearsonSim(userRatings, ratings);
+    if (sim > 0) friendSims.push({ name: friend.displayName || friend.username || 'Friend', sim, count: Object.keys(ratings).length });
+    if (sim <= 0) return;
+    Object.entries(ratings).forEach(([gid, rating]) => {
+      if (userRead.has(gid) || !globalById[gid]) return;
+      if (!scoreMap[gid]) scoreMap[gid] = { score: 0, friends: [] };
+      const avgGlobal = (globalById[gid].ratingCount > 0)
+        ? globalById[gid].ratingTotal / globalById[gid].ratingCount : 3;
+      scoreMap[gid].score += sim * rating * (1 + 0.1 * avgGlobal);
+      scoreMap[gid].friends.push({ name: friend.displayName || friend.username || 'Friend', rating, sim });
+    });
+  });
+
+  const collab = Object.entries(scoreMap)
+    .map(([gid, { score, friends }]) => {
+      const b = globalById[gid];
+      const topFriend = [...friends].sort((a, b) => b.sim - a.sim)[0];
+      const friendNames = [...new Set(friends.map(f => f.name))].slice(0, 2).join(' & ');
+      return { ...b, _recScore: score, _recReason: `${friendNames} (${topFriend.rating}★)` };
+    })
+    .sort((a, b) => b._recScore - a._recScore)
+    .slice(0, 10);
+
+  const collabIds = new Set(collab.map(b => b.id));
+
+  // ── Author-based fallback ──
+  const authorScores = {};
+  books.forEach(b => {
+    if (!b.rating || !b.author) return;
+    if (!authorScores[b.author]) authorScores[b.author] = { total: 0, count: 0 };
+    authorScores[b.author].total += b.rating;
+    authorScores[b.author].count++;
+  });
+  const topAuthors = Object.entries(authorScores)
+    .map(([author, { total, count }]) => ({ author, avg: total / count, count }))
+    .filter(a => a.avg >= 4)
+    .sort((a, b) => (b.avg * Math.log(b.count + 1)) - (a.avg * Math.log(a.count + 1)))
+    .slice(0, 6)
+    .map(a => a.author);
+
+  const byAuthor = globalBookCache
+    .filter(b => !b._localOnly && !userRead.has(b.id) && !collabIds.has(b.id) && topAuthors.includes(b.author))
+    .map(b => {
+      const avgGlobal = b.ratingCount > 0 ? b.ratingTotal / b.ratingCount : 3;
+      const authorAvg = authorScores[b.author] ? authorScores[b.author].total / authorScores[b.author].count : 4;
+      return { ...b, _recScore: authorAvg * avgGlobal, _recReason: `You love ${b.author}` };
+    })
+    .sort((a, b) => b._recScore - a._recScore)
+    .slice(0, 8);
+
+  const byAuthorIds = new Set(byAuthor.map(b => b.id));
+
+  // ── Genre-based fallback ──
+  const genreCount = {};
+  books.forEach(b => { (b.genres || []).forEach(g => { genreCount[g] = (genreCount[g] || 0) + 1; }); });
+  const topGenres = Object.entries(genreCount)
+    .sort((a, b) => b[1] - a[1]).slice(0, 4).map(([g]) => g);
+
+  const byGenre = globalBookCache
+    .filter(b => !b._localOnly && !userRead.has(b.id) && !collabIds.has(b.id) && !byAuthorIds.has(b.id))
+    .filter(b => (b.genres || []).some(g => topGenres.includes(g)))
+    .map(b => {
+      const avgGlobal = b.ratingCount > 0 ? b.ratingTotal / b.ratingCount : 3;
+      const matchGenre = (b.genres || []).find(g => topGenres.includes(g)) || '';
+      return { ...b, _recScore: (b.popularity || 0) * 0.4 + avgGlobal * 1.5, _recReason: `Popular in ${matchGenre}` };
+    })
+    .sort((a, b) => b._recScore - a._recScore)
+    .slice(0, 8);
+
+  return { collab, byAuthor, byGenre, friendSims };
+}
+
+function _recCardHtml(b) {
+  const personal = books.find(x => createGlobalBookId(x.title || '', x.author || '') === b.id);
+  const isRead = personal ? !!personal.read : false;
+  const genreTag = (b.genres || []).slice(0, 1).map(g =>
+    `<span class="tag genre"><i data-lucide="drama" class="tag-icon"></i>${esc(g)}</span>`).join('');
+  const ir = inlineRating(b);
+  const safeId = (b.id || '').replace(/'/g, "\\'");
+  const reasonHtml = b._recReason
+    ? `<div style="padding:2px 0 4px;"><span class="rec-reason-tag">${esc(b._recReason)}</span></div>` : '';
+  return `<div class="book-card${isRead ? ' is-read' : ''}">
+  <div class="book-check" onclick="toggleGlobalRead('${safeId}')"><span class="check-icon">✓</span></div>
+  <div class="book-info">
+    <div class="book-title">${esc(b.title || '')}</div>
+    <div class="book-author">${esc(b.author || '')}</div>
+    <div class="book-tags">${genreTag}${buildSeriesBubble(b)}<span class="tag book-inline-rating ${ir.cls}">${ir.str}</span></div>
+    ${reasonHtml}
+  </div>
+  <div class="book-actions">
+    <div class="btn-info" onclick="openGlobalBookInfo('${safeId}')"><i data-lucide="chevron-right"></i></div>
+  </div>
+</div>`;
+}
+
+function _recSectionHtml(iconName, title, books) {
+  if (!books.length) return '';
+  const cardsHtml = books.map(_recCardHtml).join('');
+  return `<div class="rec-section">
+    <div class="rec-section-header">
+      <i data-lucide="${iconName}" class="rec-section-icon"></i>
+      <span class="rec-section-title">${title}</span>
+      <span class="rec-section-count">${books.length}</span>
+    </div>
+    <div class="rec-books">${cardsHtml}</div>
+  </div>`;
+}
+
+let _recRendering = false;
+
+window._renderDiscoverFindTab = async function(forceRefresh) {
+  const el = document.getElementById('dtab-panel-find');
+  if (!el) return;
+  if (_recRendering) return;
+
+  // Serve from cache if fresh
+  const now = Date.now();
+  if (!forceRefresh && _recCache.recs && _recCache.ts && (now - _recCache.ts) < _REC_TTL) {
+    _renderRecResults(el, _recCache.recs, _recCache.ts);
+    return;
+  }
+
+  // Show loading state
+  _recRendering = true;
+  el.innerHTML = `<div class="rec-loading">
+    <div style="width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite"></div>
+    <div>Finding your next great read…</div>
+  </div>`;
+
+  try {
+    const result = await _runRecommendationAlgorithm();
+    _recCache.recs = result;
+    _recCache.ts = Date.now();
+    _renderRecResults(el, result, _recCache.ts);
+  } catch (e) {
+    console.error('Rec error:', e);
+    el.innerHTML = `<div class="rec-empty" style="padding:60px 24px;">
+      <div class="rec-empty-title">Couldn't load recommendations</div>
+      <div class="rec-empty-sub" style="margin-top:8px;">${esc(e.message || 'Unknown error')}</div>
+      <button class="rec-refresh-btn" style="margin:16px auto 0;display:flex;" onclick="refreshRecs()">
+        <i data-lucide="refresh-cw"></i> Try again
+      </button>
+    </div>`;
+    refreshIcons();
+  } finally {
+    _recRendering = false;
+  }
+};
+
+function _renderRecResults(el, result, ts) {
+  const { collab, byAuthor, byGenre, friendSims } = result;
+  const total = collab.length + byAuthor.length + byGenre.length;
+
+  const minsAgo = ts ? Math.round((Date.now() - ts) / 60000) : 0;
+  const tsLabel = minsAgo < 1 ? 'Just updated' : `Updated ${minsAgo} min ago`;
+
+  const refreshBar = `<div class="rec-refresh-bar">
+    <span class="rec-timestamp">${tsLabel}</span>
+    <button class="rec-refresh-btn" onclick="refreshRecs()">
+      <i data-lucide="refresh-cw"></i> Refresh
+    </button>
+  </div>`;
+
+  if (total === 0) {
+    el.innerHTML = refreshBar + `<div class="rec-empty">
+      <div class="rec-empty-icon"><i data-lucide="book-open" style="width:48px;height:48px;color:var(--text3)"></i></div>
+      <div class="rec-empty-title">No recommendations yet</div>
+      <div class="rec-empty-sub">Rate books in your library and add friends to get personalised suggestions.</div>
+    </div>`;
+    refreshIcons();
+    return;
+  }
+
+  const friendsHtml = friendSims.length
+    ? `<div style="padding:8px 16px 0;font-size:11px;color:var(--text3);">
+        Matched with ${friendSims.slice(0,3).map(f => `<strong style="color:var(--text2)">${esc(f.name)}</strong>`).join(', ')}
+      </div>` : '';
+
+  el.innerHTML = refreshBar + friendsHtml
+    + _recSectionHtml('users', 'Friends with similar taste', collab)
+    + _recSectionHtml('user', 'More from authors you love', byAuthor)
+    + _recSectionHtml('sparkles', 'Popular in your genres', byGenre)
+    + '<div style="height:80px"></div>';
+
+  refreshIcons();
+}
+
+window.refreshRecs = function() {
+  _recCache.recs = null;
+  _recCache.ts = null;
+  _renderDiscoverFindTab(true);
+};
+
 // ── DISCOVER: AUTHORS & GENRES ───────────────────────────────────────────────
 
 const _DISC_SORTS = [
@@ -5067,7 +5344,8 @@ window.setDiscoverTab = (tab) => {
     }
   } else {
     currentPage = 'discover';
-    if (tab === 'authors') _renderDiscoverAuthorsTab();
+    if (tab === 'find') _renderDiscoverFindTab();
+    else if (tab === 'authors') _renderDiscoverAuthorsTab();
     else if (tab === 'genres') _renderDiscoverGenresTab();
   }
   updateHeaderSpacer();
