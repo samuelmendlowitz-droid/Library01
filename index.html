@@ -1995,11 +1995,13 @@ let selectedStatusFilters = [];
 let topFilters = ['all'];
 let currentPage = 'mylibrary'; // 'mylibrary' | 'wishlist' | 'global' | 'discover' | 'community'
 let currentDiscoverTab = 'find'; // 'find' | 'global' | 'authors' | 'genres'
-let _selectedDiscoverAuthor = null;
-let _discoverAuthorSort    = 'popularity-desc';
+let _selectedDiscoverAuthor   = null;
+let _discoverAuthorSort       = 'popularity-desc';
 let _discoverAuthorGenreFilter = null; // null = all
-let _selectedDiscoverGenre = null;
-let _discoverGenreSort     = 'popularity-desc';
+let _discoverAuthorsListSort  = 'count-desc'; // 'count-desc' | 'alpha-asc' | 'alpha-desc'
+let _selectedDiscoverGenre    = null;
+let _discoverGenreSort        = 'popularity-desc';
+let _discoverGenresListSort   = 'count-desc';
 let currentSort = 'popularity-desc';
 let _personalSort = 'title-asc';
 let _globalSort   = 'popularity-desc';
@@ -4308,19 +4310,52 @@ window._renderDiscoverAuthorsTab = function() {
   }
 };
 
-window._renderAuthorsList = function _renderAuthorsList(query) {
+const _LIST_SORTS = [
+  { val: 'count-desc', label: 'Most Books' },
+  { val: 'alpha-asc',  label: 'A→Z'        },
+  { val: 'alpha-desc', label: 'Z→A'        },
+];
+
+window._renderAuthorsList = function() {
   const el = document.getElementById('dtab-panel-authors');
   if (!el) return;
-  const q = (query||'').toLowerCase();
+  // Build stable outer shell only when it's missing (first load or after returning from detail)
+  if (!document.getElementById('disc-authors-items')) {
+    el.innerHTML = `<div class="disc-search-bar">
+      <div class="search-wrap"><span class="search-icon">🔍</span>
+      <input class="search-input" id="disc-authors-search" placeholder="Search authors…" autocomplete="off"></div>
+    </div>
+    <div id="disc-authors-sort-bar"></div>
+    <div class="disc-list" id="disc-authors-items"></div>`;
+    document.getElementById('disc-authors-search').addEventListener('input', _updateAuthorsItems);
+  }
+  _updateAuthorsListSortBar();
+  _updateAuthorsItems();
+};
+
+function _updateAuthorsListSortBar() {
+  const bar = document.getElementById('disc-authors-sort-bar');
+  if (!bar) return;
+  bar.innerHTML = `<div class="disc-sort-bar"><span class="disc-sort-label">Sort</span>${_LIST_SORTS.map(s =>
+    `<button class="disc-sort-pill${s.val === _discoverAuthorsListSort ? ' active' : ''}" onclick="setAuthorsListSort('${s.val}')">${s.label}</button>`
+  ).join('')}</div>`;
+}
+
+function _updateAuthorsItems() {
+  const inner = document.getElementById('disc-authors-items');
+  if (!inner) return;
+  const q = (document.getElementById('disc-authors-search')?.value || '').toLowerCase();
   const authorMap = {};
   globalBookCache.forEach(b => {
     if (!b.author || b._localOnly) return;
-    if (!authorMap[b.author]) authorMap[b.author] = 0;
-    authorMap[b.author]++;
+    authorMap[b.author] = (authorMap[b.author] || 0) + 1;
   });
-  let authors = Object.keys(authorMap).sort((a, b) => a.localeCompare(b));
+  let authors = Object.keys(authorMap);
   if (q) authors = authors.filter(a => a.toLowerCase().includes(q));
-  const rows = authors.map(a => {
+  if (_discoverAuthorsListSort === 'count-desc') authors.sort((a, b) => (authorMap[b] - authorMap[a]) || a.localeCompare(b));
+  else if (_discoverAuthorsListSort === 'alpha-asc')  authors.sort((a, b) => a.localeCompare(b));
+  else if (_discoverAuthorsListSort === 'alpha-desc') authors.sort((a, b) => b.localeCompare(a));
+  inner.innerHTML = authors.map(a => {
     const initial = a.trim()[0]?.toUpperCase() || '?';
     return `<div class="disc-list-item" onclick="selectDiscoverAuthor('${jsStr(a)}')">
       <div class="disc-list-avatar">${esc(initial)}</div>
@@ -4328,14 +4363,15 @@ window._renderAuthorsList = function _renderAuthorsList(query) {
       <span class="disc-list-count">${authorMap[a]} book${authorMap[a] !== 1 ? 's' : ''}</span>
       <span class="disc-list-chevron"><i data-lucide="chevron-right"></i></span>
     </div>`;
-  }).join('');
-  el.innerHTML = `<div class="disc-search-bar">
-    <div class="search-wrap"><span class="search-icon">🔍</span>
-    <input class="search-input" placeholder="Search authors…" value="${esc(query||'')}" oninput="_renderAuthorsList(this.value)" autocomplete="off"></div>
-  </div>
-  <div class="disc-list">${rows || '<div class="disc-empty">No authors found</div>'}</div>`;
+  }).join('') || '<div class="disc-empty">No authors found</div>';
   refreshIcons();
 }
+
+window.setAuthorsListSort = (sort) => {
+  _discoverAuthorsListSort = sort;
+  _updateAuthorsListSortBar();
+  _updateAuthorsItems();
+};
 
 window.selectDiscoverAuthor = (author) => {
   _selectedDiscoverAuthor = author;
@@ -4409,41 +4445,66 @@ window._renderDiscoverGenresTab = function() {
   }
 };
 
-window._renderGenresList = function _renderGenresList(query) {
+const _GENRE_ICONS = { 'Fantasy':'⚔', 'Science Fiction':'🚀', 'Mystery':'🔍', 'Romance':'❤', 'Thriller':'🔪',
+  'Horror':'👻', 'Historical Fiction':'📜', 'Literary Fiction':'📖', 'Non-Fiction':'📚',
+  'Biography':'👤', 'Self-Help':'💡', 'Young Adult':'🌟', "Children's":'🧒', 'Graphic Novel':'🎨' };
+
+window._renderGenresList = function() {
   const el = document.getElementById('dtab-panel-genres');
   if (!el) return;
-  const q = (query||'').toLowerCase();
+  if (!document.getElementById('disc-genres-items')) {
+    el.innerHTML = `<div class="disc-search-bar">
+      <div class="search-wrap"><span class="search-icon">🔍</span>
+      <input class="search-input" id="disc-genres-search" placeholder="Search genres…" autocomplete="off"></div>
+    </div>
+    <div id="disc-genres-sort-bar"></div>
+    <div class="disc-list" id="disc-genres-items"></div>`;
+    document.getElementById('disc-genres-search').addEventListener('input', _updateGenresItems);
+  }
+  _updateGenresListSortBar();
+  _updateGenresItems();
+};
+
+function _updateGenresListSortBar() {
+  const bar = document.getElementById('disc-genres-sort-bar');
+  if (!bar) return;
+  bar.innerHTML = `<div class="disc-sort-bar"><span class="disc-sort-label">Sort</span>${_LIST_SORTS.map(s =>
+    `<button class="disc-sort-pill${s.val === _discoverGenresListSort ? ' active' : ''}" onclick="setGenresListSort('${s.val}')">${s.label}</button>`
+  ).join('')}</div>`;
+}
+
+function _updateGenresItems() {
+  const inner = document.getElementById('disc-genres-items');
+  if (!inner) return;
+  const q = (document.getElementById('disc-genres-search')?.value || '').toLowerCase();
   const genreMap = {};
   globalBookCache.forEach(b => {
     if (b._localOnly) return;
     (b.genres||[]).forEach(g => { genreMap[g] = (genreMap[g]||0) + 1; });
   });
-  // Sort by orderedGenres first, then any extras alphabetically
-  const ordered = [...orderedGenres, ...Object.keys(genreMap).filter(g => !orderedGenres.includes(g)).sort()];
-  let genres = ordered.filter(g => genreMap[g]);
+  let genres = Object.keys(genreMap);
   if (q) genres = genres.filter(g => g.toLowerCase().includes(q));
-
-  const dramaIcons = { 'Fantasy':'⚔', 'Science Fiction':'🚀', 'Mystery':'🔍', 'Romance':'❤', 'Thriller':'🔪',
-    'Horror':'👻', 'Historical Fiction':'📜', 'Literary Fiction':'📖', 'Non-Fiction':'📚',
-    'Biography':'👤', 'Self-Help':'💡', 'Young Adult':'🌟', 'Children\'s':'🧒', 'Graphic Novel':'🎨' };
-
-  const rows = genres.map(g => {
+  if (_discoverGenresListSort === 'count-desc') genres.sort((a, b) => (genreMap[b] - genreMap[a]) || a.localeCompare(b));
+  else if (_discoverGenresListSort === 'alpha-asc')  genres.sort((a, b) => a.localeCompare(b));
+  else if (_discoverGenresListSort === 'alpha-desc') genres.sort((a, b) => b.localeCompare(a));
+  inner.innerHTML = genres.map(g => {
     const cnt = genreMap[g] || 0;
-    const icon = dramaIcons[g] || '📚';
+    const icon = _GENRE_ICONS[g] || '📚';
     return `<div class="disc-list-item" onclick="selectDiscoverGenre('${jsStr(g)}')">
       <div class="disc-list-avatar genre-avatar">${icon}</div>
       <span class="disc-list-name">${esc(g)}</span>
       <span class="disc-list-count">${cnt} book${cnt !== 1 ? 's' : ''}</span>
       <span class="disc-list-chevron"><i data-lucide="chevron-right"></i></span>
     </div>`;
-  }).join('');
-  el.innerHTML = `<div class="disc-search-bar">
-    <div class="search-wrap"><span class="search-icon">🔍</span>
-    <input class="search-input" placeholder="Search genres…" value="${esc(query||'')}" oninput="_renderGenresList(this.value)" autocomplete="off"></div>
-  </div>
-  <div class="disc-list">${rows || '<div class="disc-empty">No genres found</div>'}</div>`;
+  }).join('') || '<div class="disc-empty">No genres found</div>';
   refreshIcons();
 }
+
+window.setGenresListSort = (sort) => {
+  _discoverGenresListSort = sort;
+  _updateGenresListSortBar();
+  _updateGenresItems();
+};
 
 window.selectDiscoverGenre = (genre) => {
   _selectedDiscoverGenre = genre;
