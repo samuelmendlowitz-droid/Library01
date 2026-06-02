@@ -1997,7 +1997,7 @@ const auth = getAuth(app);
 const db   = getFirestore(app);
 
 // ── DEFAULT DATA ─────────────────────────────────────────────────────────────
-const DEFAULT_GENRES = ['Fiction','Non-Fiction','Fantasy','Science Fiction','Mystery','Thriller','Crime','Romance','Young Adult','Historical Fiction','Literary Fiction','Horror','Adventure','Biography','Memoir','Self-Help',"Children's",'Graphic Novel','Classics','Poetry'];
+const DEFAULT_GENRES = ['Fiction','Non-Fiction','Fantasy','Science Fiction','Mystery','Thriller','Psychological Thriller','Crime','Romance','Young Adult','Historical Fiction','Literary Fiction','Horror','Adventure','Biography','Memoir','Self-Help',"Children's",'Graphic Novel','Classics','Poetry','Physics'];
 const DEFAULT_LOCATIONS = ['Bookshelf 1']; // 'Borrowed' is always locked at bottom
 
 // ── STATE ────────────────────────────────────────────────────────────────────
@@ -4750,6 +4750,8 @@ const _GENRE_LUCIDE = {
   'Music':              'music',
   'Politics':           'landmark',
   'Psychology':         'activity',
+  'Physics':            'atom',
+  'Psychological Thriller': 'eye',
 };
 function _genreIcon(genre) { return _GENRE_LUCIDE[genre] || 'book-open'; }
 
