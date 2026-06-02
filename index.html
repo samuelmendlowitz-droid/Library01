@@ -306,6 +306,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .toggle-pill { display:flex;align-items:center;justify-content:center;gap:8px;padding:12px 16px;background:var(--surface2);border:2px solid var(--border);border-radius:12px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text2);transition:all 0.15s;flex:1;min-width:80px;user-select:none; }
 .toggle-pill input[type="checkbox"] { display:none; }
 .toggle-pill:has(input:checked) { background:color-mix(in srgb,var(--accent) 12%,var(--surface2));border-color:var(--accent);color:var(--accent); }
+.toggle-pill .lucide { width:14px;height:14px;vertical-align:-2px; }
 .series-num-slider { -webkit-appearance: none; appearance: none; flex: 1; height: 4px; border-radius: 2px; background: rgba(106,174,245,0.2); outline: none; border: none; cursor: pointer; }
 .series-num-slider::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: rgba(106,174,245,0.2); }
 .series-num-slider::-moz-range-track { height: 4px; border-radius: 2px; background: rgba(106,174,245,0.2); }
@@ -1429,7 +1430,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
         <div class="toggle-pill-row">
           <label class="toggle-pill" onclick="onTogglePill('wishlist')">
             <input type="checkbox" id="newWishlist">
-            <span>♡ Wishlist</span>
+            <span><i data-lucide="star"></i> Wishlist</span>
           </label>
           <label class="toggle-pill" onclick="onTogglePill('read')">
             <input type="checkbox" id="newRead">
@@ -1437,7 +1438,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
           </label>
           <label class="toggle-pill" onclick="onTogglePill('globalOnly')">
             <input type="checkbox" id="newGlobalOnly">
-            <span>🌐 Global Only</span>
+            <span><i data-lucide="globe"></i> Global Only</span>
           </label>
         </div>
       </div>
@@ -1488,14 +1489,16 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
       <div class="form-group" id="editLocationGroup"><label class="form-label">Location</label>
         <select class="form-select" id="editLocation"></select>
       </div>
-      <div class="form-group" style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <label class="form-label" style="margin:0">Wishlist Item?</label>
-          <input type="checkbox" id="editWishlist" style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent)">
-        </div>
-        <div style="display:flex;align-items:center;gap:10px;">
-          <label class="form-label" style="margin:0">Read?</label>
-          <input type="checkbox" id="editRead" style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent)" onchange="onEditReadChange()">
+      <div class="form-group">
+        <div class="toggle-pill-row">
+          <label class="toggle-pill" onclick="onEditTogglePill('wishlist')">
+            <input type="checkbox" id="editWishlist">
+            <span><i data-lucide="star"></i> Wishlist</span>
+          </label>
+          <label class="toggle-pill" onclick="onEditTogglePill('read')">
+            <input type="checkbox" id="editRead">
+            <span>✓ Read</span>
+          </label>
         </div>
       </div>
       <div class="form-group" id="editRatingGroup">
@@ -3228,9 +3231,27 @@ function inlineRating(gb) {
 window.onEditReadChange = () => {
   const isRead = document.getElementById('editRead').checked;
   document.getElementById('editRatingGroup').style.display = isRead ? '' : 'none';
-  if (!isRead) {
-    document.getElementById('editRating').value = 0;
-    updateStarDisplay(0);
+  if (!isRead) { document.getElementById('editRating').value = 0; updateStarDisplay(0); }
+};
+
+window.onEditTogglePill = (which) => {
+  const wishlistEl = document.getElementById('editWishlist');
+  const readEl     = document.getElementById('editRead');
+  const locGroup   = document.getElementById('editLocationGroup');
+  const ratingGroup = document.getElementById('editRatingGroup');
+  if (which === 'wishlist') {
+    wishlistEl.checked = !wishlistEl.checked;
+    locGroup.style.display = wishlistEl.checked ? 'none' : '';
+    if (wishlistEl.checked) {
+      readEl.checked = false;
+      ratingGroup.style.display = 'none';
+      document.getElementById('editRating').value = 0; updateStarDisplay(0);
+    }
+  } else if (which === 'read') {
+    readEl.checked = !readEl.checked;
+    ratingGroup.style.display = readEl.checked ? '' : 'none';
+    if (!readEl.checked) { document.getElementById('editRating').value = 0; updateStarDisplay(0); }
+    if (readEl.checked) { wishlistEl.checked = false; locGroup.style.display = ''; }
   }
 };
 
@@ -3460,9 +3481,19 @@ window.saveEdit = async () => {
 window.deleteFromEdit = async () => {
   const b = books.find(x => x.id === editingId);
   if (!confirm('Remove "' + (b ? b.title : 'this book') + '" from your library?')) return;
+  const wasRead = !!(b && b.read && b.location !== 'Wishlist' && b.location !== 'GlobalRead');
   closeModal('editModal');
   try {
     await removeBook(editingId);
+    if (wasRead && b) {
+      // Preserve the read status in global library without re-counting popularity
+      await saveBook({
+        title: b.title, author: b.author||'', series: b.series||'',
+        seriesNumber: b.seriesNumber||null, seriesTag: b.seriesTag||'',
+        genres: b.genres||[], location: 'GlobalRead',
+        read: true, rating: b.rating||0, checkoutDate: '', borrowedBy: ''
+      }, { skipGlobalSync: true });
+    }
     await loadBooks();
     showStatus('Book removed.', 'success');
     setTimeout(hideStatus, 2000);
@@ -4232,12 +4263,7 @@ window.cycleBookView = () => {
 
 // ── WISHLIST / EDIT change listeners ─────────────────────────────────────────
 document.addEventListener('change', e => {
-  if (e.target && e.target.id === 'newWishlist') {
-    document.getElementById('addLocationGroup').style.display = e.target.checked ? 'none' : 'block';
-  }
-  if (e.target && e.target.id === 'editWishlist') {
-    document.getElementById('editLocationGroup').style.display = e.target.checked ? 'none' : 'block';
-  }
+  // kept for any future checkbox-based fields; pill-based checkboxes are handled by onTogglePill / onEditTogglePill
 });
 
 // ════════════════════════════════════════════════════════════════════════════════
