@@ -377,8 +377,20 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .subject-tag { display:inline-flex;align-items:center;padding:5px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--text2);gap:0; }
 .about-edit-row { display:flex;align-items:center;gap:6px;margin-bottom:6px; }
 .about-type-select { padding:6px 8px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface3);color:var(--text);font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer; }
-.hl-inputs { display:flex;gap:6px;flex-wrap:wrap;margin-top:4px; }
-.hl-inputs input { flex:1;min-width:100px; }
+.hl-row { display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border); }
+.hl-row:last-child { border-bottom:none; }
+.hl-row-label { font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);font-weight:600;width:52px;flex-shrink:0;padding-top:5px; }
+.hl-chip { display:inline-flex;align-items:center;gap:4px;padding:4px 8px 4px 7px;background:var(--surface3);border:1px solid var(--border);border-radius:20px;font-size:12px;color:var(--text2);user-select:none; }
+.hl-chip .lucide { width:11px;height:11px;color:var(--accent);flex-shrink:0; }
+.hl-chip-remove { background:none;border:none;padding:0 0 0 3px;cursor:pointer;color:var(--text3);display:inline-flex;align-items:center;line-height:1;font-size:15px; }
+.hl-chip-remove:hover { color:var(--danger); }
+.hl-add-btn { width:26px;height:26px;border-radius:50%;border:1px solid var(--border);background:var(--surface2);color:var(--accent);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all 0.12s;margin-top:2px; }
+.hl-add-btn:hover { background:var(--accent);color:#1a1612;border-color:var(--accent); }
+.hl-add-btn .lucide { width:13px;height:13px; }
+.hl-input-row { position:relative;display:inline-flex;align-items:center; }
+.hl-ac { position:absolute;top:calc(100% + 2px);left:0;min-width:180px;z-index:300;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);max-height:180px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,0.4); }
+.hl-ac-item { padding:8px 12px;cursor:pointer;font-size:13px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.hl-ac-item:hover { background:var(--surface3); }
 .book-list.list-view { gap: 0; padding: 0 0 100px; flex-direction: column; overflow-x: auto; }
 .list-col-header { display: grid; grid-template-columns: 30px 1fr 1fr 90px 80px 72px 76px 68px; gap: 6px; padding: 7px 16px; background: var(--surface2); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 5; min-width: 560px; }
 .list-col-header span { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; white-space: nowrap; overflow: hidden; }
@@ -1847,41 +1859,15 @@ All columns other than Author, Title, Series and Genres should be left empty or 
           </div>
         </div>
         <div class="form-group" style="margin-top:20px;border-top:1px solid var(--border);padding-top:20px;">
-          <label class="form-label" style="font-size:13px;font-weight:700;">My Highlights</label>
-          <div style="font-size:12px;color:var(--text3);margin-bottom:14px;">Your top picks — visible to friends in your profile.</div>
-          <div style="margin-bottom:12px;">
-            <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);font-weight:600;margin-bottom:6px;">Top Books</div>
-            <div class="hl-inputs">
-              <input class="form-input" id="hl-books-0" placeholder="Book 1">
-              <input class="form-input" id="hl-books-1" placeholder="Book 2">
-              <input class="form-input" id="hl-books-2" placeholder="Book 3">
-            </div>
+          <label class="form-label" style="font-size:13px;font-weight:700;">Profile</label>
+          <div style="font-size:12px;color:var(--text3);margin-bottom:10px;">Visible to friends on your profile.</div>
+          <div style="margin-bottom:10px;">
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);font-weight:600;margin-bottom:6px;">About Me</div>
+            <textarea class="form-input" id="hl-about-me" rows="2" maxlength="200" placeholder="A short bio…" style="resize:none;" oninput="document.getElementById('hl-about-count').textContent=(200-this.value.length)+' left'"></textarea>
+            <div id="hl-about-count" style="font-size:11px;color:var(--text3);margin-top:2px;text-align:right;">200 left</div>
           </div>
-          <div style="margin-bottom:12px;">
-            <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);font-weight:600;margin-bottom:6px;">Top Authors</div>
-            <div class="hl-inputs">
-              <input class="form-input" id="hl-authors-0" placeholder="Author 1">
-              <input class="form-input" id="hl-authors-1" placeholder="Author 2">
-              <input class="form-input" id="hl-authors-2" placeholder="Author 3">
-            </div>
-          </div>
-          <div style="margin-bottom:12px;">
-            <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);font-weight:600;margin-bottom:6px;">Top Genres</div>
-            <div class="hl-inputs">
-              <input class="form-input" id="hl-genres-0" placeholder="Genre 1">
-              <input class="form-input" id="hl-genres-1" placeholder="Genre 2">
-              <input class="form-input" id="hl-genres-2" placeholder="Genre 3">
-            </div>
-          </div>
-          <div style="margin-bottom:14px;">
-            <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);font-weight:600;margin-bottom:6px;">Top Series</div>
-            <div class="hl-inputs">
-              <input class="form-input" id="hl-series-0" placeholder="Series 1">
-              <input class="form-input" id="hl-series-1" placeholder="Series 2">
-              <input class="form-input" id="hl-series-2" placeholder="Series 3">
-            </div>
-          </div>
-          <button onclick="saveHighlights()" style="padding:9px 18px;background:var(--accent);color:#1a1612;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Save Highlights</button>
+          <div id="hl-section"></div>
+          <button onclick="saveHighlights()" style="margin-top:12px;padding:9px 18px;background:var(--accent);color:#1a1612;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Save Profile</button>
         </div>
         <button class="btn-signout-settings" onclick="signOut()"><i data-lucide="log-out"></i> Sign Out</button>
       </div>
@@ -1974,6 +1960,11 @@ let _reviewsData = [];
 let _reviewBookGlobalId = null;
 let _myHighlights = { books: [], authors: [], genres: [], series: [] };
 let _clubAboutEditing = false;
+let _hlActiveInput = null;
+let _hlAcResults = {};
+let _clubHlActive = null;
+let _clubHlAcResults = {};
+let _clubSubjects = { books: [], authors: [], genres: [], series: [] };
 let userUsername = '';
 let friendsList = [], friendRequests = [], sentRequests = [];
 let communitySubtab = 'friends', friendsView = 'myfriends';
@@ -3970,40 +3961,162 @@ window.addGlobalToWishlist = async (globalId) => {
 };
 
 // ── USER HIGHLIGHTS ──────────────────────────────────────────────────────────
+
+const _HL_CATS = [
+  { key:'books',   label:'Books',   icon:'book-open', placeholder:'Search books…'   },
+  { key:'authors', label:'Authors', icon:'user',      placeholder:'Search authors…' },
+  { key:'genres',  label:'Genres',  icon:'drama',     placeholder:'Search genres…'  },
+  { key:'series',  label:'Series',  icon:'layers',    placeholder:'Search series…'  },
+];
+const _HL_MAX = 5;
+
+function _hlAcSources(cat) {
+  switch(cat) {
+    case 'books':   return [...new Set(books.filter(b=>b.title).map(b=>b.title))].sort();
+    case 'authors': return [...new Set(books.filter(b=>b.author).map(b=>b.author))].sort();
+    case 'genres':  return [...orderedGenres];
+    case 'series':  return [...new Set(books.filter(b=>b.series).map(b=>b.series))].sort();
+    default: return [];
+  }
+}
+
+function _clubHlAcSources(cat) {
+  switch(cat) {
+    case 'books':   return [...new Set(globalBookCache.filter(b=>b.title&&!b._localOnly).map(b=>b.title))].sort().slice(0,200);
+    case 'authors': return [...new Set(globalBookCache.filter(b=>b.author&&!b._localOnly).map(b=>b.author))].sort().slice(0,200);
+    case 'genres':  return [...orderedGenres];
+    case 'series':  return [...new Set(globalBookCache.filter(b=>b.series&&!b._localOnly).map(b=>b.series))].sort().slice(0,200);
+    default: return [];
+  }
+}
+
+function _buildHlChip(val, cat, idx, isClub) {
+  const iconMap = { books:'book-open', authors:'user', genres:'drama', series:'layers' };
+  const rm = isClub ? `removeClubHlChip('${cat}',${idx})` : `removeHlChip('${cat}',${idx})`;
+  return `<span class="hl-chip"><i data-lucide="${iconMap[cat]}"></i>${esc(val)}<button class="hl-chip-remove" onclick="${rm}" title="Remove">×</button></span>`;
+}
+
+function _buildHlRow(cat, catInfo, items, isActive, isClub) {
+  const pfx = isClub ? 'chl' : 'hl';
+  const toggleFn = isClub ? `toggleClubHlInput('${cat}')` : `toggleHlInput('${cat}')`;
+  const chips = items.map((v,i) => _buildHlChip(v, cat, i, isClub)).join('');
+  const inputHtml = isActive
+    ? `<div class="hl-input-row"><input class="form-input" id="${pfx}-input-${cat}" placeholder="${esc(catInfo.placeholder)}" autocomplete="off" style="height:28px;font-size:12px;padding:4px 10px;min-width:130px;" oninput="${isClub?`clubHlInputChange('${cat}',this.value)`:`hlInputChange('${cat}',this.value)`}" onkeydown="${isClub?`clubHlKeydown(event,'${cat}')`:`hlKeydown(event,'${cat}')`}"><div class="hl-ac" id="${pfx}-ac-${cat}" style="display:none;"></div></div>`
+    : '';
+  const addBtn = items.length < _HL_MAX
+    ? `<button class="hl-add-btn" onclick="${toggleFn}" title="Add"><i data-lucide="plus"></i></button>`
+    : `<div style="width:26px;flex-shrink:0;"></div>`;
+  return `<div class="hl-row"><span class="hl-row-label">${catInfo.label}</span><div style="flex:1;display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-width:0;">${chips}${inputHtml}</div>${addBtn}</div>`;
+}
+
+function _hlUpdateAc(cat, val) {
+  const acEl = document.getElementById('hl-ac-' + cat);
+  if (!acEl) return;
+  const existing = new Set(_myHighlights[cat]||[]);
+  const q = val.toLowerCase();
+  const matches = _hlAcSources(cat).filter(s => !existing.has(s) && s.toLowerCase().includes(q)).slice(0, 8);
+  _hlAcResults[cat] = matches;
+  if (!matches.length) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
+  acEl.style.display = '';
+  acEl.innerHTML = matches.map((m,i) => `<div class="hl-ac-item" onmousedown="event.preventDefault()" onclick="addHlChip('${cat}',${i})">${esc(m)}</div>`).join('');
+}
+
+function _clubHlUpdateAc(cat, val) {
+  const acEl = document.getElementById('chl-ac-' + cat);
+  if (!acEl) return;
+  const existing = new Set(_clubSubjects[cat]||[]);
+  const q = val.toLowerCase();
+  const matches = _clubHlAcSources(cat).filter(s => !existing.has(s) && s.toLowerCase().includes(q)).slice(0, 8);
+  _clubHlAcResults[cat] = matches;
+  if (!matches.length) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
+  acEl.style.display = '';
+  acEl.innerHTML = matches.map((m,i) => `<div class="hl-ac-item" onmousedown="event.preventDefault()" onclick="addClubHlChip('${cat}',${i})">${esc(m)}</div>`).join('');
+}
+
+function _renderHlEditor() {
+  const el = document.getElementById('hl-section');
+  if (!el) return;
+  el.innerHTML = _HL_CATS.map(c => _buildHlRow(c.key, c, _myHighlights[c.key]||[], _hlActiveInput === c.key, false)).join('');
+  refreshIcons();
+  if (_hlActiveInput) {
+    const inp = document.getElementById('hl-input-' + _hlActiveInput);
+    if (inp) { inp.focus(); _hlUpdateAc(_hlActiveInput, ''); }
+  }
+}
+
+function _renderClubSubjectsEditor() {
+  const el = document.getElementById('club-subjects-editor');
+  if (!el) return;
+  el.innerHTML = _HL_CATS.map(c => _buildHlRow(c.key, c, _clubSubjects[c.key]||[], _clubHlActive === c.key, true)).join('');
+  refreshIcons();
+  if (_clubHlActive) {
+    const inp = document.getElementById('chl-input-' + _clubHlActive);
+    if (inp) { inp.focus(); _clubHlUpdateAc(_clubHlActive, ''); }
+  }
+}
+
+window.toggleHlInput = (cat) => { _hlActiveInput = _hlActiveInput === cat ? null : cat; _renderHlEditor(); };
+window.toggleClubHlInput = (cat) => { _clubHlActive = _clubHlActive === cat ? null : cat; _renderClubSubjectsEditor(); };
+window.hlInputChange = (cat, val) => _hlUpdateAc(cat, val);
+window.clubHlInputChange = (cat, val) => _clubHlUpdateAc(cat, val);
+
+window.hlKeydown = (event, cat) => {
+  if (event.key === 'Escape') { _hlActiveInput = null; _renderHlEditor(); }
+  else if (event.key === 'Enter') { event.preventDefault(); const v = event.target.value.trim(); if (v) _addHlItem(cat, v); }
+};
+window.clubHlKeydown = (event, cat) => {
+  if (event.key === 'Escape') { _clubHlActive = null; _renderClubSubjectsEditor(); }
+  else if (event.key === 'Enter') { event.preventDefault(); const v = event.target.value.trim(); if (v) _addClubHlItem(cat, v); }
+};
+
+window.addHlChip = (cat, idx) => { const v = (_hlAcResults[cat]||[])[idx]; if (v) _addHlItem(cat, v); };
+window.addClubHlChip = (cat, idx) => { const v = (_clubHlAcResults[cat]||[])[idx]; if (v) _addClubHlItem(cat, v); };
+
+function _addHlItem(cat, val) {
+  if (!val?.trim()) return;
+  const arr = _myHighlights[cat] = _myHighlights[cat]||[];
+  if (arr.includes(val) || arr.length >= _HL_MAX) return;
+  arr.push(val); _hlActiveInput = null; _renderHlEditor();
+}
+function _addClubHlItem(cat, val) {
+  if (!val?.trim()) return;
+  const arr = _clubSubjects[cat] = _clubSubjects[cat]||[];
+  if (arr.includes(val) || arr.length >= _HL_MAX) return;
+  arr.push(val); _clubHlActive = null; _renderClubSubjectsEditor();
+}
+
+window.removeHlChip = (cat, idx) => { (_myHighlights[cat]=_myHighlights[cat]||[]).splice(idx,1); _renderHlEditor(); };
+window.removeClubHlChip = (cat, idx) => { (_clubSubjects[cat]=_clubSubjects[cat]||[]).splice(idx,1); _renderClubSubjectsEditor(); };
+
 async function loadMyHighlights() {
   try {
     const snap = await getDoc(userSettingsDoc());
-    if (snap.exists() && snap.data().highlights) {
-      _myHighlights = { books: [], authors: [], genres: [], series: [], ...snap.data().highlights };
+    if (snap.exists()) {
+      const d = snap.data();
+      if (d.highlights) _myHighlights = { books:[], authors:[], genres:[], series:[], ...d.highlights };
+      const ta = document.getElementById('hl-about-me');
+      if (ta && d.aboutMe !== undefined) {
+        ta.value = d.aboutMe || '';
+        const ct = document.getElementById('hl-about-count');
+        if (ct) ct.textContent = (200 - ta.value.length) + ' left';
+      }
     }
   } catch(e) {}
-  _populateHighlightsForm();
-}
-
-function _populateHighlightsForm() {
-  ['books','authors','genres','series'].forEach(cat => {
-    for (let i = 0; i < 3; i++) {
-      const el = document.getElementById(`hl-${cat}-${i}`);
-      if (el) el.value = (_myHighlights[cat] || [])[i] || '';
-    }
-  });
+  _hlActiveInput = null; _renderHlEditor();
 }
 
 window.saveHighlights = async () => {
-  const highlights = {};
-  ['books','authors','genres','series'].forEach(cat => {
-    highlights[cat] = [0,1,2].map(i => {
-      const el = document.getElementById(`hl-${cat}-${i}`);
-      return (el?.value || '').trim();
-    }).filter(Boolean);
-  });
-  _myHighlights = highlights;
+  const aboutMe = (document.getElementById('hl-about-me')?.value || '').trim().slice(0, 200);
+  const highlights = {
+    books:   [...(_myHighlights.books   || [])],
+    authors: [...(_myHighlights.authors || [])],
+    genres:  [...(_myHighlights.genres  || [])],
+    series:  [...(_myHighlights.series  || [])],
+  };
   try {
-    await setDoc(userSettingsDoc(), { highlights }, { merge: true });
-    showStatus('Highlights saved!', 'success'); setTimeout(hideStatus, 2000);
-  } catch(e) {
-    showStatus('Error saving highlights.', 'error'); setTimeout(hideStatus, 2000);
-  }
+    await setDoc(userSettingsDoc(), { highlights, aboutMe }, { merge: true });
+    showStatus('Profile saved!', 'success'); setTimeout(hideStatus, 2000);
+  } catch(e) { showStatus('Error saving profile.', 'error'); setTimeout(hideStatus, 2000); }
 };
 
 async function loadAndRenderFriendHighlights(uid) {
@@ -4012,82 +4125,49 @@ async function loadAndRenderFriendHighlights(uid) {
   el.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--text3);font-size:13px">Loading…</div>';
   try {
     const snap = await getDoc(doc(db, 'users', uid, 'meta', 'settings'));
-    const highlights = snap.exists() ? (snap.data().highlights || {}) : {};
-    _renderHighlightsPanel(el, highlights);
+    const d = snap.exists() ? snap.data() : {};
+    _renderHighlightsPanel(el, d.highlights||{}, d.aboutMe||'');
   } catch(e) {
-    el.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--text3);font-size:13px">Could not load highlights.</div>';
+    el.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--text3);font-size:13px">Could not load profile.</div>';
   }
 }
 
-function _renderHighlightsPanel(el, highlights) {
-  const cats = [
-    { key: 'books',   label: 'Top Books'   },
-    { key: 'authors', label: 'Top Authors' },
-    { key: 'genres',  label: 'Top Genres'  },
-    { key: 'series',  label: 'Top Series'  },
-  ];
+function _renderHighlightsPanel(el, highlights, aboutMe) {
   let html = '';
-  cats.forEach(({ key, label }) => {
-    const items = (highlights[key] || []).filter(Boolean).slice(0, 3);
+  if (aboutMe) html += `<div class="info-section"><span class="info-section-label">About</span><div style="font-size:13px;color:var(--text2);line-height:1.6;">${esc(aboutMe)}</div></div>`;
+  _HL_CATS.forEach(({ key, label, icon }) => {
+    const items = (highlights[key]||[]).filter(Boolean);
     if (!items.length) return;
-    const chips = items.map(v => `<span class="tag genre" style="font-size:12px;">${esc(v)}</span>`).join('');
-    html += `<div class="info-section"><span class="info-section-label">${label}</span><div class="info-chips">${chips}</div></div>`;
+    const chips = items.map(v => `<span class="hl-chip"><i data-lucide="${icon}"></i>${esc(v)}</span>`).join('');
+    html += `<div class="info-section"><span class="info-section-label">${label}</span><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:2px;">${chips}</div></div>`;
   });
-  el.innerHTML = html || '<div style="text-align:center;padding:40px 0;color:var(--text3);font-size:13px">No highlights set yet.</div>';
+  el.innerHTML = html || '<div style="text-align:center;padding:40px 0;color:var(--text3);font-size:13px">No profile info yet.</div>';
+  refreshIcons();
 }
 
 // ── CLUB ABOUT ────────────────────────────────────────────────────────────────
 function renderClubAboutTab() {
   const el = document.getElementById('clubAboutContent');
   if (!el || !currentClubData) return;
-  const subjects = currentClubData.subjects || [];
+  const raw = currentClubData.subjects;
+  let subj = { books:[], authors:[], genres:[], series:[] };
+  if (raw && !Array.isArray(raw)) subj = { ...subj, ...raw };
+  else if (Array.isArray(raw)) raw.forEach(s => { const k=s.type+'s'; if(subj[k]) subj[k].push(s.value||''); });
   const desc = currentClubData.description || '';
   const descHtml = desc
     ? `<div class="info-section"><span class="info-section-label">Description</span><div style="font-size:13px;color:var(--text2);line-height:1.6;">${esc(desc).replace(/\n/g,'<br>')}</div></div>`
     : '';
-  const subjectChips = subjects.map(s =>
-    `<span class="subject-tag"><span class="subject-type-badge ${s.type||'book'}">${esc(s.type||'')}</span>${esc(s.value||'')}</span>`
-  ).join('');
-  const subjectsHtml = subjects.length
-    ? `<div class="info-section"><span class="info-section-label">Subjects</span><div class="info-chips" style="gap:8px;">${subjectChips}</div></div>`
-    : '';
+  let subjectsHtml = '';
+  _HL_CATS.forEach(({ key, label, icon }) => {
+    const items = (subj[key]||[]).filter(Boolean);
+    if (!items.length) return;
+    const chips = items.map(v => `<span class="hl-chip"><i data-lucide="${icon}"></i>${esc(v)}</span>`).join('');
+    subjectsHtml += `<div class="info-section"><span class="info-section-label">${label}</span><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:2px;">${chips}</div></div>`;
+  });
   el.innerHTML = (descHtml || subjectsHtml)
     ? `<div>${descHtml}${subjectsHtml}</div>`
     : `<div style="text-align:center;padding:40px 0;font-size:13px;color:var(--text3);">No about info yet.</div>`;
   refreshIcons();
-}
-
-window.addClubSubjectRow = () => {
-  const container = document.getElementById('club-subject-rows');
-  if (!container) return;
-  const rows = container.querySelectorAll('.about-edit-row');
-  if (rows.length >= 10) return;
-  const i = rows.length;
-  const typeOpts = ['book','author','genre','series'].map(t =>
-    `<option value="${t}">${t.charAt(0).toUpperCase()+t.slice(1)}</option>`
-  ).join('');
-  const div = document.createElement('div');
-  div.className = 'about-edit-row';
-  div.id = `subject-row-${i}`;
-  div.innerHTML = `<select class="about-type-select" id="subj-type-${i}">${typeOpts}</select>
-    <input class="form-input" id="subj-val-${i}" placeholder="Name…" style="flex:1;">
-    <button class="btn-edit" style="color:var(--danger);border-color:var(--danger);flex-shrink:0;" onclick="removeClubSubjectRow(${i})" title="Remove"><i data-lucide="x"></i></button>`;
-  container.appendChild(div);
-  _updateAddSubjectBtn();
-  refreshIcons();
-};
-
-window.removeClubSubjectRow = (i) => {
-  const row = document.getElementById(`subject-row-${i}`);
-  if (row) row.remove();
-  _updateAddSubjectBtn();
-};
-
-function _updateAddSubjectBtn() {
-  const container = document.getElementById('club-subject-rows');
-  const btn = document.getElementById('addSubjectBtn');
-  if (!container || !btn) return;
-  btn.style.display = container.querySelectorAll('.about-edit-row').length >= 10 ? 'none' : '';
 }
 
 // ── REVIEWS ──────────────────────────────────────────────────────────────────
@@ -6347,21 +6427,22 @@ async function renderClubSettingsContent() {
     editClubColor = currentClubData.bgColor || '#2d2520';
     editClubPrivacy = currentClubData.privacy || (currentClubData.isPublic ? 'public' : 'private');
 
+    // Initialize _clubSubjects from saved data (handle both old array and new object format)
+    const _rawSubj = currentClubData.subjects;
+    if (_rawSubj && !Array.isArray(_rawSubj)) {
+      _clubSubjects = { books: [...(_rawSubj.books||[])], authors: [...(_rawSubj.authors||[])], genres: [...(_rawSubj.genres||[])], series: [...(_rawSubj.series||[])] };
+    } else if (Array.isArray(_rawSubj)) {
+      _clubSubjects = { books: [], authors: [], genres: [], series: [] };
+      _rawSubj.forEach(s => { const k = s.type + 's'; if (_clubSubjects[k]) _clubSubjects[k].push(s.value||''); });
+    } else {
+      _clubSubjects = { books: [], authors: [], genres: [], series: [] };
+    }
+
     const privOpts = [
       { val: 'private', icon: '🔒', label: 'Private', desc: 'Invite only' },
       { val: 'public',  icon: '👁',  label: 'Public',  desc: 'Request to join' },
       { val: 'open',    icon: '🔓', label: 'Open',    desc: 'Anyone can join' }
     ];
-    const typeOpts = ['book','author','genre','series'].map(t =>
-      '<option value="' + t + '">' + t.charAt(0).toUpperCase() + t.slice(1) + '</option>'
-    ).join('');
-    const subjectRows = (currentClubData.subjects||[]).map((s,i) =>
-      '<div class="about-edit-row" id="subject-row-' + i + '">'
-      + '<select class="about-type-select" id="subj-type-' + i + '">' + typeOpts + '</select>'
-      + '<input class="form-input" id="subj-val-' + i + '" value="' + esc(s.value||'') + '" placeholder="Name…" style="flex:1;">'
-      + '<button class="btn-edit" style="color:var(--danger);border-color:var(--danger);flex-shrink:0;" onclick="removeClubSubjectRow(' + i + ')" title="Remove"><i data-lucide="x"></i></button>'
-      + '</div>'
-    ).join('');
 
     el.innerHTML = '<div style="font-size:12px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Edit Club</div>'
       + '<div class="form-group" style="margin-bottom:10px"><label class="form-label">Name</label>'
@@ -6380,9 +6461,8 @@ async function renderClubSettingsContent() {
       + privOpts.map(o => '<button class="privacy-opt' + (editClubPrivacy === o.val ? ' active' : '') + '" data-val="' + o.val + '" onclick="setClubPrivacy(\'' + o.val + '\',\'editClubPrivacyRow\')">'
         + '<span class="priv-icon">' + o.icon + '</span><span class="priv-label">' + o.label + '</span><span class="priv-desc">' + o.desc + '</span></button>').join('')
       + '</div></div>'
-      + '<div class="form-group" style="margin-bottom:16px"><label class="form-label">Subjects <span style="color:var(--text3);font-weight:400;font-size:11px;">(up to 10 — shown on About tab)</span></label>'
-      + '<div id="club-subject-rows">' + subjectRows + '</div>'
-      + '<button class="btn-add-collection" id="addSubjectBtn" style="margin-top:8px;" onclick="addClubSubjectRow()"><i data-lucide="plus"></i> Add Subject</button>'
+      + '<div class="form-group" style="margin-bottom:16px"><label class="form-label">Subjects <span style="color:var(--text3);font-weight:400;font-size:11px;">(up to 10 per category — shown on About tab)</span></label>'
+      + '<div id="club-subjects-editor"></div>'
       + '</div>'
       + '<button class="btn-submit" style="width:100%;margin-bottom:20px" onclick="saveClubEdit()">Save Changes</button>'
       + (requests.length ? '<div style="font-size:12px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Join Requests (' + requests.length + ')</div>'
@@ -6406,11 +6486,7 @@ async function renderClubSettingsContent() {
       + '<button style="margin-top:24px;background:none;border:1px solid var(--danger);color:var(--danger);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;padding:9px 14px;border-radius:var(--radius-sm);font-family:\'DM Sans\',sans-serif;width:100%;justify-content:center" onclick="confirmDeleteClub()"><i data-lucide="trash-2" style="width:14px;height:14px"></i> Delete Club</button>';
 
     renderClubColorRow('editClubColorRow', 'editClubIconPreview', false);
-    (currentClubData.subjects||[]).forEach((s, i) => {
-      const sel = document.getElementById('subj-type-' + i);
-      if (sel) sel.value = s.type || 'book';
-    });
-    _updateAddSubjectBtn();
+    _renderClubSubjectsEditor();
     refreshIcons();
   } else {
     // Member view
@@ -6440,16 +6516,12 @@ window.saveClubEdit = async () => {
   const name = document.getElementById('editClubName').value.trim();
   const desc = document.getElementById('editClubDesc').value.trim();
   if (!name) { showStatus('Name required', 'error'); return; }
-  const subjects = [];
-  const sContainer = document.getElementById('club-subject-rows');
-  if (sContainer) {
-    sContainer.querySelectorAll('.about-edit-row').forEach(row => {
-      const idx = row.id.replace('subject-row-','');
-      const type = document.getElementById('subj-type-' + idx)?.value || 'book';
-      const value = (document.getElementById('subj-val-' + idx)?.value || '').trim();
-      if (value) subjects.push({ type, value });
-    });
-  }
+  const subjects = {
+    books:   [...(_clubSubjects.books   || [])],
+    authors: [...(_clubSubjects.authors || [])],
+    genres:  [...(_clubSubjects.genres  || [])],
+    series:  [...(_clubSubjects.series  || [])],
+  };
   try {
     const updates = { name, description: desc, subjects, emoji: editClubEmoji, bgColor: editClubColor, privacy: editClubPrivacy, isDiscoverable: editClubPrivacy !== 'private' };
     await updateDoc(clubDoc(currentClubId), updates);
