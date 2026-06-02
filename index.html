@@ -191,6 +191,13 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .community-tabs { display: flex; border-bottom: 1px solid var(--border); padding: 0 16px; }
 .ctab { padding: 10px 16px; border: none; border-bottom: 2px solid transparent; background: none; color: var(--text3); font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all 0.15s; -webkit-tap-highlight-color: transparent; }
 .ctab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+
+/* DISCOVER */
+.discover-tabs { display: flex; border-bottom: 1px solid var(--border); padding: 0 16px; overflow-x: auto; scrollbar-width: none; background: var(--surface1); position: sticky; top: 0; z-index: 50; }
+.discover-tabs::-webkit-scrollbar { display: none; }
+.dtab { flex-shrink: 0; padding: 11px 14px; border: none; border-bottom: 2px solid transparent; background: none; color: var(--text3); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: color 0.15s, border-color 0.15s; -webkit-tap-highlight-color: transparent; }
+.dtab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+.dtab:hover:not(.active) { color: var(--text2); }
 .friends-nav { display: flex; gap: 8px; padding: 14px 16px 4px; overflow-x: auto; scrollbar-width: none; }
 .friends-nav::-webkit-scrollbar { display: none; }
 .fnav-btn { padding: 7px 16px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface2); color: var(--text2); font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all 0.15s; position: relative; flex-shrink: 0; }
@@ -1086,7 +1093,6 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
       <button class="hnav-btn active" id="hnav-mylibrary" onclick="setPage('mylibrary')"><i data-lucide="book"></i> My Library</button>
       <button class="hnav-btn" id="hnav-wishlist" onclick="setPage('wishlist')"><i data-lucide="star"></i> Wishlist</button>
       <button class="hnav-btn" id="hnav-community" onclick="setPage('community')"><i data-lucide="users"></i> Community</button>
-      <button class="hnav-btn" id="hnav-global" onclick="setPage('global')"><i data-lucide="globe"></i> Global Library</button>
       <button class="hnav-btn" id="hnav-discover" onclick="setPage('discover')"><i data-lucide="compass"></i> Discover</button>
     </div>
   </div><!-- /.header -->
@@ -1128,17 +1134,31 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
     </div>
   </div>
 
+  <!-- Discover page: tab bar + non-global panels; global tab uses the shared bookList/subheader below -->
+  <div id="page-discover" style="display:none">
+    <div class="discover-tabs">
+      <button class="dtab active" id="dtab-find" onclick="setDiscoverTab('find')">Find My Next Book</button>
+      <button class="dtab" id="dtab-global" onclick="setDiscoverTab('global')">Global Library</button>
+      <button class="dtab" id="dtab-authors" onclick="setDiscoverTab('authors')">Authors</button>
+      <button class="dtab" id="dtab-genres" onclick="setDiscoverTab('genres')">Genres</button>
+    </div>
+    <div id="dtab-panel-find">
+      <div class="coming-soon"><i data-lucide="wand-2" class="coming-soon-icon"></i><div class="coming-soon-title">Find My Next Book</div><div class="coming-soon-sub">Coming soon</div></div>
+    </div>
+    <div id="dtab-panel-authors" style="display:none">
+      <div class="coming-soon"><i data-lucide="user" class="coming-soon-icon"></i><div class="coming-soon-title">Authors</div><div class="coming-soon-sub">Coming soon</div></div>
+    </div>
+    <div id="dtab-panel-genres" style="display:none">
+      <div class="coming-soon"><i data-lucide="drama" class="coming-soon-icon"></i><div class="coming-soon-title">Genres</div><div class="coming-soon-sub">Coming soon</div></div>
+    </div>
+  </div>
+
   <div class="status-bar" id="statusBar"></div>
   <div class="list-header" id="listHeader"></div>
   <div class="book-list" id="bookList"></div>
   <div id="globalLoadSentinel" style="display:none;padding:20px;text-align:center;color:var(--text2);font-size:13px;"></div>
 
   <button class="fab" id="fabAdd" onclick="openAddModal()" style="display:none"><i data-lucide="plus"></i></button>
-
-  <!-- Coming soon pages -->
-  <div id="page-discover" style="display:none">
-    <div class="coming-soon"><i data-lucide="compass" class="coming-soon-icon"></i><div class="coming-soon-title">Discover</div><div class="coming-soon-sub">Coming soon</div></div>
-  </div>
   <div id="page-community" style="display:none">
     <div class="community-tabs">
       <button class="ctab active" id="ctab-chats" onclick="setCommunityTab('chats')">Chats</button>
@@ -1949,6 +1969,7 @@ let selectedGenreFilters = [], genreFilterMode = 'OR';
 let selectedStatusFilters = [];
 let topFilters = ['all'];
 let currentPage = 'mylibrary'; // 'mylibrary' | 'wishlist' | 'global' | 'discover' | 'community'
+let currentDiscoverTab = 'find'; // 'find' | 'global' | 'authors' | 'genres'
 let currentSort = 'popularity-desc';
 let _personalSort = 'title-asc';
 let _globalSort   = 'popularity-desc';
@@ -4651,6 +4672,63 @@ function updateStatCardLabels(page) {
   });
 }
 
+window.setDiscoverTab = (tab) => {
+  currentDiscoverTab = tab;
+  // Update discover tab button active states
+  ['find','global','authors','genres'].forEach(t => {
+    document.getElementById('dtab-' + t)?.classList.toggle('active', t === tab);
+  });
+  const isGlobal = tab === 'global';
+  // Show/hide non-global discover panels
+  ['find','authors','genres'].forEach(t => {
+    const el = document.getElementById('dtab-panel-' + t);
+    if (el) el.style.display = (!isGlobal && t === tab) ? '' : 'none';
+  });
+  // Subheader + stats: only visible on global tab
+  const sub = document.getElementById('subheader');
+  if (sub) sub.style.display = isGlobal ? '' : 'none';
+  const stats = document.getElementById('subheaderStats');
+  if (stats) stats.style.display = isGlobal ? '' : 'none';
+  // Shared book list elements: only on global tab
+  document.getElementById('bookList').style.display = isGlobal ? '' : 'none';
+  document.getElementById('listHeader').style.display = isGlobal ? '' : 'none';
+  document.getElementById('statusBar').style.display = isGlobal ? '' : 'none';
+  if (!isGlobal) document.getElementById('globalLoadSentinel').style.display = 'none';
+
+  if (isGlobal) {
+    // Internally treat as global page for all rendering functions
+    currentPage = 'global';
+    currentSort = _globalSort;
+    // Keep discover nav tab active
+    document.querySelectorAll('.hnav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('hnav-discover')?.classList.add('active');
+    // Reset filters
+    topFilters = ['all']; selectedGenreFilters = []; selectedStatusFilters = [];
+    const si = document.getElementById('searchInput'); if (si) si.value = '';
+    filterPanelOpen = false; sortPanelOpen = false;
+    document.getElementById('filterPanel').style.display = 'none';
+    document.getElementById('sortPanel').style.display = 'none';
+    document.getElementById('filterBtn')?.classList.remove('active');
+    document.getElementById('sortBtn')?.classList.remove('active');
+    updateStatCardLabels('global');
+    if (!_globalBooksPreloaded) {
+      document.getElementById('listHeader').textContent = '';
+      document.getElementById('bookList').innerHTML = '<div style="display:flex;justify-content:center;padding:60px 0"><div style="width:32px;height:32px;border:3px solid #3a3632;border-top-color:#c9a96e;border-radius:50%;animation:spin 0.7s linear infinite"></div></div>';
+      preloadGlobalBooks().then(() => {
+        if (currentPage !== 'global') return;
+        syncUserBooksToCache(); buildGlobalGenreFilters(); applyGlobalFilters(); updateStats();
+        if (_personalBooksLoaded) ensurePersonalBooksInGlobalCache();
+      });
+    } else {
+      syncUserBooksToCache(); buildGlobalGenreFilters(); applyGlobalFilters(); updateStats();
+      ensurePersonalBooksInGlobalCache();
+    }
+  } else {
+    currentPage = 'discover';
+  }
+  updateHeaderSpacer();
+};
+
 window.setPage = (page) => {
   // Save current sort for the page we're leaving, restore for the page we're entering
   if (currentPage === 'global') _globalSort = currentSort;
@@ -4678,44 +4756,28 @@ window.setPage = (page) => {
   // Show/hide location filter (only on My Library)
   const locFilter = document.getElementById('locationFilterSection');
   if (locFilter) locFilter.style.display = page === 'mylibrary' ? '' : 'none';
-  // Show/hide subheader stats
+  // Show/hide subheader stats (discover delegates to setDiscoverTab)
   const stats = document.getElementById('subheaderStats');
-  if (stats) stats.style.display = ['mylibrary','wishlist','global'].includes(page) ? '' : 'none';
-  // Show/hide subheader itself on coming soon pages
+  if (stats) stats.style.display = ['mylibrary','wishlist'].includes(page) ? '' : 'none';
+  // Show/hide subheader (discover delegates its subheader visibility to setDiscoverTab)
   const sub = document.getElementById('subheader');
-  if (sub) sub.style.display = ['discover','community'].includes(page) ? 'none' : '';
+  if (sub) sub.style.display = ['mylibrary','wishlist'].includes(page) ? '' : 'none';
   // FAB
   document.getElementById('fabAdd').style.display = ['mylibrary','wishlist'].includes(page) ? 'flex' : 'none';
-  // Coming soon pages
+  // Page containers
   document.getElementById('page-discover').style.display = page === 'discover' ? '' : 'none';
   document.getElementById('page-community').style.display = page === 'community' ? '' : 'none';
-  // Main content area
-  const showMain = ['mylibrary','wishlist','global'].includes(page);
+  // Main content area (global is now routed through discover's tab)
+  const showMain = ['mylibrary','wishlist'].includes(page);
   document.getElementById('bookList').style.display = showMain ? '' : 'none';
   document.getElementById('listHeader').style.display = showMain ? '' : 'none';
   document.getElementById('statusBar').style.display = showMain ? '' : 'none';
-  // Always hide the scroll sentinel when leaving global — it's not covered by showMain
-  if (page !== 'global') document.getElementById('globalLoadSentinel').style.display = 'none';
+  document.getElementById('globalLoadSentinel').style.display = 'none';
   // Load page content
-  if (page === 'global') {
-    if (!_globalBooksPreloaded) {
-      // First visit — clear stale content immediately, show spinner, then render
-      // once the Firestore fetch completes. Guard against tab switch happening
-      // before the fetch resolves (would overwrite personal library content).
-      document.getElementById('listHeader').textContent = '';
-      document.getElementById('bookList').innerHTML = '<div style="display:flex;justify-content:center;padding:60px 0"><div style="width:32px;height:32px;border:3px solid #3a3632;border-top-color:#c9a96e;border-radius:50%;animation:spin 0.7s linear infinite"></div></div>';
-      preloadGlobalBooks().then(() => {
-        if (currentPage !== 'global') return;
-        syncUserBooksToCache(); buildGlobalGenreFilters(); applyGlobalFilters(); updateStats();
-        if (_personalBooksLoaded) ensurePersonalBooksInGlobalCache();
-      });
-    } else {
-      // Already loaded — render immediately from cache, no Firestore round-trip.
-      syncUserBooksToCache(); buildGlobalGenreFilters(); applyGlobalFilters(); updateStats();
-      ensurePersonalBooksInGlobalCache();
-    }
-  } else if (page === 'community') {
+  if (page === 'community') {
     initCommunityPage();
+  } else if (page === 'discover') {
+    setDiscoverTab(currentDiscoverTab);
   } else if (showMain) {
     updateStats(); buildGenreFilters(); buildStatusFilters(); applyFilters();
   }
