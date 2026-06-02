@@ -349,11 +349,14 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .info-edit-btn .lucide { width:13px;height:13px; }
 .info-star-btn { font-size:24px;background:none;border:none;padding:2px;cursor:pointer;line-height:1;transition:color 0.1s; }
 .review-section-sep { border:none;border-top:1px solid var(--border);margin:24px 0 0; }
-.review-controls { display:flex;flex-direction:column;gap:6px;margin-bottom:14px; }
-.review-sort-btn { padding:5px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.12s; }
-.review-sort-btn.active { background:color-mix(in srgb,var(--accent) 12%,var(--surface2));border-color:var(--accent);color:var(--accent); }
-.review-star-filter-btn { padding:4px 8px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:12px;cursor:pointer;transition:all 0.12s; }
-.review-star-filter-btn.active { background:color-mix(in srgb,#f5a623 15%,var(--surface2));border-color:#f5a623;color:#f5a623; }
+.review-controls { display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap; }
+.review-ctrl-btn { display:inline-flex;align-items:center;gap:5px;padding:6px 11px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.12s; }
+.review-ctrl-btn.has-active { border-color:var(--accent);color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,var(--surface2)); }
+.review-dropdown { position:absolute;top:calc(100% + 4px);left:0;z-index:200;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);min-width:150px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.45); }
+.review-dd-item { display:block;width:100%;padding:9px 14px;background:none;border:none;border-bottom:1px solid var(--border);color:var(--text2);font-size:13px;text-align:left;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background 0.1s; }
+.review-dd-item:last-child { border-bottom:none; }
+.review-dd-item:hover { background:var(--surface3); }
+.review-dd-item.active { color:var(--accent);font-weight:600; }
 .review-write-box { background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:16px; }
 .review-textarea { width:100%;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:10px 12px;resize:vertical;min-height:72px;box-sizing:border-box;outline:none; }
 .review-textarea:focus { border-color:var(--accent); }
@@ -2462,6 +2465,17 @@ document.addEventListener('click', (e) => {
     authorDrop.style.display = 'none';
     authorDrop.innerHTML = '';
   }
+  // Close review dropdowns when clicking outside
+  const sortDd = document.getElementById('review-sort-dropdown');
+  const sortToggle = document.getElementById('review-sort-toggle');
+  if (sortDd && sortToggle && !sortDd.contains(e.target) && !sortToggle.contains(e.target)) {
+    sortDd.style.display = 'none';
+  }
+  const filterDd = document.getElementById('review-filter-dropdown');
+  const filterToggle = document.getElementById('review-filter-toggle');
+  if (filterDd && filterToggle && !filterDd.contains(e.target) && !filterToggle.contains(e.target)) {
+    filterDd.style.display = 'none';
+  }
 });
 
 window.handleAuthorSearch = function() {
@@ -3894,18 +3908,9 @@ window.addGlobalToWishlist = async (globalId) => {
 
 // ── REVIEWS ──────────────────────────────────────────────────────────────────
 function _buildReviewsSection(canWrite, myRating) {
-  const sortBtns = [
-    { s: 'newest', l: 'Newest' },
-    { s: 'oldest', l: 'Oldest' },
-    { s: 'high',   l: '★ High' },
-    { s: 'low',    l: '★ Low'  },
-  ].map(({s,l}) =>
-    `<button class="review-sort-btn${_reviewSort===s?' active':''}" data-sort="${s}" onclick="setReviewSort('${s}')">${l}</button>`
-  ).join('');
-
-  const starBtns = [1,2,3,4,5].map(n =>
-    `<button class="review-star-filter-btn${_reviewFilter===n?' active':''}" data-star="${n}" onclick="setReviewFilter(${n})">${'★'.repeat(n)}</button>`
-  ).join('');
+  const sortLabels = { newest:'Newest', oldest:'Oldest', high:'High → Low', low:'Low → High' };
+  const sortLabel = sortLabels[_reviewSort] || 'Newest';
+  const filterLabel = _reviewFilter !== null ? '★'.repeat(_reviewFilter) : 'All stars';
 
   const writeBox = canWrite ? `<div class="review-write-box">
     <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;">Your review <span style="color:var(--text3);font-weight:400;">(${myRating}/5)</span></div>
@@ -3918,10 +3923,29 @@ function _buildReviewsSection(canWrite, myRating) {
   <span class="info-section-label">Reviews</span>
   ${writeBox}
   <div class="review-controls">
-    <div style="display:flex;gap:6px;flex-wrap:wrap;">${sortBtns}</div>
-    <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">
-      <span style="font-size:11px;color:var(--text3);font-weight:600;">Show:</span>
-      ${starBtns}
+    <div style="position:relative;display:inline-block;">
+      <button class="review-ctrl-btn${_reviewSort!=='newest'?' has-active':''}" id="review-sort-toggle" onclick="toggleReviewDropdown('sort')">
+        <span id="review-sort-label">${sortLabel}</span><i data-lucide="chevron-down" style="width:12px;height:12px;"></i>
+      </button>
+      <div class="review-dropdown" id="review-sort-dropdown" style="display:none;">
+        <button class="review-dd-item${_reviewSort==='newest'?' active':''}" data-sort="newest" onclick="setReviewSort('newest')">Newest</button>
+        <button class="review-dd-item${_reviewSort==='oldest'?' active':''}" data-sort="oldest" onclick="setReviewSort('oldest')">Oldest</button>
+        <button class="review-dd-item${_reviewSort==='high'?' active':''}" data-sort="high" onclick="setReviewSort('high')">★ High → Low</button>
+        <button class="review-dd-item${_reviewSort==='low'?' active':''}" data-sort="low" onclick="setReviewSort('low')">★ Low → High</button>
+      </div>
+    </div>
+    <div style="position:relative;display:inline-block;">
+      <button class="review-ctrl-btn${_reviewFilter!==null?' has-active':''}" id="review-filter-toggle" onclick="toggleReviewDropdown('filter')">
+        <span id="review-filter-label">${filterLabel}</span><i data-lucide="chevron-down" style="width:12px;height:12px;"></i>
+      </button>
+      <div class="review-dropdown" id="review-filter-dropdown" style="display:none;">
+        <button class="review-dd-item${_reviewFilter===null?' active':''}" data-star="0" onclick="setReviewFilter(null)">All stars</button>
+        <button class="review-dd-item${_reviewFilter===5?' active':''}" data-star="5" onclick="setReviewFilter(5)">★★★★★</button>
+        <button class="review-dd-item${_reviewFilter===4?' active':''}" data-star="4" onclick="setReviewFilter(4)">★★★★</button>
+        <button class="review-dd-item${_reviewFilter===3?' active':''}" data-star="3" onclick="setReviewFilter(3)">★★★</button>
+        <button class="review-dd-item${_reviewFilter===2?' active':''}" data-star="2" onclick="setReviewFilter(2)">★★</button>
+        <button class="review-dd-item${_reviewFilter===1?' active':''}" data-star="1" onclick="setReviewFilter(1)">★</button>
+      </div>
     </div>
   </div>
   <div id="review-list"><div class="review-empty">Loading…</div></div>
@@ -3980,18 +4004,46 @@ function _renderReviewList() {
   }).join('');
 }
 
+window.toggleReviewDropdown = (which) => {
+  const sortDd   = document.getElementById('review-sort-dropdown');
+  const filterDd = document.getElementById('review-filter-dropdown');
+  if (which === 'sort') {
+    const open = sortDd && sortDd.style.display !== 'none';
+    if (sortDd)   sortDd.style.display   = open ? 'none' : '';
+    if (filterDd) filterDd.style.display = 'none';
+  } else {
+    const open = filterDd && filterDd.style.display !== 'none';
+    if (filterDd) filterDd.style.display = open ? 'none' : '';
+    if (sortDd)   sortDd.style.display   = 'none';
+  }
+};
+
 window.setReviewSort = (sort) => {
   _reviewSort = sort;
-  document.querySelectorAll('.review-sort-btn').forEach(btn => {
+  const dd = document.getElementById('review-sort-dropdown');
+  if (dd) dd.style.display = 'none';
+  const labelEl = document.getElementById('review-sort-label');
+  const labels = { newest:'Newest', oldest:'Oldest', high:'High → Low', low:'Low → High' };
+  if (labelEl) labelEl.textContent = labels[sort] || sort;
+  const toggle = document.getElementById('review-sort-toggle');
+  if (toggle) toggle.classList.toggle('has-active', sort !== 'newest');
+  document.querySelectorAll('#review-sort-dropdown .review-dd-item').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.sort === sort);
   });
   _renderReviewList();
 };
 
 window.setReviewFilter = (star) => {
-  _reviewFilter = (_reviewFilter === star) ? null : star;
-  document.querySelectorAll('.review-star-filter-btn').forEach(btn => {
-    btn.classList.toggle('active', +btn.dataset.star === _reviewFilter);
+  _reviewFilter = star;
+  const dd = document.getElementById('review-filter-dropdown');
+  if (dd) dd.style.display = 'none';
+  const labelEl = document.getElementById('review-filter-label');
+  if (labelEl) labelEl.textContent = star !== null ? '★'.repeat(star) : 'All stars';
+  const toggle = document.getElementById('review-filter-toggle');
+  if (toggle) toggle.classList.toggle('has-active', star !== null);
+  const starVal = star === null ? '0' : String(star);
+  document.querySelectorAll('#review-filter-dropdown .review-dd-item').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.star === starVal);
   });
   _renderReviewList();
 };
