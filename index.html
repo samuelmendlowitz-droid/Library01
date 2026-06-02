@@ -369,6 +369,16 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .review-stars { color:#f5a623;font-size:14px;letter-spacing:1px;margin-top:1px; }
 .review-text { font-size:13px;color:var(--text2);line-height:1.5; }
 .review-empty { font-size:13px;color:var(--text3);text-align:center;padding:20px 0; }
+.subject-type-badge { display:inline-flex;align-items:center;padding:2px 6px;border-radius:5px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;margin-right:4px; }
+.subject-type-badge.book { background:#1e2a1e;color:#6bc97e; }
+.subject-type-badge.author { background:#1e1e2a;color:#7ea8e3; }
+.subject-type-badge.genre { background:#2a1e1e;color:#e38a7e; }
+.subject-type-badge.series { background:#2a261e;color:#e3c87e; }
+.subject-tag { display:inline-flex;align-items:center;padding:5px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--text2);gap:0; }
+.about-edit-row { display:flex;align-items:center;gap:6px;margin-bottom:6px; }
+.about-type-select { padding:6px 8px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface3);color:var(--text);font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer; }
+.hl-inputs { display:flex;gap:6px;flex-wrap:wrap;margin-top:4px; }
+.hl-inputs input { flex:1;min-width:100px; }
 .book-list.list-view { gap: 0; padding: 0 0 100px; flex-direction: column; overflow-x: auto; }
 .list-col-header { display: grid; grid-template-columns: 30px 1fr 1fr 90px 80px 72px 76px 68px; gap: 6px; padding: 7px 16px; background: var(--surface2); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 5; min-width: 560px; }
 .list-col-header span { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; white-space: nowrap; overflow: hidden; }
@@ -1229,6 +1239,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
         <div style="display:flex;gap:4px;flex-shrink:0">
           <button class="fdet-tab-btn active" id="fdet-btn-chat" onclick="setFriendDetailsTab('chat')" title="Chat"><i data-lucide="message-circle"></i></button>
           <button class="fdet-tab-btn" id="fdet-btn-library" onclick="setFriendDetailsTab('library')" title="Library"><i data-lucide="book-open"></i></button>
+          <button class="fdet-tab-btn" id="fdet-btn-highlights" onclick="setFriendDetailsTab('highlights')" title="Highlights"><i data-lucide="star"></i></button>
           <button class="fdet-tab-btn" id="fdet-btn-settings" onclick="setFriendDetailsTab('settings')" title="Settings"><i data-lucide="settings"></i></button>
         </div>
       </div>
@@ -1279,6 +1290,13 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
         <div style="font-size:40px">🏛️</div>
         <div style="font-family:'Playfair Display',serif;font-size:22px;color:var(--accent2)">Clubs</div>
         <div style="font-size:14px;color:var(--text3)">Coming soon</div>
+      </div>
+    </div>
+
+    <!-- Highlights tab -->
+    <div id="fdet-highlights" style="display:none;flex-direction:column;flex:1;overflow-y:auto;padding:20px 20px 40px">
+      <div id="fdet-highlights-content">
+        <div style="text-align:center;padding:40px 0;color:var(--text3);font-size:13px">Loading…</div>
       </div>
     </div>
 
@@ -1365,6 +1383,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
         </div>
         <div style="display:flex;gap:4px;flex-shrink:0">
           <button class="fdet-tab-btn active" id="club-btn-chat" onclick="setClubTab('chat')" title="Chat"><i data-lucide="message-circle"></i></button>
+          <button class="fdet-tab-btn" id="club-btn-about" onclick="setClubTab('about')" title="About"><i data-lucide="info"></i></button>
           <button class="fdet-tab-btn" id="club-btn-settings" onclick="setClubTab('settings')" title="Settings"><i data-lucide="settings"></i></button>
         </div>
       </div>
@@ -1384,6 +1403,11 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
           oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
         <button class="chat-send-btn" onclick="sendClubMessage()"><i data-lucide="send"></i></button>
       </div>
+    </div>
+
+    <!-- Club About tab -->
+    <div id="club-tab-about" style="display:none;flex-direction:column;flex:1;overflow-y:auto;padding:20px 20px 40px">
+      <div id="clubAboutContent"></div>
     </div>
 
     <!-- Club Settings tab -->
@@ -1822,6 +1846,43 @@ All columns other than Author, Title, Series and Genres should be left empty or 
             <div id="usernameEditErr" style="font-size:12px;color:var(--danger);min-height:16px;"></div>
           </div>
         </div>
+        <div class="form-group" style="margin-top:20px;border-top:1px solid var(--border);padding-top:20px;">
+          <label class="form-label" style="font-size:13px;font-weight:700;">My Highlights</label>
+          <div style="font-size:12px;color:var(--text3);margin-bottom:14px;">Your top picks — visible to friends in your profile.</div>
+          <div style="margin-bottom:12px;">
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);font-weight:600;margin-bottom:6px;">Top Books</div>
+            <div class="hl-inputs">
+              <input class="form-input" id="hl-books-0" placeholder="Book 1">
+              <input class="form-input" id="hl-books-1" placeholder="Book 2">
+              <input class="form-input" id="hl-books-2" placeholder="Book 3">
+            </div>
+          </div>
+          <div style="margin-bottom:12px;">
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);font-weight:600;margin-bottom:6px;">Top Authors</div>
+            <div class="hl-inputs">
+              <input class="form-input" id="hl-authors-0" placeholder="Author 1">
+              <input class="form-input" id="hl-authors-1" placeholder="Author 2">
+              <input class="form-input" id="hl-authors-2" placeholder="Author 3">
+            </div>
+          </div>
+          <div style="margin-bottom:12px;">
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);font-weight:600;margin-bottom:6px;">Top Genres</div>
+            <div class="hl-inputs">
+              <input class="form-input" id="hl-genres-0" placeholder="Genre 1">
+              <input class="form-input" id="hl-genres-1" placeholder="Genre 2">
+              <input class="form-input" id="hl-genres-2" placeholder="Genre 3">
+            </div>
+          </div>
+          <div style="margin-bottom:14px;">
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);font-weight:600;margin-bottom:6px;">Top Series</div>
+            <div class="hl-inputs">
+              <input class="form-input" id="hl-series-0" placeholder="Series 1">
+              <input class="form-input" id="hl-series-1" placeholder="Series 2">
+              <input class="form-input" id="hl-series-2" placeholder="Series 3">
+            </div>
+          </div>
+          <button onclick="saveHighlights()" style="padding:9px 18px;background:var(--accent);color:#1a1612;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Save Highlights</button>
+        </div>
         <button class="btn-signout-settings" onclick="signOut()"><i data-lucide="log-out"></i> Sign Out</button>
       </div>
 
@@ -1911,6 +1972,8 @@ let _reviewSort = 'newest';
 let _reviewFilter = null;
 let _reviewsData = [];
 let _reviewBookGlobalId = null;
+let _myHighlights = { books: [], authors: [], genres: [], series: [] };
+let _clubAboutEditing = false;
 let userUsername = '';
 let friendsList = [], friendRequests = [], sentRequests = [];
 let communitySubtab = 'friends', friendsView = 'myfriends';
@@ -3906,6 +3969,205 @@ window.addGlobalToWishlist = async (globalId) => {
   showStatus('Added to wishlist!', 'success'); setTimeout(hideStatus, 2000);
 };
 
+// ── USER HIGHLIGHTS ──────────────────────────────────────────────────────────
+async function loadMyHighlights() {
+  try {
+    const snap = await getDoc(userSettingsDoc());
+    if (snap.exists() && snap.data().highlights) {
+      _myHighlights = { books: [], authors: [], genres: [], series: [], ...snap.data().highlights };
+    }
+  } catch(e) {}
+  _populateHighlightsForm();
+}
+
+function _populateHighlightsForm() {
+  ['books','authors','genres','series'].forEach(cat => {
+    for (let i = 0; i < 3; i++) {
+      const el = document.getElementById(`hl-${cat}-${i}`);
+      if (el) el.value = (_myHighlights[cat] || [])[i] || '';
+    }
+  });
+}
+
+window.saveHighlights = async () => {
+  const highlights = {};
+  ['books','authors','genres','series'].forEach(cat => {
+    highlights[cat] = [0,1,2].map(i => {
+      const el = document.getElementById(`hl-${cat}-${i}`);
+      return (el?.value || '').trim();
+    }).filter(Boolean);
+  });
+  _myHighlights = highlights;
+  try {
+    await setDoc(userSettingsDoc(), { highlights }, { merge: true });
+    showStatus('Highlights saved!', 'success'); setTimeout(hideStatus, 2000);
+  } catch(e) {
+    showStatus('Error saving highlights.', 'error'); setTimeout(hideStatus, 2000);
+  }
+};
+
+async function loadAndRenderFriendHighlights(uid) {
+  const el = document.getElementById('fdet-highlights-content');
+  if (!el) return;
+  el.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--text3);font-size:13px">Loading…</div>';
+  try {
+    const snap = await getDoc(doc(db, 'users', uid, 'meta', 'settings'));
+    const highlights = snap.exists() ? (snap.data().highlights || {}) : {};
+    _renderHighlightsPanel(el, highlights);
+  } catch(e) {
+    el.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--text3);font-size:13px">Could not load highlights.</div>';
+  }
+}
+
+function _renderHighlightsPanel(el, highlights) {
+  const cats = [
+    { key: 'books',   label: 'Top Books'   },
+    { key: 'authors', label: 'Top Authors' },
+    { key: 'genres',  label: 'Top Genres'  },
+    { key: 'series',  label: 'Top Series'  },
+  ];
+  let html = '';
+  cats.forEach(({ key, label }) => {
+    const items = (highlights[key] || []).filter(Boolean).slice(0, 3);
+    if (!items.length) return;
+    const chips = items.map(v => `<span class="tag genre" style="font-size:12px;">${esc(v)}</span>`).join('');
+    html += `<div class="info-section"><span class="info-section-label">${label}</span><div class="info-chips">${chips}</div></div>`;
+  });
+  el.innerHTML = html || '<div style="text-align:center;padding:40px 0;color:var(--text3);font-size:13px">No highlights set yet.</div>';
+}
+
+// ── CLUB ABOUT ────────────────────────────────────────────────────────────────
+function renderClubAboutTab() {
+  const el = document.getElementById('clubAboutContent');
+  if (!el || !currentClubData) return;
+  const isAdmin = currentClubRole === 'admin';
+  const subjects = currentClubData.subjects || [];
+  const desc = currentClubData.description || '';
+
+  if (_clubAboutEditing && isAdmin) {
+    _renderClubAboutEdit(el, desc, subjects);
+  } else {
+    _renderClubAboutView(el, desc, subjects, isAdmin);
+  }
+  refreshIcons();
+}
+
+function _renderClubAboutView(el, desc, subjects, isAdmin) {
+  const descHtml = desc
+    ? `<div class="info-section"><span class="info-section-label">Description</span><div style="font-size:13px;color:var(--text2);line-height:1.6;">${esc(desc).replace(/\n/g,'<br>')}</div></div>`
+    : '';
+
+  const typeColors = { book: 'book', author: 'author', genre: 'genre', series: 'series' };
+  const subjectChips = subjects.map(s =>
+    `<span class="subject-tag"><span class="subject-type-badge ${typeColors[s.type]||'book'}">${esc(s.type||'')}</span>${esc(s.value||'')}</span>`
+  ).join('');
+  const subjectsHtml = subjects.length
+    ? `<div class="info-section"><span class="info-section-label">Subjects</span><div class="info-chips" style="gap:8px;">${subjectChips}</div></div>`
+    : '';
+
+  const editBtn = isAdmin
+    ? `<button class="info-edit-btn" onclick="_clubAboutEditing=true;renderClubAboutTab()" style="margin-bottom:4px;"><i data-lucide="pencil"></i> Edit</button>`
+    : '';
+
+  el.innerHTML = (descHtml || subjectsHtml)
+    ? `<div>${editBtn}${descHtml}${subjectsHtml}</div>`
+    : `<div style="text-align:center;padding:40px 0;">${editBtn}<div style="font-size:13px;color:var(--text3);margin-top:8px">No about info yet${isAdmin?' — tap Edit to add some':''}.</div></div>`;
+}
+
+function _renderClubAboutEdit(el, desc, subjects) {
+  const typeOpts = ['book','author','genre','series'].map(t =>
+    `<option value="${t}">${t.charAt(0).toUpperCase()+t.slice(1)}</option>`
+  ).join('');
+
+  const rowsHtml = subjects.map((s, i) =>
+    `<div class="about-edit-row" id="subject-row-${i}">
+      <select class="about-type-select" id="subj-type-${i}">${typeOpts}</select>
+      <input class="form-input" id="subj-val-${i}" value="${esc(s.value||'')}" placeholder="Name…" style="flex:1;">
+      <button class="btn-edit" style="color:var(--danger);border-color:var(--danger);flex-shrink:0;" onclick="removeClubSubjectRow(${i})" title="Remove"><i data-lucide="x"></i></button>
+    </div>`
+  ).join('');
+
+  el.innerHTML = `
+    <div style="margin-bottom:12px;">
+      <label class="form-label">Description</label>
+      <textarea class="form-input" id="clubAboutDescInput" rows="3" style="resize:vertical;">${esc(desc)}</textarea>
+    </div>
+    <div style="margin-bottom:10px;">
+      <label class="form-label">Subjects <span style="color:var(--text3);font-weight:400;font-size:11px;">(up to 10)</span></label>
+      <div id="club-subject-rows">${rowsHtml}</div>
+      <button class="btn-add-collection" id="addSubjectBtn" style="margin-top:8px;" onclick="addClubSubjectRow()"><i data-lucide="plus"></i> Add Subject</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px;">
+      <button class="btn-submit" onclick="saveClubAbout()" style="flex:1;">Save</button>
+      <button class="btn-edit" style="flex:1;padding:0 12px;width:auto;" onclick="_clubAboutEditing=false;renderClubAboutTab()">Cancel</button>
+    </div>`;
+
+  // Set select values after render
+  subjects.forEach((s, i) => {
+    const sel = document.getElementById(`subj-type-${i}`);
+    if (sel) sel.value = s.type || 'book';
+  });
+  _updateAddSubjectBtn();
+  refreshIcons();
+}
+
+window.addClubSubjectRow = () => {
+  const container = document.getElementById('club-subject-rows');
+  if (!container) return;
+  const rows = container.querySelectorAll('.about-edit-row');
+  if (rows.length >= 10) return;
+  const i = rows.length;
+  const typeOpts = ['book','author','genre','series'].map(t =>
+    `<option value="${t}">${t.charAt(0).toUpperCase()+t.slice(1)}</option>`
+  ).join('');
+  const div = document.createElement('div');
+  div.className = 'about-edit-row';
+  div.id = `subject-row-${i}`;
+  div.innerHTML = `<select class="about-type-select" id="subj-type-${i}">${typeOpts}</select>
+    <input class="form-input" id="subj-val-${i}" placeholder="Name…" style="flex:1;">
+    <button class="btn-edit" style="color:var(--danger);border-color:var(--danger);flex-shrink:0;" onclick="removeClubSubjectRow(${i})" title="Remove"><i data-lucide="x"></i></button>`;
+  container.appendChild(div);
+  _updateAddSubjectBtn();
+  refreshIcons();
+};
+
+window.removeClubSubjectRow = (i) => {
+  const row = document.getElementById(`subject-row-${i}`);
+  if (row) row.remove();
+  _updateAddSubjectBtn();
+};
+
+function _updateAddSubjectBtn() {
+  const container = document.getElementById('club-subject-rows');
+  const btn = document.getElementById('addSubjectBtn');
+  if (!container || !btn) return;
+  btn.style.display = container.querySelectorAll('.about-edit-row').length >= 10 ? 'none' : '';
+}
+
+window.saveClubAbout = async () => {
+  const desc = (document.getElementById('clubAboutDescInput')?.value || '').trim();
+  const container = document.getElementById('club-subject-rows');
+  const subjects = [];
+  if (container) {
+    container.querySelectorAll('.about-edit-row').forEach((row, _i) => {
+      const idx = row.id.replace('subject-row-','');
+      const type = document.getElementById(`subj-type-${idx}`)?.value || 'book';
+      const value = (document.getElementById(`subj-val-${idx}`)?.value || '').trim();
+      if (value) subjects.push({ type, value });
+    });
+  }
+  try {
+    await updateDoc(clubDoc(currentClubId), { description: desc, subjects });
+    currentClubData.description = desc;
+    currentClubData.subjects = subjects;
+    _clubAboutEditing = false;
+    renderClubAboutTab();
+    showStatus('About saved!', 'success'); setTimeout(hideStatus, 2000);
+  } catch(e) {
+    showStatus('Error saving.', 'error'); setTimeout(hideStatus, 2000);
+  }
+};
+
 // ── REVIEWS ──────────────────────────────────────────────────────────────────
 function _buildReviewsSection(canWrite, myRating) {
   const sortLabels = { newest:'Newest', oldest:'Oldest', high:'High → Low', low:'Low → High' };
@@ -4514,7 +4776,7 @@ window.openSettingsSection = (section) => {
     document.getElementById('ltab-all').classList.add('active');
     buildBorrowerLog();
   }
-  if (section === 'account') renderUserAvatarSection();
+  if (section === 'account') { renderUserAvatarSection(); loadMyHighlights(); }
   if (section === 'importexport') {
     const ownerSection = document.getElementById('ownerWipeSection');
     if (ownerSection) ownerSection.style.display = currentUser && currentUser.email === 'samuelmendlowitz@gmail.com' ? '' : 'none';
@@ -5575,7 +5837,7 @@ window.resetUnfriendSection = () => {
 
 window.setFriendDetailsTab = (tab) => {
   friendDetailsTab = tab;
-  ['chat','library','settings'].forEach(t => {
+  ['chat','library','highlights','settings'].forEach(t => {
     document.getElementById('fdet-btn-' + t)?.classList.toggle('active', t === tab);
     const el = document.getElementById('fdet-' + t);
     if (el) el.style.display = t === tab ? (t === 'library' ? '' : 'flex') : 'none';
@@ -5584,6 +5846,9 @@ window.setFriendDetailsTab = (tab) => {
     startChatListener(currentUser.uid, friendDetailsUid);
   } else {
     stopChatListener();
+    if (tab === 'highlights') {
+      loadAndRenderFriendHighlights(friendDetailsUid);
+    }
     if (tab === 'library' && !friendLibBooks.length) {
       document.getElementById('friendLibSearch').value = '';
       document.getElementById('friendLibList').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3)">Loading…</div>';
@@ -5987,10 +6252,12 @@ window.openClubDetails = async (clubId) => {
   document.getElementById('clubDetailIcon').style.background = currentClubData.bgColor || '#2d2520';
   document.getElementById('clubDetailName').textContent = currentClubData.name || '';
   document.getElementById('clubDetailSub').textContent = 'Group · ' + (currentClubData.memberUids||[]).length + ' members';
-  document.getElementById('club-btn-chat').classList.add('active');
-  document.getElementById('club-btn-settings').classList.remove('active');
-  document.getElementById('club-tab-chat').style.display = 'flex';
-  document.getElementById('club-tab-settings').style.display = 'none';
+  ['chat','about','settings'].forEach(t => {
+    document.getElementById('club-btn-' + t)?.classList.toggle('active', t === 'chat');
+    const el = document.getElementById('club-tab-' + t);
+    if (el) el.style.display = t === 'chat' ? 'flex' : 'none';
+  });
+  _clubAboutEditing = false;
   document.getElementById('clubDetailModal').classList.add('open');
   refreshIcons();
   startClubChatListener(clubId);
@@ -6003,12 +6270,17 @@ window.closeClubDetails = () => {
 };
 
 window.setClubTab = (tab) => {
-  document.getElementById('club-btn-chat').classList.toggle('active', tab === 'chat');
-  document.getElementById('club-btn-settings').classList.toggle('active', tab === 'settings');
-  document.getElementById('club-tab-chat').style.display = tab === 'chat' ? 'flex' : 'none';
-  document.getElementById('club-tab-settings').style.display = tab === 'settings' ? 'flex' : 'none';
+  ['chat','about','settings'].forEach(t => {
+    document.getElementById('club-btn-' + t)?.classList.toggle('active', t === tab);
+    const el = document.getElementById('club-tab-' + t);
+    if (el) el.style.display = t === tab ? 'flex' : 'none';
+  });
   if (tab === 'chat') startClubChatListener(currentClubId);
-  else { stopClubChatListener(); renderClubSettingsContent(); }
+  else {
+    stopClubChatListener();
+    if (tab === 'about') { _clubAboutEditing = false; renderClubAboutTab(); }
+    else renderClubSettingsContent();
+  }
 };
 
 // ── CLUB CHAT ─────────────────────────────────────────────────────────────────
