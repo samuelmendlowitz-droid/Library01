@@ -193,7 +193,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .ctab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
 
 /* DISCOVER */
-.discover-tabs { display: flex; border-bottom: 1px solid var(--border); padding: 0 16px; overflow-x: auto; scrollbar-width: none; background: var(--surface1); position: sticky; top: 0; z-index: 50; }
+.discover-tabs { display: flex; border-bottom: 1px solid var(--border); padding: 0 16px; overflow-x: auto; scrollbar-width: none; margin: -10px -16px 0; }
 .discover-tabs::-webkit-scrollbar { display: none; }
 .dtab { flex-shrink: 0; padding: 11px 14px; border: none; border-bottom: 2px solid transparent; background: none; color: var(--text3); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: color 0.15s, border-color 0.15s; -webkit-tap-highlight-color: transparent; }
 .dtab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
@@ -1099,8 +1099,14 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 
   <div id="headerSpacer"></div>
 
-  <!-- Scroll-hiding subheader: stats + search + filter/sort/view controls -->
+  <!-- Scroll-hiding subheader: discover tabs (when on discover) + stats + search + filter/sort/view controls -->
   <div class="subheader" id="subheader">
+    <div class="discover-tabs" id="discoverTabBar" style="display:none">
+      <button class="dtab active" id="dtab-find" onclick="setDiscoverTab('find')">Find My Next Book</button>
+      <button class="dtab" id="dtab-global" onclick="setDiscoverTab('global')">Global Library</button>
+      <button class="dtab" id="dtab-authors" onclick="setDiscoverTab('authors')">Authors</button>
+      <button class="dtab" id="dtab-genres" onclick="setDiscoverTab('genres')">Genres</button>
+    </div>
     <div class="subheader-stats" id="subheaderStats">
       <div class="stat stat-clickable active" id="statCardAll" onclick="setTopFilter('all')"><div class="stat-num" id="statTotal">0</div><div class="stat-label">Books</div></div>
       <div class="stat stat-clickable" id="statCardRead" onclick="setTopFilter('read')"><div class="stat-num" id="statRead">0</div><div class="stat-label">Read</div></div>
@@ -1134,14 +1140,8 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
     </div>
   </div>
 
-  <!-- Discover page: tab bar + non-global panels; global tab uses the shared bookList/subheader below -->
+  <!-- Discover page: non-global tab panels (tab bar lives in subheader above) -->
   <div id="page-discover" style="display:none">
-    <div class="discover-tabs">
-      <button class="dtab active" id="dtab-find" onclick="setDiscoverTab('find')">Find My Next Book</button>
-      <button class="dtab" id="dtab-global" onclick="setDiscoverTab('global')">Global Library</button>
-      <button class="dtab" id="dtab-authors" onclick="setDiscoverTab('authors')">Authors</button>
-      <button class="dtab" id="dtab-genres" onclick="setDiscoverTab('genres')">Genres</button>
-    </div>
     <div id="dtab-panel-find">
       <div class="coming-soon"><i data-lucide="wand-2" class="coming-soon-icon"></i><div class="coming-soon-title">Find My Next Book</div><div class="coming-soon-sub">Coming soon</div></div>
     </div>
@@ -4684,11 +4684,16 @@ window.setDiscoverTab = (tab) => {
     const el = document.getElementById('dtab-panel-' + t);
     if (el) el.style.display = (!isGlobal && t === tab) ? '' : 'none';
   });
-  // Subheader + stats: only visible on global tab
-  const sub = document.getElementById('subheader');
-  if (sub) sub.style.display = isGlobal ? '' : 'none';
+  // Stats row: only visible on global tab (tab bar itself stays in subheader always)
   const stats = document.getElementById('subheaderStats');
   if (stats) stats.style.display = isGlobal ? '' : 'none';
+  // Search/sort/filter ctrl: only on global tab
+  const ctrl = document.querySelector('.subheader-ctrl');
+  if (ctrl) ctrl.style.display = isGlobal ? '' : 'none';
+  const fp = document.getElementById('filterPanel');
+  if (fp && !isGlobal) fp.style.display = 'none';
+  const sp = document.getElementById('sortPanel');
+  if (sp && !isGlobal) sp.style.display = 'none';
   // Shared book list elements: only on global tab
   document.getElementById('bookList').style.display = isGlobal ? '' : 'none';
   document.getElementById('listHeader').style.display = isGlobal ? '' : 'none';
@@ -4759,9 +4764,12 @@ window.setPage = (page) => {
   // Show/hide subheader stats (discover delegates to setDiscoverTab)
   const stats = document.getElementById('subheaderStats');
   if (stats) stats.style.display = ['mylibrary','wishlist'].includes(page) ? '' : 'none';
-  // Show/hide subheader (discover delegates its subheader visibility to setDiscoverTab)
+  // Hide subheader only for community; discover controls its own tab bar + stats visibility
   const sub = document.getElementById('subheader');
-  if (sub) sub.style.display = ['mylibrary','wishlist'].includes(page) ? '' : 'none';
+  if (sub) sub.style.display = page === 'community' ? 'none' : '';
+  // Discover tab bar: show when on discover, hidden for all other pages
+  const dtb = document.getElementById('discoverTabBar');
+  if (dtb) dtb.style.display = page === 'discover' ? '' : 'none';
   // FAB
   document.getElementById('fabAdd').style.display = ['mylibrary','wishlist'].includes(page) ? 'flex' : 'none';
   // Page containers
