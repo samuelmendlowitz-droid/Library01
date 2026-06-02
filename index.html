@@ -1379,8 +1379,9 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
         <div id="newSeriesSlider" style="display:none;padding:8px 0 2px;">
           <div style="display:flex;align-items:center;gap:10px;">
             <span style="font-size:12px;color:var(--text3);white-space:nowrap;">Book #</span>
-            <input type="range" id="newSeriesNum" min="1" max="50" value="1" style="flex:1;accent-color:var(--accent);" oninput="onSeriesSlider('new')">
-            <span style="font-size:13px;font-weight:600;color:var(--accent);min-width:20px;text-align:right;" id="newSeriesNumLabel">1</span>
+            <input type="range" id="newSeriesNum" min="1" max="50" value="1" style="flex:1;accent-color:#6aaef5;" oninput="onSeriesSlider('new')">
+            <span style="font-size:13px;font-weight:600;color:#6aaef5;min-width:20px;text-align:right;" id="newSeriesNumLabel">1</span>
+            <button onclick="clearSeriesNum('new')" style="padding:2px 8px;font-size:11px;color:var(--text3);background:none;border:1px solid var(--border);border-radius:4px;cursor:pointer;white-space:nowrap;font-family:'DM Sans',sans-serif;" title="Remove series number">✕ clear</button>
           </div>
         </div>
         <div id="newSeriesTagRow" style="display:none;padding:4px 0 0;">
@@ -1436,8 +1437,9 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
         <div id="editSeriesSlider" style="display:none;padding:8px 0 2px;">
           <div style="display:flex;align-items:center;gap:10px;">
             <span style="font-size:12px;color:var(--text3);white-space:nowrap;">Book #</span>
-            <input type="range" id="editSeriesNum" min="1" max="50" value="1" style="flex:1;accent-color:var(--accent);" oninput="onSeriesSlider('edit')">
-            <span style="font-size:13px;font-weight:600;color:var(--accent);min-width:20px;text-align:right;" id="editSeriesNumLabel">1</span>
+            <input type="range" id="editSeriesNum" min="1" max="50" value="1" style="flex:1;accent-color:#6aaef5;" oninput="onSeriesSlider('edit')">
+            <span style="font-size:13px;font-weight:600;color:#6aaef5;min-width:20px;text-align:right;" id="editSeriesNumLabel">1</span>
+            <button onclick="clearSeriesNum('edit')" style="padding:2px 8px;font-size:11px;color:var(--text3);background:none;border:1px solid var(--border);border-radius:4px;cursor:pointer;white-space:nowrap;font-family:'DM Sans',sans-serif;" title="Remove series number">✕ clear</button>
           </div>
         </div>
         <div id="editSeriesTagRow" style="display:none;padding:4px 0 0;">
@@ -1829,6 +1831,7 @@ let currentBookView = 'card'; // 'card' | 'grid' | 'list'
 let filterPanelOpen = false;
 let sortPanelOpen = false;
 let addSelectedGenres = [], editSelectedGenres = [];
+const _seriesNumCleared = { new: false, edit: false };
 let editingId = null;
 let userUsername = '';
 let friendsList = [], friendRequests = [], sentRequests = [];
@@ -3134,10 +3137,24 @@ window.onSeriesInput = (ctx) => {
 
 window.toggleSeriesSlider = (ctx) => {
   const el = document.getElementById(ctx + 'SeriesSlider');
-  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+  const opening = el.style.display === 'none';
+  el.style.display = opening ? 'block' : 'none';
+  if (opening) {
+    _seriesNumCleared[ctx] = false;
+    const val = document.getElementById(ctx + 'SeriesNum').value;
+    document.getElementById(ctx + 'SeriesNumVal').textContent = val;
+    document.getElementById(ctx + 'SeriesNumLabel').textContent = val;
+  }
+};
+
+window.clearSeriesNum = (ctx) => {
+  _seriesNumCleared[ctx] = true;
+  document.getElementById(ctx + 'SeriesSlider').style.display = 'none';
+  document.getElementById(ctx + 'SeriesNumVal').textContent = '—';
 };
 
 window.onSeriesSlider = (ctx) => {
+  _seriesNumCleared[ctx] = false;
   const val = document.getElementById(ctx + 'SeriesNum').value;
   document.getElementById(ctx + 'SeriesNumVal').textContent = val;
   document.getElementById(ctx + 'SeriesNumLabel').textContent = val;
@@ -3206,9 +3223,13 @@ window.addGlobalBookToCollection = bookId => {
   updateGenreHint();
   if (b.series) onSeriesInput('new');
   if (b.seriesNumber) {
+    _seriesNumCleared.new = false;
     document.getElementById('newSeriesNum').value = b.seriesNumber;
     document.getElementById('newSeriesNumVal').textContent = b.seriesNumber;
     document.getElementById('newSeriesNumLabel').textContent = b.seriesNumber;
+  } else if (b.series) {
+    _seriesNumCleared.new = true;
+    document.getElementById('newSeriesNumVal').textContent = '—';
   }
 };
 
@@ -3281,6 +3302,7 @@ window.openAddModal = () => {
   document.getElementById('newWishlist').checked = false;
   document.getElementById('addLocationGroup').style.display = 'block';
   document.getElementById('genreHint').textContent = '';
+  _seriesNumCleared.new = false;
   document.getElementById('newSeriesNumBtn').style.display = 'none';
   document.getElementById('newSeriesSlider').style.display = 'none';
   document.getElementById('newSeriesNum').value = '1';
@@ -3294,7 +3316,7 @@ window.addBook = async () => {
   const title   = document.getElementById('newTitle').value.trim();
   const author  = document.getElementById('newAuthor').value.trim();
   const series  = document.getElementById('newSeries').value.trim();
-  const seriesNumber = series && document.getElementById('newSeriesNumBtn').style.display !== 'none'
+  const seriesNumber = series && !_seriesNumCleared.new && document.getElementById('newSeriesNumBtn').style.display !== 'none'
     ? (parseInt(document.getElementById('newSeriesNum').value) || null) : null;
   const seriesTag = series ? document.getElementById('newSeriesTag').value.trim() : '';
   const loc     = document.getElementById('newLocation').value;
@@ -3335,7 +3357,9 @@ window.openEditModal = id => {
   document.getElementById('editSeriesNum').value = String(sNum);
   document.getElementById('editSeriesNumVal').textContent = sNum;
   document.getElementById('editSeriesNumLabel').textContent = sNum;
+  _seriesNumCleared.edit = b.series ? !b.seriesNumber : false;
   document.getElementById('editSeriesNumBtn').style.display = b.series ? 'flex' : 'none';
+  document.getElementById('editSeriesNumVal').textContent = b.seriesNumber ? sNum : '—';
   document.getElementById('editSeriesSlider').style.display = 'none';
   document.getElementById('editSeriesTag').value = b.seriesTag || '';
   document.getElementById('editSeriesTagRow').style.display = b.series ? '' : 'none';
@@ -3355,7 +3379,7 @@ window.saveEdit = async () => {
   const title   = document.getElementById('editTitle').value.trim();
   const author  = document.getElementById('editAuthor').value.trim();
   const series  = document.getElementById('editSeries').value.trim();
-  const seriesNumber = series && document.getElementById('editSeriesNumBtn').style.display !== 'none'
+  const seriesNumber = series && !_seriesNumCleared.edit && document.getElementById('editSeriesNumBtn').style.display !== 'none'
     ? (parseInt(document.getElementById('editSeriesNum').value) || null) : null;
   const seriesTag = series ? document.getElementById('editSeriesTag').value.trim() : '';
   const loc     = document.getElementById('editLocation').value;
