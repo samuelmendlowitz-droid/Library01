@@ -302,6 +302,10 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .btn-add-collection:active { background: var(--accent); color: #1a1612; }
 .series-num-btn { padding: 5px 10px; border-radius: 8px; background: var(--surface2); border: 1px solid var(--border); color: var(--accent); font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; flex-shrink: 0; display: flex; align-items: center; gap: 4px; }
 .series-num-btn:active { background: var(--surface3); }
+.toggle-pill-row { display:flex;gap:8px;flex-wrap:wrap;margin-top:4px; }
+.toggle-pill { display:flex;align-items:center;justify-content:center;gap:8px;padding:12px 16px;background:var(--surface2);border:2px solid var(--border);border-radius:12px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text2);transition:all 0.15s;flex:1;min-width:80px;user-select:none; }
+.toggle-pill input[type="checkbox"] { display:none; }
+.toggle-pill:has(input:checked) { background:color-mix(in srgb,var(--accent) 12%,var(--surface2));border-color:var(--accent);color:var(--accent); }
 .series-num-slider { -webkit-appearance: none; appearance: none; flex: 1; height: 4px; border-radius: 2px; background: rgba(106,174,245,0.2); outline: none; border: none; cursor: pointer; }
 .series-num-slider::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: rgba(106,174,245,0.2); }
 .series-num-slider::-moz-range-track { height: 4px; border-radius: 2px; background: rgba(106,174,245,0.2); }
@@ -1421,14 +1425,20 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
       <div class="form-group" id="addLocationGroup"><label class="form-label">Location</label>
         <select class="form-select" id="newLocation"></select>
       </div>
-      <div class="form-group" style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <label class="form-label" style="margin:0">Wishlist Item?</label>
-          <input type="checkbox" id="newWishlist" style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent)">
-        </div>
-        <div style="display:flex;align-items:center;gap:10px;">
-          <label class="form-label" style="margin:0">Already Read?</label>
-          <input type="checkbox" id="newRead" style="width:18px;height:18px;cursor:pointer;accent-color:var(--accent)">
+      <div class="form-group">
+        <div class="toggle-pill-row">
+          <label class="toggle-pill" onclick="onTogglePill('wishlist')">
+            <input type="checkbox" id="newWishlist">
+            <span>♡ Wishlist</span>
+          </label>
+          <label class="toggle-pill" onclick="onTogglePill('read')">
+            <input type="checkbox" id="newRead">
+            <span>✓ Read</span>
+          </label>
+          <label class="toggle-pill" onclick="onTogglePill('globalOnly')">
+            <input type="checkbox" id="newGlobalOnly">
+            <span>🌐 Global Only</span>
+          </label>
         </div>
       </div>
       <button class="btn-submit" id="addBtn" onclick="addBook()">Add to Library</button>
@@ -1540,7 +1550,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
       <div class="modal-header-row">
         <div class="modal-title">Book Details</div>
         <div style="display:flex;gap:8px;align-items:center;">
-          <button class="info-edit-btn" onclick="openEditFromInfo()"><i data-lucide="pencil"></i> Edit</button>
+          <button class="info-edit-btn" id="bookInfoEditBtn" onclick="openEditFromInfo()"><i data-lucide="pencil"></i> Edit</button>
           <button class="modal-close" onclick="closeModal('bookInfoModal')"><i data-lucide="x"></i></button>
         </div>
       </div>
@@ -1872,6 +1882,7 @@ let addSelectedGenres = [], editSelectedGenres = [];
 const _seriesNumCleared = { new: false, edit: false };
 let editingId = null;
 let _bookInfoId = null;
+let _bookInfoIsGlobal = false;
 let userUsername = '';
 let friendsList = [], friendRequests = [], sentRequests = [];
 let communitySubtab = 'friends', friendsView = 'myfriends';
@@ -2175,7 +2186,7 @@ function normalizeSearchTitle(str = '') {
 // always works even when globalLibrary is inaccessible.
 function syncUserBooksToCache() {
   books.forEach(b => {
-    if (!b.title || b.location === 'Wishlist') return;
+    if (!b.title || b.location === 'Wishlist' || b.location === 'GlobalRead') return;
     const normTitle  = normalizeBookText(b.title);
     const normAuthor = normalizeBookText(b.author || '');
     const id = normTitle + '__' + normAuthor;
@@ -2246,7 +2257,7 @@ function _maybeResyncToGlobal() {
 // any missing popularity scores in Firestore.
 async function ensurePersonalBooksInGlobalCache() {
   const toFetch = books.filter(b => {
-    if (!b.title || !b.author || b.location === 'Wishlist') return false;
+    if (!b.title || !b.author || b.location === 'Wishlist' || b.location === 'GlobalRead') return false;
     const id = createGlobalBookId(b.title, b.author);
     if (deletedGlobalIds.has(id)) return false;
     const cached = globalBookCache.find(g => g.id === id);
@@ -2716,7 +2727,7 @@ function applyFilters() {
       }
       return true;
     }
-    if (b.location === 'Wishlist') return false;
+    if (b.location === 'Wishlist' || b.location === 'GlobalRead') return false;
     if (!topFilters.includes('all')) {
       let topMatch = false;
       if (topFilters.includes('read')     && b.read) topMatch = true;
@@ -2787,12 +2798,11 @@ function renderBooks(list) {
     const locCls = isBorrowed ? 'tag borrowed-tag' : 'tag location';
     const gbId = createGlobalBookId(b.title||'', b.author||'');
     const gb = globalBookCache.find(x => x.id === gbId);
-    const ir = inlineRating(gb);
     const locTag = currentBookView === 'grid' ? '' : ((b.location && b.location !== 'Wishlist') ? '<span class="' + locCls + '"><i data-lucide="map-pin" class="tag-icon"></i> ' + esc(b.location) + '</span>' : '');
     return '<div class="book-card ' + readCls + ' ' + borCls + '" id="card-' + b.id + '">'
       + '<div class="book-check" onclick="toggleRead(\'' + b.id + '\',' + b.read + ')"><span class="check-icon">✓</span></div>'
       + '<div class="book-info">'
-      + '<div class="book-title-row"><div class="book-title">' + esc(b.title) + '</div><div class="book-inline-rating ' + ir.cls + '">' + ir.str + '</div></div>'
+      + '<div class="book-title">' + esc(b.title) + '</div>'
       + '<div class="book-author">' + esc(b.author||'') + '</div>'
       + '<div class="book-tags">' + genreTags + seriesBubble + locTag + '</div>'
       + '</div>'
@@ -2859,13 +2869,13 @@ function updateStats() {
     document.getElementById('statUnread').textContent   = wb.filter(b => !b.read).length;
     // statBorrowed is hidden on wishlist page
   } else if (currentPage === 'global') {
-    const owned = books.filter(b => b.location !== 'Wishlist');
+    const owned = books.filter(b => b.location !== 'Wishlist' && b.location !== 'GlobalRead');
     document.getElementById('statTotal').textContent    = owned.length;         // Owned
     document.getElementById('statRead').textContent     = owned.filter(b => b.read).length;
     document.getElementById('statUnread').textContent   = owned.filter(b => !b.read).length;
     document.getElementById('statBorrowed').textContent = books.filter(b => b.location === 'Wishlist').length; // Wishlist
   } else {
-    const lb = books.filter(b => b.location !== 'Wishlist');
+    const lb = books.filter(b => b.location !== 'Wishlist' && b.location !== 'GlobalRead');
     document.getElementById('statTotal').textContent    = lb.length;            // Books
     document.getElementById('statRead').textContent     = lb.filter(b => b.read).length;
     document.getElementById('statUnread').textContent   = lb.filter(b => !b.read).length;
@@ -3030,26 +3040,22 @@ function renderGlobalBooks(list, append, totalCount) {
     const personal = books.find(x => createGlobalBookId(x.title||'', x.author||'') === b.id);
     const isRead = personal ? !!personal.read : false;
     const genres = (b.genres||[]).slice(0, 1).map(g => `<span class="tag genre">${esc(g)}</span>`).join('');
-    const ratingStr = renderStars(b.ratingTotal || 0, b.ratingCount || 0);
+    const ir = inlineRating(b); // b has ratingTotal/ratingCount directly
     const safeId = (b.id||'').replace(/'/g, "\\'");
     const isOwner = currentUser && currentUser.email === 'samuelmendlowitz@gmail.com';
-    const actionBtn = personal
-      ? `<span style="font-size:10px;color:var(--read);font-weight:600;text-transform:uppercase;letter-spacing:0.4px;">✓ Owned</span>`
-      : `<button class="btn-add-collection" onclick="addGlobalBookToCollection('${safeId}')"><i data-lucide="plus"></i> Add</button>`;
-    const deleteBtn = isOwner ? `<button class="btn-edit" style="color:var(--danger);border-color:var(--danger)" onclick="deleteGlobalBook('${safeId}')" title="Delete from global library"><i data-lucide="trash-2"></i></button>` : '';
+    const deleteBtn = isOwner ? `<div class="btn-edit" style="color:var(--danger);border-color:var(--danger)" onclick="deleteGlobalBook('${safeId}')" title="Delete from global library"><i data-lucide="trash-2"></i></div>` : '';
     return `<div class="book-card${isRead ? ' is-read' : ''}">
-      <div class="book-check" onclick="toggleGlobalRead('${safeId}')"><span class="check-icon">✓</span></div>
-      <div class="book-info">
-        <div class="book-title">${esc(b.title||'')}</div>
-        <div class="book-author">${esc(b.author||'')}</div>
-        ${ratingStr}
-        <div class="book-tags">${genres}${buildSeriesBubble(b)}</div>
-      </div>
-      <div class="book-actions">
-        ${actionBtn}
-        ${deleteBtn}
-      </div>
-    </div>`;
+  <div class="book-check" onclick="toggleGlobalRead('${safeId}')"><span class="check-icon">✓</span></div>
+  <div class="book-info">
+    <div class="book-title">${esc(b.title||'')}</div>
+    <div class="book-author">${esc(b.author||'')}</div>
+    <div class="book-tags">${genres}${buildSeriesBubble(b)}<span class="tag book-inline-rating ${ir.cls}">${ir.str}</span></div>
+  </div>
+  <div class="book-actions">
+    <div class="btn-info" onclick="openGlobalBookInfo('${safeId}')"><i data-lucide="chevron-right"></i></div>
+    ${deleteBtn}
+  </div>
+</div>`;
   }
   const _gGrouped = groupBySeries(list);
   const html = _gGrouped.map(item => {
@@ -3076,14 +3082,12 @@ function renderGlobalBooksList(list, append, totalCount) {
   function _gRowHtml(b) {
     const personal = books.find(x => createGlobalBookId(x.title||'', x.author||'') === b.id);
     const isRead = personal ? !!personal.read : false;
-    const avgRating = b.ratingCount ? (b.ratingTotal/b.ratingCount).toFixed(1) + ' ★' : '—';
+    const avgRating = b.ratingCount ? (b.ratingTotal/b.ratingCount).toFixed(1) + '/5' : '—/5';
     const series = b.series ? seriesIcon(b.seriesNumber) + (b.seriesTag ? esc(b.series) + ' <span style="opacity:0.65;font-weight:400">(' + esc(b.seriesTag) + ')</span>' : esc(b.series)) : '—';
     const genres = (b.genres||[]).slice(0,2).join(', ') || '—';
     const safeId = (b.id||'').replace(/'/g, "\\'");
     const isOwner = currentUser && currentUser.email === 'samuelmendlowitz@gmail.com';
-    const actionBtn = personal
-      ? `<span style="font-size:10px;color:var(--read);font-weight:600;">✓ Owned</span>`
-      : `<button class="lr-chk-btn" onclick="addGlobalBookToCollection('${safeId}')"><i data-lucide="plus"></i> Add</button>`;
+    const actionBtn = `<span class="lr-edit-btn" onclick="openGlobalBookInfo('${safeId}')"><i data-lucide="info"></i></span>`;
     const deleteBtn = isOwner ? `<button class="lr-chk-btn" style="color:var(--danger);border-color:var(--danger)" onclick="deleteGlobalBook('${safeId}')" title="Delete"><i data-lucide="trash-2"></i></button>` : '';
     return `<div class="list-row${isRead ? ' is-read' : ''}">
       <div class="lr-check" onclick="toggleGlobalRead('${safeId}')"><span class="lr-check-icon">✓</span></div>
@@ -3136,16 +3140,15 @@ window.toggleGlobalRead = async (globalId) => {
       if (cached) cached.popularity = (cached.popularity || 0) + readDelta;
     } catch(e) { personal.read = !personal.read; applyGlobalFilters(); }
   } else {
-    // Book not in personal library — add it as read
+    // Book not in personal library — track as read globally
     const gb = globalBookCache.find(b => b.id === globalId);
     if (!gb) return;
     await saveBook({
-      title: gb.title||'', author: gb.author||'', series: gb.series||'',
-      genres: gb.genres||[], location: orderedLocations[0]||'Bookshelf 1',
-      read: true, checkoutDate: '', borrowedBy: ''
+      title: gb.title||'', author: gb.author||'', series: gb.series||'', seriesNumber: gb.seriesNumber||null,
+      genres: gb.genres||[], location: 'GlobalRead', read: true, checkoutDate: '', borrowedBy: ''
     }, { skipGlobalSync: true });
-    await updateDoc(doc(db, 'globalLibrary', globalId), { popularity: increment(2) });
-    if (gb) gb.popularity = (gb.popularity || 0) + 2;
+    await updateDoc(doc(db, 'globalLibrary', globalId), { popularity: increment(3) });
+    if (gb) gb.popularity = (gb.popularity || 0) + 3;
     await loadBooks();
     applyGlobalFilters();
   }
@@ -3163,6 +3166,23 @@ window.onSeriesInput = (ctx) => {
     document.getElementById(ctx + 'SeriesSlider').style.display = 'none';
     if (tagRow) document.getElementById(ctx === 'new' ? 'newSeriesTag' : 'editSeriesTag').value = '';
   }
+};
+
+window.onTogglePill = (which) => {
+  const wishlistEl   = document.getElementById('newWishlist');
+  const readEl       = document.getElementById('newRead');
+  const globalOnlyEl = document.getElementById('newGlobalOnly');
+  const locGroup     = document.getElementById('addLocationGroup');
+  if (which === 'wishlist') {
+    wishlistEl.checked = !wishlistEl.checked;
+    if (wishlistEl.checked) globalOnlyEl.checked = false;
+  } else if (which === 'read') {
+    readEl.checked = !readEl.checked;
+  } else if (which === 'globalOnly') {
+    globalOnlyEl.checked = !globalOnlyEl.checked;
+    if (globalOnlyEl.checked) wishlistEl.checked = false;
+  }
+  locGroup.style.display = (wishlistEl.checked || globalOnlyEl.checked) ? 'none' : '';
 };
 
 window.toggleSeriesSlider = (ctx) => {
@@ -3333,8 +3353,9 @@ window.openAddModal = () => {
   addSelectedGenres = [];
   ['newTitle','newAuthor','newSeries','customGenreInput'].forEach(id => document.getElementById(id).value = '');
   buildLocationSelect('newLocation', orderedLocations[0] || 'Bookshelf');
-  document.getElementById('newRead').checked    = false;
-  document.getElementById('newWishlist').checked = false;
+  document.getElementById('newRead').checked       = false;
+  document.getElementById('newWishlist').checked   = false;
+  document.getElementById('newGlobalOnly').checked = false;
   document.getElementById('addLocationGroup').style.display = 'block';
   document.getElementById('genreHint').textContent = '';
   _seriesNumCleared.new = false;
@@ -3355,8 +3376,9 @@ window.addBook = async () => {
     ? (parseInt(document.getElementById('newSeriesNum').value) || null) : null;
   const seriesTag = series ? document.getElementById('newSeriesTag').value.trim() : '';
   const loc     = document.getElementById('newLocation').value;
-  const read    = document.getElementById('newRead').checked;
-  const wishlist = document.getElementById('newWishlist').checked;
+  const read       = document.getElementById('newRead').checked;
+  const wishlist   = document.getElementById('newWishlist').checked;
+  const globalOnly = document.getElementById('newGlobalOnly').checked;
   if (!title || !author) { showStatus('Please enter title and author.', 'error'); return; }
   const dup = books.find(b => b.title.toLowerCase() === title.toLowerCase());
   if (dup) {
@@ -3370,7 +3392,8 @@ window.addBook = async () => {
   const btn = document.getElementById('addBtn');
   btn.disabled = true; btn.textContent = 'Adding…';
   try {
-    await saveBook({ title, author, series, seriesNumber, seriesTag, genres: addSelectedGenres, location: wishlist ? 'Wishlist' : loc, read, checkoutDate: '', borrowedBy: '' });
+    const saveLoc = globalOnly ? 'GlobalRead' : (wishlist ? 'Wishlist' : loc);
+    await saveBook({ title, author, series, seriesNumber, seriesTag, genres: addSelectedGenres, location: saveLoc, read, checkoutDate: '', borrowedBy: '' });
     closeModal('addModal');
     await loadBooks();
     showStatus('Book added!', 'success');
@@ -3552,6 +3575,8 @@ window.openBookInfo = (id) => {
   const b = books.find(x => x.id === id);
   if (!b) return;
   _bookInfoId = id;
+  _bookInfoIsGlobal = false;
+  document.getElementById('bookInfoEditBtn').style.display = '';
   _renderBookInfoBody(b);
   openModal('bookInfoModal');
 };
@@ -3668,6 +3693,132 @@ window.openEditFromInfo = () => {
   const id = _bookInfoId;
   closeModal('bookInfoModal');
   setTimeout(() => openEditModal(id), 220);
+};
+
+window.openGlobalBookInfo = (globalId) => {
+  const b = globalBookCache.find(x => x.id === globalId);
+  if (!b) return;
+  _bookInfoId = globalId;
+  _bookInfoIsGlobal = true;
+  document.getElementById('bookInfoEditBtn').style.display = 'none';
+  _renderGlobalBookInfoBody(b);
+  openModal('bookInfoModal');
+};
+
+function _renderGlobalBookInfoBody(b) {
+  const safeId = (b.id||'').replace(/'/g, "\\'");
+  const personal = books.find(x => createGlobalBookId(x.title||'', x.author||'') === b.id);
+  const isRead = personal ? !!personal.read : false;
+  const isOwned = personal && personal.location !== 'Wishlist' && personal.location !== 'GlobalRead';
+  const isWishlisted = personal && personal.location === 'Wishlist';
+  const isGlobalRead = personal && personal.location === 'GlobalRead';
+
+  const avg = b.ratingCount ? (b.ratingTotal / b.ratingCount) : null;
+  const filled = avg ? Math.round(avg) : 0;
+  const communityStars = Array.from({length:5}, (_,i) =>
+    `<span style="font-size:20px;color:${i < filled ? '#f5a623' : 'var(--surface3)'}">★</span>`
+  ).join('');
+  const communityRating = `<div style="display:flex;align-items:center;gap:6px;margin-top:12px;">
+    <div style="display:flex;gap:1px;">${communityStars}</div>
+    <span style="font-size:15px;color:var(--text2);font-weight:600;">${avg ? avg.toFixed(1) + '/5' : '—/5'}</span>
+    ${b.ratingCount ? `<span style="font-size:12px;color:var(--text3)">(${b.ratingCount} rating${b.ratingCount!==1?'s':''})</span>` : ''}
+  </div>`;
+
+  const seriesSection = b.series ? `<div class="info-section">
+    <span class="info-section-label">Series</span>
+    <div class="info-chips">${buildSeriesBubble(b)}</div>
+  </div>` : '';
+
+  const genresSection = (b.genres||[]).length ? `<div class="info-section">
+    <span class="info-section-label">Genres</span>
+    <div class="info-chips">${(b.genres||[]).map(g=>`<span class="tag genre">${esc(g)}</span>`).join('')}</div>
+  </div>` : '';
+
+  const popularitySection = b.popularity ? `<div class="info-section">
+    <span class="info-section-label">Popularity</span>
+    <div class="info-chips"><span class="tag" style="color:var(--accent);border-color:#3a3220;background:#2a2418;">★ ${b.popularity} reader${b.popularity!==1?'s':''}</span></div>
+  </div>` : '';
+
+  // Status section
+  let statusSection = '';
+  if (isOwned) {
+    statusSection = `<div class="info-section"><div class="info-chips">
+      <span class="tag genre" style="padding:6px 14px;">✓ In your library</span>
+      ${isRead ? '<span class="tag genre" style="padding:6px 14px;">✓ Read</span>' : ''}
+    </div></div>`;
+  } else if (isWishlisted) {
+    statusSection = `<div class="info-section"><div class="info-chips">
+      <span class="tag location" style="padding:6px 14px;">♡ On your wishlist</span>
+    </div></div>`;
+  } else if (isRead || isGlobalRead) {
+    statusSection = `<div class="info-section"><div class="info-chips">
+      <span class="tag genre" style="padding:6px 14px;">✓ Marked as read</span>
+    </div></div>`;
+  }
+
+  // Action buttons
+  let actions = '';
+  if (!isOwned) {
+    actions += `<div class="info-section" style="display:flex;flex-direction:column;gap:10px;">`;
+    if (!isRead && !isGlobalRead) {
+      actions += `<button class="btn-submit" onclick="markGlobalRead('${safeId}');closeModal('bookInfoModal')">
+        ✓ Mark as Read
+      </button>`;
+    }
+    if (!isWishlisted) {
+      actions += `<button class="btn-submit" style="background:var(--surface2);border:1px solid var(--border);color:var(--accent);" onclick="addGlobalToWishlist('${safeId}');closeModal('bookInfoModal')">
+        ♡ Add to Wishlist
+      </button>`;
+    }
+    actions += `<button class="btn-submit" style="background:var(--surface2);border:1px solid var(--border);color:var(--accent);" onclick="addGlobalBookToCollection('${safeId}');closeModal('bookInfoModal')">
+      + Add to Library
+    </button>`;
+    actions += `</div>`;
+  }
+
+  document.getElementById('bookInfoBody').innerHTML =
+    `<div style="padding-bottom:16px;border-bottom:1px solid var(--border);">
+      <div class="info-title">${esc(b.title||'')}</div>
+      <div class="info-author">by ${esc(b.author||'')}</div>
+      ${communityRating}
+    </div>`
+    + seriesSection + genresSection + popularitySection + statusSection + actions;
+  refreshIcons();
+}
+
+window.markGlobalRead = async (globalId) => {
+  const gb = globalBookCache.find(b => b.id === globalId);
+  if (!gb) return;
+  const personal = books.find(x => createGlobalBookId(x.title||'', x.author||'') === globalId);
+  if (personal) {
+    if (!personal.read) {
+      personal.read = true;
+      await updateBook(personal.id, { read: true });
+      await updateDoc(doc(db, 'globalLibrary', globalId), { popularity: increment(2) });
+      if (gb) gb.popularity = (gb.popularity || 0) + 2;
+      await loadBooks(); applyGlobalFilters();
+    }
+  } else {
+    await saveBook({
+      title: gb.title||'', author: gb.author||'', series: gb.series||'', seriesNumber: gb.seriesNumber||null,
+      genres: gb.genres||[], location: 'GlobalRead', read: true, checkoutDate: '', borrowedBy: ''
+    }, { skipGlobalSync: true });
+    await updateDoc(doc(db, 'globalLibrary', globalId), { popularity: increment(3) });
+    if (gb) gb.popularity = (gb.popularity || 0) + 3;
+    await loadBooks(); applyGlobalFilters();
+  }
+  showStatus('Marked as read!', 'success'); setTimeout(hideStatus, 2000);
+};
+
+window.addGlobalToWishlist = async (globalId) => {
+  const gb = globalBookCache.find(b => b.id === globalId);
+  if (!gb) return;
+  await saveBook({
+    title: gb.title||'', author: gb.author||'', series: gb.series||'', seriesNumber: gb.seriesNumber||null,
+    genres: gb.genres||[], location: 'Wishlist', read: false, checkoutDate: '', borrowedBy: ''
+  }, { skipGlobalSync: true });
+  await loadBooks(); applyGlobalFilters();
+  showStatus('Added to wishlist!', 'success'); setTimeout(hideStatus, 2000);
 };
 
 // ── CSV BULK ADD ───────────────────────────────────────────────────────────────
