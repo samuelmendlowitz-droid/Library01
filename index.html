@@ -348,6 +348,24 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .info-edit-btn:active { background:var(--surface3); }
 .info-edit-btn .lucide { width:13px;height:13px; }
 .info-star-btn { font-size:24px;background:none;border:none;padding:2px;cursor:pointer;line-height:1;transition:color 0.1s; }
+.review-section-sep { border:none;border-top:1px solid var(--border);margin:24px 0 0; }
+.review-controls { display:flex;flex-direction:column;gap:6px;margin-bottom:14px; }
+.review-sort-btn { padding:5px 10px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.12s; }
+.review-sort-btn.active { background:color-mix(in srgb,var(--accent) 12%,var(--surface2));border-color:var(--accent);color:var(--accent); }
+.review-star-filter-btn { padding:4px 8px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);font-size:12px;cursor:pointer;transition:all 0.12s; }
+.review-star-filter-btn.active { background:color-mix(in srgb,#f5a623 15%,var(--surface2));border-color:#f5a623;color:#f5a623; }
+.review-write-box { background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:16px; }
+.review-textarea { width:100%;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:10px 12px;resize:vertical;min-height:72px;box-sizing:border-box;outline:none; }
+.review-textarea:focus { border-color:var(--accent); }
+.review-item { border-top:1px solid var(--border);padding:12px 0; }
+.review-item:first-child { border-top:none; }
+.review-item-header { display:flex;align-items:flex-start;gap:8px;margin-bottom:4px; }
+.review-avatar { width:28px;height:28px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0; }
+.review-user { font-size:13px;font-weight:600;color:var(--text);line-height:1.3; }
+.review-date { font-size:11px;color:var(--text3);white-space:nowrap;padding-top:2px; }
+.review-stars { color:#f5a623;font-size:14px;letter-spacing:1px;margin-top:1px; }
+.review-text { font-size:13px;color:var(--text2);line-height:1.5; }
+.review-empty { font-size:13px;color:var(--text3);text-align:center;padding:20px 0; }
 .book-list.list-view { gap: 0; padding: 0 0 100px; flex-direction: column; overflow-x: auto; }
 .list-col-header { display: grid; grid-template-columns: 30px 1fr 1fr 90px 80px 72px 76px 68px; gap: 6px; padding: 7px 16px; background: var(--surface2); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 5; min-width: 560px; }
 .list-col-header span { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; white-space: nowrap; overflow: hidden; }
@@ -1886,6 +1904,10 @@ const _seriesNumCleared = { new: false, edit: false };
 let editingId = null;
 let _bookInfoId = null;
 let _bookInfoIsGlobal = false;
+let _reviewSort = 'newest';
+let _reviewFilter = null;
+let _reviewsData = [];
+let _reviewBookGlobalId = null;
 let userUsername = '';
 let friendsList = [], friendRequests = [], sentRequests = [];
 let communitySubtab = 'friends', friendsView = 'myfriends';
@@ -3688,14 +3710,23 @@ function _renderBookInfoBody(b) {
     </div>`;
   }
 
-  document.getElementById('bookInfoBody').innerHTML =
+  const bodyEl = document.getElementById('bookInfoBody');
+  bodyEl.innerHTML =
     `<div style="padding-bottom:16px;border-bottom:1px solid var(--border);">
       <div class="info-title">${esc(b.title)}</div>
       <div class="info-author">by ${esc(b.author||'')}</div>
       ${communityRating}
     </div>`
     + seriesSection + genresSection + locSection + statusSection + myRatingSection + checkoutSection;
+  const infoRating = b.rating || 0;
+  bodyEl.innerHTML += _buildReviewsSection(!!(b.read && infoRating > 0), infoRating);
   refreshIcons();
+  if (_reviewBookGlobalId !== gbId) {
+    _reviewSort = 'newest'; _reviewFilter = null; _reviewsData = [];
+    _loadAndRenderReviews(gbId);
+  } else {
+    _renderReviewList();
+  }
 }
 
 window.toggleInfoRead = async (id, currentRead) => {
@@ -3807,14 +3838,23 @@ function _renderGlobalBookInfoBody(b) {
     actions += `</div>`;
   }
 
-  document.getElementById('bookInfoBody').innerHTML =
+  const bodyEl = document.getElementById('bookInfoBody');
+  bodyEl.innerHTML =
     `<div style="padding-bottom:16px;border-bottom:1px solid var(--border);">
       <div class="info-title">${esc(b.title||'')}</div>
       <div class="info-author">by ${esc(b.author||'')}</div>
       ${communityRating}
     </div>`
     + seriesSection + genresSection + popularitySection + statusSection + actions;
+  const globalInfoRating = personal ? (personal.rating || 0) : 0;
+  bodyEl.innerHTML += _buildReviewsSection(globalInfoRating > 0, globalInfoRating);
   refreshIcons();
+  if (_reviewBookGlobalId !== b.id) {
+    _reviewSort = 'newest'; _reviewFilter = null; _reviewsData = [];
+    _loadAndRenderReviews(b.id);
+  } else {
+    _renderReviewList();
+  }
 }
 
 window.markGlobalRead = async (globalId) => {
@@ -3850,6 +3890,139 @@ window.addGlobalToWishlist = async (globalId) => {
   }, { skipGlobalSync: true });
   await loadBooks(); applyGlobalFilters();
   showStatus('Added to wishlist!', 'success'); setTimeout(hideStatus, 2000);
+};
+
+// ── REVIEWS ──────────────────────────────────────────────────────────────────
+function _buildReviewsSection(canWrite, myRating) {
+  const sortBtns = [
+    { s: 'newest', l: 'Newest' },
+    { s: 'oldest', l: 'Oldest' },
+    { s: 'high',   l: '★ High' },
+    { s: 'low',    l: '★ Low'  },
+  ].map(({s,l}) =>
+    `<button class="review-sort-btn${_reviewSort===s?' active':''}" data-sort="${s}" onclick="setReviewSort('${s}')">${l}</button>`
+  ).join('');
+
+  const starBtns = [1,2,3,4,5].map(n =>
+    `<button class="review-star-filter-btn${_reviewFilter===n?' active':''}" data-star="${n}" onclick="setReviewFilter(${n})">${'★'.repeat(n)}</button>`
+  ).join('');
+
+  const writeBox = canWrite ? `<div class="review-write-box">
+    <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;">Your review <span style="color:var(--text3);font-weight:400;">(${myRating}/5)</span></div>
+    <textarea class="review-textarea" id="review-textarea" placeholder="Share your thoughts about this book…"></textarea>
+    <button class="btn-submit" id="review-submit-btn" style="margin-top:10px;" onclick="submitReview()">Post Review</button>
+  </div>` : '';
+
+  return `<hr class="review-section-sep">
+<div class="info-section" style="padding-bottom:40px;">
+  <span class="info-section-label">Reviews</span>
+  ${writeBox}
+  <div class="review-controls">
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">${sortBtns}</div>
+    <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">
+      <span style="font-size:11px;color:var(--text3);font-weight:600;">Show:</span>
+      ${starBtns}
+    </div>
+  </div>
+  <div id="review-list"><div class="review-empty">Loading…</div></div>
+</div>`;
+}
+
+async function _loadAndRenderReviews(globalId) {
+  _reviewBookGlobalId = globalId;
+  try {
+    const snap = await getDocs(collection(db, 'globalLibrary', globalId, 'reviews'));
+    _reviewsData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch(e) {
+    _reviewsData = [];
+  }
+  _renderReviewList();
+  if (currentUser) {
+    const myReview = _reviewsData.find(r => r.userId === currentUser.uid);
+    const ta = document.getElementById('review-textarea');
+    if (ta && myReview) ta.value = myReview.text || '';
+  }
+}
+
+function _renderReviewList() {
+  const listEl = document.getElementById('review-list');
+  if (!listEl) return;
+  let data = [..._reviewsData];
+  if (_reviewFilter !== null) data = data.filter(r => r.rating === _reviewFilter);
+  if (_reviewSort === 'high') data.sort((a,b) => (b.rating||0) - (a.rating||0));
+  else if (_reviewSort === 'low') data.sort((a,b) => (a.rating||0) - (b.rating||0));
+  else if (_reviewSort === 'newest') data.sort((a,b) => (b.timestamp?.seconds||0) - (a.timestamp?.seconds||0));
+  else if (_reviewSort === 'oldest') data.sort((a,b) => (a.timestamp?.seconds||0) - (b.timestamp?.seconds||0));
+  if (!data.length) {
+    listEl.innerHTML = `<div class="review-empty">No reviews yet${_reviewFilter !== null ? ' for this rating' : ''}.</div>`;
+    return;
+  }
+  listEl.innerHTML = data.map(r => {
+    const stars = Array.from({length:5},(_,i)=>`<span style="color:${i<(r.rating||0)?'#f5a623':'var(--surface3)'}">★</span>`).join('');
+    const dateStr = r.timestamp?.seconds
+      ? new Date(r.timestamp.seconds*1000).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
+      : '';
+    const isMe = currentUser && r.userId === currentUser.uid;
+    const displayName = r.username || r.displayName || 'Anonymous';
+    const char = displayName[0].toUpperCase();
+    const avatarStyle = r.avatarColor ? `background:${r.avatarColor};` : '';
+    return `<div class="review-item">
+      <div class="review-item-header">
+        <div class="review-avatar" style="${avatarStyle}">${esc(char)}</div>
+        <div style="flex:1;min-width:0;">
+          <div class="review-user">${esc(displayName)}${isMe?' <span style="font-size:10px;color:var(--text3);font-weight:400;">(you)</span>':''}</div>
+          <div class="review-stars">${stars}</div>
+        </div>
+        <div class="review-date">${dateStr}</div>
+      </div>
+      ${r.text ? `<div class="review-text">${esc(r.text)}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+window.setReviewSort = (sort) => {
+  _reviewSort = sort;
+  document.querySelectorAll('.review-sort-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.sort === sort);
+  });
+  _renderReviewList();
+};
+
+window.setReviewFilter = (star) => {
+  _reviewFilter = (_reviewFilter === star) ? null : star;
+  document.querySelectorAll('.review-star-filter-btn').forEach(btn => {
+    btn.classList.toggle('active', +btn.dataset.star === _reviewFilter);
+  });
+  _renderReviewList();
+};
+
+window.submitReview = async () => {
+  if (!currentUser || !_reviewBookGlobalId) return;
+  const ta = document.getElementById('review-textarea');
+  const text = (ta?.value || '').trim();
+  if (!text) { showStatus('Write something before submitting.', 'error'); setTimeout(hideStatus, 2000); return; }
+  const personal = books.find(x => createGlobalBookId(x.title||'', x.author||'') === _reviewBookGlobalId);
+  const rating = personal ? (personal.rating || 0) : 0;
+  if (!rating) { showStatus('Rate the book first to write a review.', 'error'); setTimeout(hideStatus, 2000); return; }
+  const displayName = userUsername || currentUser.displayName || currentUser.email || 'Anonymous';
+  const btn = document.getElementById('review-submit-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  try {
+    const reviewData = {
+      userId: currentUser.uid, username: displayName, rating, text,
+      timestamp: serverTimestamp(), avatarColor: userIconColor || ''
+    };
+    await setDoc(doc(db, 'globalLibrary', _reviewBookGlobalId, 'reviews', currentUser.uid), reviewData);
+    const idx = _reviewsData.findIndex(r => r.userId === currentUser.uid);
+    const local = { id: currentUser.uid, ...reviewData, timestamp: { seconds: Date.now()/1000 } };
+    if (idx >= 0) _reviewsData[idx] = local; else _reviewsData.push(local);
+    _renderReviewList();
+    if (ta && idx < 0) ta.value = '';
+    showStatus('Review saved!', 'success'); setTimeout(hideStatus, 2000);
+  } catch(e) {
+    showStatus('Error saving review.', 'error'); setTimeout(hideStatus, 2000);
+  }
+  if (btn) { btn.disabled = false; btn.textContent = 'Post Review'; }
 };
 
 // ── CSV BULK ADD ───────────────────────────────────────────────────────────────
