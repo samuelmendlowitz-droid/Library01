@@ -1456,7 +1456,10 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
       <div class="form-group">
         <label class="form-label">Series <span style="font-weight:300;text-transform:none;letter-spacing:0">(optional)</span></label>
         <div style="display:flex;gap:8px;align-items:center;">
-          <input class="form-input" id="newSeries" placeholder="e.g. Throne of Glass" style="flex:1;" oninput="onSeriesInput('new')">
+          <div class="autocomplete-wrap" style="flex:1;min-width:0;">
+            <input class="form-input" id="newSeries" placeholder="e.g. Throne of Glass" style="width:100%;" oninput="onSeriesInput('new');handleSeriesSearch('new')" autocomplete="off">
+            <div class="autocomplete-dropdown" id="seriesAutocomplete-new"></div>
+          </div>
           <button class="series-num-btn" id="newSeriesNumBtn" style="display:none" onclick="toggleSeriesSlider('new')">#<span id="newSeriesNumVal">1</span></button>
         </div>
         <div id="newSeriesSlider" style="display:none;padding:8px 0 2px;">
@@ -1520,7 +1523,10 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
       <div class="form-group">
         <label class="form-label">Series <span style="font-weight:300;text-transform:none;letter-spacing:0">(optional)</span></label>
         <div style="display:flex;gap:8px;align-items:center;">
-          <input class="form-input" id="editSeries" placeholder="e.g. Throne of Glass" style="flex:1;" oninput="onSeriesInput('edit')">
+          <div class="autocomplete-wrap" style="flex:1;min-width:0;">
+            <input class="form-input" id="editSeries" placeholder="e.g. Throne of Glass" style="width:100%;" oninput="onSeriesInput('edit');handleSeriesSearch('edit')" autocomplete="off">
+            <div class="autocomplete-dropdown" id="seriesAutocomplete-edit"></div>
+          </div>
           <button class="series-num-btn" id="editSeriesNumBtn" style="display:none" onclick="toggleSeriesSlider('edit')">#<span id="editSeriesNumVal">1</span></button>
         </div>
         <div id="editSeriesSlider" style="display:none;padding:8px 0 2px;">
@@ -2451,22 +2457,20 @@ window.handleGlobalTitleSearch = function() {
 
   const raw = input.value.trim();
 
-  const meaningfulLength = normalizeBookText(raw).length;
+  const normalized = normalizeBookText(raw);
 
-  if (meaningfulLength < 2) {
+  if (!normalized) {
     dropdown.style.display = 'none';
     dropdown.innerHTML = '';
     return;
   }
-
-  const normalized = normalizeBookText(raw);
 
   const matches = globalBookCache
     .filter(book => {
       const title = book.normalizedTitle || normalizeBookText(book.title || '');
       return title.startsWith(normalized);
     })
-    .slice(0, 8);
+    .slice(0, 5);
 
   if (!matches.length) {
     dropdown.style.display = 'none';
@@ -2519,6 +2523,11 @@ document.addEventListener('click', (e) => {
     authorDrop.style.display = 'none';
     authorDrop.innerHTML = '';
   }
+  for (const ctx of ['new', 'edit']) {
+    const sWrap = document.getElementById(ctx === 'new' ? 'newSeries' : 'editSeries')?.closest('.autocomplete-wrap');
+    const sDrop = document.getElementById('seriesAutocomplete-' + ctx);
+    if (sDrop && sWrap && !sWrap.contains(e.target)) { sDrop.style.display = 'none'; sDrop.innerHTML = ''; }
+  }
   // Close review dropdowns when clicking outside
   const sortDd = document.getElementById('review-sort-dropdown');
   const sortToggle = document.getElementById('review-sort-toggle');
@@ -2538,7 +2547,7 @@ window.handleAuthorSearch = function() {
   if (!input || !dropdown) return;
   const raw = input.value.trim();
   const normalized = normalizeBookText(raw);
-  if (normalized.length < 2) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; return; }
+  if (!normalized) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; return; }
   const seen = new Set();
   const matches = [];
   globalBookCache.forEach(b => {
@@ -2546,7 +2555,7 @@ window.handleAuthorSearch = function() {
     if (normalizeBookText(b.author).startsWith(normalized)) { seen.add(b.author); matches.push(b.author); }
   });
   if (!matches.length) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; return; }
-  dropdown.innerHTML = matches.slice(0, 6).map(a =>
+  dropdown.innerHTML = matches.slice(0, 5).map(a =>
     `<div class="autocomplete-item" onclick="selectAuthorSuggestion('${a.replace(/'/g, "\\'")}')">
       <div class="autocomplete-title">${esc(a)}</div>
     </div>`
@@ -2558,6 +2567,34 @@ window.selectAuthorSuggestion = function(author) {
   document.getElementById('newAuthor').value = author;
   const d = document.getElementById('authorAutocomplete');
   d.style.display = 'none'; d.innerHTML = '';
+};
+
+window.handleSeriesSearch = function(ctx) {
+  const inputId = ctx === 'new' ? 'newSeries' : 'editSeries';
+  const input = document.getElementById(inputId);
+  const dropdown = document.getElementById('seriesAutocomplete-' + ctx);
+  if (!input || !dropdown) return;
+  const q = normalizeBookText(input.value.trim());
+  if (!q) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; return; }
+  const seen = new Set();
+  const matches = [];
+  globalBookCache.forEach(b => {
+    if (!b.series || seen.has(b.series)) return;
+    if (normalizeBookText(b.series).includes(q)) { seen.add(b.series); matches.push(b.series); }
+  });
+  if (!matches.length) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; return; }
+  dropdown.innerHTML = matches.slice(0, 5).map(s =>
+    `<div class="autocomplete-item" onmousedown="event.preventDefault()" onclick="selectSeriesSuggestion('${s.replace(/'/g, "\\'")}','${ctx}')"><div class="autocomplete-title">${esc(s)}</div></div>`
+  ).join('');
+  dropdown.style.display = 'block';
+};
+
+window.selectSeriesSuggestion = function(series, ctx) {
+  const inputId = ctx === 'new' ? 'newSeries' : 'editSeries';
+  document.getElementById(inputId).value = series;
+  const d = document.getElementById('seriesAutocomplete-' + ctx);
+  if (d) { d.style.display = 'none'; d.innerHTML = ''; }
+  onSeriesInput(ctx);
 };
 
 
@@ -2886,7 +2923,7 @@ function renderBooks(list) {
     const readCls = b.read ? 'is-read' : '';
     const borCls  = isBorrowed ? 'is-borrowed' : '';
     const maxGenres = currentBookView === 'grid' ? 1 : 99;
-    const genreTags = (b.genres||[]).slice(0, maxGenres).map(g => '<span class="tag genre">' + esc(g) + '</span>').join('');
+    const genreTags = (b.genres||[]).slice(0, maxGenres).map(g => '<span class="tag genre"><i data-lucide="drama" class="tag-icon"></i>' + esc(g) + '</span>').join('');
     const seriesBubble = currentBookView === 'grid' ? '' : buildSeriesBubble(b);
     const locCls = isBorrowed ? 'tag borrowed-tag' : 'tag location';
     const gbId = createGlobalBookId(b.title||'', b.author||'');
@@ -3972,10 +4009,10 @@ const _HL_MAX = 5;
 
 function _hlAcSources(cat) {
   switch(cat) {
-    case 'books':   return [...new Set(books.filter(b=>b.title).map(b=>b.title))].sort();
-    case 'authors': return [...new Set(books.filter(b=>b.author).map(b=>b.author))].sort();
+    case 'books':   return [...new Set(globalBookCache.filter(b=>b.title&&!b._localOnly).map(b=>b.title))].sort();
+    case 'authors': return [...new Set(globalBookCache.filter(b=>b.author&&!b._localOnly).map(b=>b.author))].sort();
     case 'genres':  return [...orderedGenres];
-    case 'series':  return [...new Set(books.filter(b=>b.series).map(b=>b.series))].sort();
+    case 'series':  return [...new Set(globalBookCache.filter(b=>b.series&&!b._localOnly).map(b=>b.series))].sort();
     default: return [];
   }
 }
@@ -3990,10 +4027,17 @@ function _clubHlAcSources(cat) {
   }
 }
 
+function _hlIconHtml(cat) {
+  if (cat === 'series') {
+    return '<svg width="11" height="11" viewBox="0 0 20 20" style="flex-shrink:0;color:var(--accent)" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M0 5Q3.33 3.5 6.67 5Q10 3.5 13.33 5Q16.67 3.5 20 5L20 15Q16.67 16.5 13.33 15Q10 16.5 6.67 15Q3.33 16.5 0 15Z"/></svg>';
+  }
+  const m = { books: 'book-open', authors: 'user', genres: 'drama' };
+  return `<i data-lucide="${m[cat] || cat}"></i>`;
+}
+
 function _buildHlChip(val, cat, idx, isClub) {
-  const iconMap = { books:'book-open', authors:'user', genres:'drama', series:'layers' };
   const rm = isClub ? `removeClubHlChip('${cat}',${idx})` : `removeHlChip('${cat}',${idx})`;
-  return `<span class="hl-chip"><i data-lucide="${iconMap[cat]}"></i>${esc(val)}<button class="hl-chip-remove" onclick="${rm}" title="Remove">×</button></span>`;
+  return `<span class="hl-chip">${_hlIconHtml(cat)}${esc(val)}<button class="hl-chip-remove" onclick="${rm}" title="Remove">×</button></span>`;
 }
 
 function _buildHlRow(cat, catInfo, items, isActive, isClub) {
@@ -4014,7 +4058,7 @@ function _hlUpdateAc(cat, val) {
   if (!acEl) return;
   const existing = new Set(_myHighlights[cat]||[]);
   const q = val.toLowerCase();
-  const matches = _hlAcSources(cat).filter(s => !existing.has(s) && s.toLowerCase().includes(q)).slice(0, 8);
+  const matches = _hlAcSources(cat).filter(s => !existing.has(s) && s.toLowerCase().includes(q)).slice(0, 5);
   _hlAcResults[cat] = matches;
   if (!matches.length) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
   acEl.style.display = '';
@@ -4026,7 +4070,7 @@ function _clubHlUpdateAc(cat, val) {
   if (!acEl) return;
   const existing = new Set(_clubSubjects[cat]||[]);
   const q = val.toLowerCase();
-  const matches = _clubHlAcSources(cat).filter(s => !existing.has(s) && s.toLowerCase().includes(q)).slice(0, 8);
+  const matches = _clubHlAcSources(cat).filter(s => !existing.has(s) && s.toLowerCase().includes(q)).slice(0, 5);
   _clubHlAcResults[cat] = matches;
   if (!matches.length) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
   acEl.style.display = '';
@@ -4138,7 +4182,7 @@ function _renderHighlightsPanel(el, highlights, aboutMe) {
   _HL_CATS.forEach(({ key, label, icon }) => {
     const items = (highlights[key]||[]).filter(Boolean);
     if (!items.length) return;
-    const chips = items.map(v => `<span class="hl-chip"><i data-lucide="${icon}"></i>${esc(v)}</span>`).join('');
+    const chips = items.map(v => `<span class="hl-chip">${_hlIconHtml(key)}${esc(v)}</span>`).join('');
     html += `<div class="info-section"><span class="info-section-label">${label}</span><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:2px;">${chips}</div></div>`;
   });
   el.innerHTML = html || '<div style="text-align:center;padding:40px 0;color:var(--text3);font-size:13px">No profile info yet.</div>';
@@ -4161,7 +4205,7 @@ function renderClubAboutTab() {
   _HL_CATS.forEach(({ key, label, icon }) => {
     const items = (subj[key]||[]).filter(Boolean);
     if (!items.length) return;
-    const chips = items.map(v => `<span class="hl-chip"><i data-lucide="${icon}"></i>${esc(v)}</span>`).join('');
+    const chips = items.map(v => `<span class="hl-chip">${_hlIconHtml(key)}${esc(v)}</span>`).join('');
     subjectsHtml += `<div class="info-section"><span class="info-section-label">${label}</span><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:2px;">${chips}</div></div>`;
   });
   el.innerHTML = (descHtml || subjectsHtml)
