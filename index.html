@@ -206,7 +206,8 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .disc-list-item:last-child { border-bottom: none; }
 .disc-list-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--surface3); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 15px; color: var(--accent); font-family: 'Playfair Display', serif; flex-shrink: 0; }
 .disc-list-avatar.genre-avatar { border-radius: 8px; }
-.disc-list-avatar.genre-avatar .lucide { width: 18px; height: 18px; color: var(--accent); }
+.disc-list-avatar.genre-avatar .lucide,
+.disc-list-avatar.genre-avatar .genre-svg { width: 18px; height: 18px; color: var(--accent); }
 .disc-list-name { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .disc-list-count { font-size: 12px; color: var(--text3); flex-shrink: 0; }
 .disc-list-chevron { color: var(--text3); flex-shrink: 0; }
@@ -974,6 +975,9 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .btn-checkout .lucide, .lr-chk-btn .lucide, .btn-add-collection .lucide { width: 13px; height: 13px; vertical-align: -1px; }
 .filter-btn .lucide { width: 11px; height: 11px; vertical-align: -1px; flex-shrink: 0; }
 .tag-icon.lucide { width: 11px; height: 11px; vertical-align: -1px; }
+.tag-icon.genre-svg { width: 11px; height: 11px; vertical-align: -1px; flex-shrink: 0; }
+.disc-list-avatar .genre-svg { width: 18px; height: 18px; color: var(--accent); }
+.hl-chip .genre-svg { width: 11px; height: 11px; color: var(--accent); flex-shrink: 0; }
 
 /* ════════════════════════════════════════════════
    LEATHER DARK BLUE THEME — grain + deboss
@@ -2996,7 +3000,7 @@ function renderBooks(list) {
     const readCls = b.read ? 'is-read' : '';
     const borCls  = isBorrowed ? 'is-borrowed' : '';
     const maxGenres = currentBookView === 'grid' ? 1 : 99;
-    const genreTags = (b.genres||[]).slice(0, maxGenres).map(g => '<span class="tag genre"><i data-lucide="' + _genreIcon(g) + '" class="tag-icon"></i>' + esc(g) + '</span>').join('');
+    const genreTags = (b.genres||[]).slice(0, maxGenres).map(g => '<span class="tag genre">' + _genreIconHtml(g, 'tag-icon') + esc(g) + '</span>').join('');
     const seriesBubble = currentBookView === 'grid' ? '' : buildSeriesBubble(b);
     const locCls = isBorrowed ? 'tag borrowed-tag' : 'tag location';
     const gbId = createGlobalBookId(b.title||'', b.author||'');
@@ -3242,7 +3246,7 @@ function renderGlobalBooks(list, append, totalCount) {
   function _gCardHtml(b) {
     const personal = books.find(x => createGlobalBookId(x.title||'', x.author||'') === b.id);
     const isRead = personal ? !!personal.read : false;
-    const genres = (b.genres||[]).slice(0, 1).map(g => `<span class="tag genre"><i data-lucide="${_genreIcon(g)}" class="tag-icon"></i>${esc(g)}</span>`).join('');
+    const genres = (b.genres||[]).slice(0, 1).map(g => `<span class="tag genre">${_genreIconHtml(g, 'tag-icon')}${esc(g)}</span>`).join('');
     const ir = inlineRating(b); // b has ratingTotal/ratingCount directly
     const safeId = (b.id||'').replace(/'/g, "\\'");
     const isOwner = currentUser && currentUser.email === 'samuelmendlowitz@gmail.com';
@@ -3835,7 +3839,7 @@ function _renderBookInfoBody(b) {
 
   const genresSection = (b.genres||[]).length ? `<div class="info-section">
     <span class="info-section-label">Genres</span>
-    <div class="info-chips">${(b.genres||[]).map(g=>`<span class="tag genre"><i data-lucide="${_genreIcon(g)}" class="tag-icon"></i>${esc(g)}</span>`).join('')}</div>
+    <div class="info-chips">${(b.genres||[]).map(g=>`<span class="tag genre">${_genreIconHtml(g,'tag-icon')}${esc(g)}</span>`).join('')}</div>
   </div>` : '';
 
   const isBorrowed = b.location === 'Borrowed';
@@ -3971,7 +3975,7 @@ function _renderGlobalBookInfoBody(b) {
 
   const genresSection = (b.genres||[]).length ? `<div class="info-section">
     <span class="info-section-label">Genres</span>
-    <div class="info-chips">${(b.genres||[]).map(g=>`<span class="tag genre"><i data-lucide="${_genreIcon(g)}" class="tag-icon"></i>${esc(g)}</span>`).join('')}</div>
+    <div class="info-chips">${(b.genres||[]).map(g=>`<span class="tag genre">${_genreIconHtml(g,'tag-icon')}${esc(g)}</span>`).join('')}</div>
   </div>` : '';
 
   const popularitySection = b.popularity ? `<div class="info-section">
@@ -4104,7 +4108,7 @@ function _hlIconHtml(cat, val) {
   if (cat === 'series') {
     return '<svg width="11" height="11" viewBox="0 0 20 20" style="flex-shrink:0;color:var(--accent)" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M0 5Q3.33 3.5 6.67 5Q10 3.5 13.33 5Q16.67 3.5 20 5L20 15Q16.67 16.5 13.33 15Q10 16.5 6.67 15Q3.33 16.5 0 15Z"/></svg>';
   }
-  if (cat === 'genres' && val) return `<i data-lucide="${_genreIcon(val)}"></i>`;
+  if (cat === 'genres' && val) return _genreIconHtml(val);
   const m = { books: 'book-open', authors: 'user', genres: 'book-open' };
   return `<i data-lucide="${m[cat] || cat}"></i>`;
 }
@@ -4404,7 +4408,7 @@ function _recCardHtml(b) {
   const personal = books.find(x => createGlobalBookId(x.title || '', x.author || '') === b.id);
   const isRead = personal ? !!personal.read : false;
   const genreTag = (b.genres || []).slice(0, 1).map(g =>
-    `<span class="tag genre"><i data-lucide="${_genreIcon(g)}" class="tag-icon"></i>${esc(g)}</span>`).join('');
+    `<span class="tag genre">${_genreIconHtml(g, 'tag-icon')}${esc(g)}</span>`).join('');
   const ir = inlineRating(b);
   const safeId = (b.id || '').replace(/'/g, "\\'");
   const reasonHtml = b._recReason
@@ -4548,7 +4552,7 @@ function _discSortBooks(list, sort) {
 function _discBookCardHtml(b) {
   const personal = books.find(x => createGlobalBookId(x.title||'', x.author||'') === b.id);
   const isRead = personal ? !!personal.read : false;
-  const genreTag = (b.genres||[]).slice(0,1).map(g => `<span class="tag genre"><i data-lucide="${_genreIcon(g)}" class="tag-icon"></i>${esc(g)}</span>`).join('');
+  const genreTag = (b.genres||[]).slice(0,1).map(g => `<span class="tag genre">${_genreIconHtml(g,'tag-icon')}${esc(g)}</span>`).join('');
   const ir = inlineRating(b);
   const safeId = (b.id||'').replace(/'/g, "\\'");
   return `<div class="book-card${isRead ? ' is-read' : ''}">
@@ -4775,7 +4779,17 @@ const _GENRE_LUCIDE = {
   'Manga':                 'layers',
   'Spirituality':          'sun',
 };
-function _genreIcon(genre) { return _GENRE_LUCIDE[genre] || 'book-open'; }
+const _GENRE_SVG = {
+  'Mythology': `<svg class="genre-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 11V7L6 5L7 3L8 5L7 7M12 11V6L11 4L12 2L13 4L12 6M17 11V7L16 5L17 3L18 5L17 7M7 11h10M12 11v11"/></svg>`,
+};
+function _genreIconHtml(genre, cls) {
+  if (_GENRE_SVG[genre]) {
+    const s = _GENRE_SVG[genre];
+    return cls ? s.replace('class="genre-svg"', `class="genre-svg ${cls}"`) : s;
+  }
+  const icon = _GENRE_LUCIDE[genre] || 'book-open';
+  return cls ? `<i data-lucide="${icon}" class="${cls}"></i>` : `<i data-lucide="${icon}"></i>`;
+}
 
 window._renderGenresList = function() {
   const el = document.getElementById('dtab-panel-genres');
@@ -4818,7 +4832,7 @@ function _updateGenresItems() {
   inner.innerHTML = genres.map(g => {
     const cnt = genreMap[g] || 0;
     return `<div class="disc-list-item" onclick="selectDiscoverGenre('${jsStr(g)}')">
-      <div class="disc-list-avatar genre-avatar"><i data-lucide="${_genreIcon(g)}"></i></div>
+      <div class="disc-list-avatar genre-avatar">${_genreIconHtml(g)}</div>
       <span class="disc-list-name">${esc(g)}</span>
       <span class="disc-list-count">${cnt} book${cnt !== 1 ? 's' : ''}</span>
       <span class="disc-list-chevron"><i data-lucide="chevron-right"></i></span>
@@ -6752,7 +6766,7 @@ window.applyFriendLibFilters = () => {
     return;
   }
   el.innerHTML = list.map(b => {
-    const genres = (b.genres||[]).slice(0,2).map(g => '<span class="tag genre"><i data-lucide="' + _genreIcon(g) + '" class="tag-icon"></i>' + esc(g) + '</span>').join('');
+    const genres = (b.genres||[]).slice(0,2).map(g => '<span class="tag genre">' + _genreIconHtml(g, 'tag-icon') + esc(g) + '</span>').join('');
     const series = b.series ? '<span class="tag series">' + seriesIcon(b.seriesNumber) + esc(b.series) + '</span>' : '';
     const alreadyWishlisted = books.some(w => w.location === 'Wishlist' && (w.title||'').toLowerCase() === (b.title||'').toLowerCase());
     const starBtn = '<button class="wishlist-star-btn' + (alreadyWishlisted ? ' in-wishlist' : '') + '" title="' + (alreadyWishlisted ? 'In wishlist' : 'Add to wishlist') + '" onclick="addToWishlist(\'' + jsStr(b.title||'') + '\',\'' + jsStr(b.author||'') + '\',' + JSON.stringify(b.genres||[]) + ',\'' + jsStr(b.series||'') + '\',\'' + jsStr(b.seriesNumber||'') + '\',this)">★</button>';
@@ -6820,7 +6834,7 @@ function renderChatMessages(msgs) {
       const gb = globalBookCache.find(x => x.id === gbId);
       const ratingStr = gb ? renderStars(gb.ratingTotal||0, gb.ratingCount||0) : '';
       const bookGenres = m.bookGenres || (gb ? gb.genres : []) || [];
-      const genrePills = bookGenres.slice(0,3).map(g => '<span class="tag genre"><i data-lucide="' + _genreIcon(g) + '" class="tag-icon"></i>' + esc(g) + '</span>').join('');
+      const genrePills = bookGenres.slice(0,3).map(g => '<span class="tag genre">' + _genreIconHtml(g, 'tag-icon') + esc(g) + '</span>').join('');
       const seriesStr = m.bookSeries ? '<span class="tag series">' + esc(m.bookSeries) + (m.bookSeriesNumber ? ' #'+m.bookSeriesNumber : '') + '</span>' : '';
       const alreadyWishlisted = books.some(b => b.location === 'Wishlist' && (b.title||'').toLowerCase() === (m.bookTitle||'').toLowerCase());
       const starBtn = '<button class="wishlist-star-btn' + (alreadyWishlisted ? ' in-wishlist' : '') + '" title="' + (alreadyWishlisted ? 'In wishlist' : 'Add to wishlist') + '" onclick="addToWishlist(\'' + jsStr(m.bookTitle||'') + '\',\'' + jsStr(m.bookAuthor||'') + '\',' + JSON.stringify(bookGenres) + ',\'' + jsStr(m.bookSeries||'') + '\',\'' + jsStr(m.bookSeriesNumber||'') + '\',this)">★</button>';
@@ -7104,7 +7118,7 @@ function renderClubMessages(msgs) {
       const gb = globalBookCache.find(x => x.id === gbId);
       const ratingStr = gb ? renderStars(gb.ratingTotal||0, gb.ratingCount||0) : '';
       const bookGenres = m.bookGenres || (gb ? gb.genres : []) || [];
-      const genrePills = bookGenres.slice(0,3).map(g => '<span class="tag genre"><i data-lucide="' + _genreIcon(g) + '" class="tag-icon"></i>' + esc(g) + '</span>').join('');
+      const genrePills = bookGenres.slice(0,3).map(g => '<span class="tag genre">' + _genreIconHtml(g, 'tag-icon') + esc(g) + '</span>').join('');
       const seriesStr = m.bookSeries ? '<span class="tag series">' + esc(m.bookSeries) + (m.bookSeriesNumber ? ' #'+m.bookSeriesNumber : '') + '</span>' : '';
       const alreadyWishlisted = books.some(b => b.location === 'Wishlist' && (b.title||'').toLowerCase() === (m.bookTitle||'').toLowerCase());
       const starBtn = '<button class="wishlist-star-btn' + (alreadyWishlisted ? ' in-wishlist' : '') + '" onclick="addToWishlist(\'' + jsStr(m.bookTitle||'') + '\',\'' + jsStr(m.bookAuthor||'') + '\',' + JSON.stringify(bookGenres) + ',\'' + jsStr(m.bookSeries||'') + '\',\'' + jsStr(m.bookSeriesNumber||'') + '\',this)">★</button>';
