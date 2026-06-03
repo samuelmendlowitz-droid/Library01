@@ -1261,6 +1261,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
       <div class="stat stat-clickable" id="statCardRead" onclick="setTopFilter('read')"><div class="stat-num" id="statRead">0</div><div class="stat-label">Read</div></div>
       <div class="stat stat-clickable" id="statCardUnread" onclick="setTopFilter('unread')"><div class="stat-num" id="statUnread">0</div><div class="stat-label">Unread</div></div>
       <div class="stat stat-clickable" id="statCardBorrowed" onclick="setTopFilter('borrowed')"><div class="stat-num" id="statBorrowed">0</div><div class="stat-label">Out</div></div>
+      <div class="stat stat-clickable" id="statCardAllRead" onclick="setTopFilter('allread')"><div class="stat-num" id="statAllRead">0</div><div class="stat-label">All Read</div></div>
     </div>
     <div class="subheader-ctrl">
       <div class="search-wrap" style="flex:1;min-width:0">
@@ -1661,7 +1662,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
           </label>
           <label class="toggle-pill" onclick="onTogglePill('globalOnly')">
             <input type="checkbox" id="newGlobalOnly">
-            <span><i data-lucide="globe"></i> Global Only</span>
+            <span><i data-lucide="globe"></i> Not Owned</span>
           </label>
         </div>
       </div>
@@ -3035,6 +3036,10 @@ function applyFilters() {
       }
       return true;
     }
+    if (topFilters.includes('allread')) {
+      if (b.location === 'Wishlist') return false;
+      return b.read;
+    }
     if (b.location === 'Wishlist' || b.location === 'GlobalRead') return false;
     if (!topFilters.includes('all')) {
       let topMatch = false;
@@ -3188,6 +3193,7 @@ function updateStats() {
     document.getElementById('statRead').textContent     = lb.filter(b => b.read).length;
     document.getElementById('statUnread').textContent   = lb.filter(b => !b.read).length;
     document.getElementById('statBorrowed').textContent = lb.filter(b => b.location === 'Borrowed').length; // Out
+    document.getElementById('statAllRead').textContent  = books.filter(b => b.read && b.location !== 'Wishlist').length;
   }
 }
 
@@ -3617,7 +3623,7 @@ window.addGlobalBookToCollection = bookId => {
 window.setTopFilter = filter => {
   topFilters = [filter || 'all'];
   document.querySelectorAll('.stat-clickable').forEach(el => el.classList.remove('active'));
-  const idMap = { all: 'statCardAll', read: 'statCardRead', unread: 'statCardUnread', borrowed: 'statCardBorrowed' };
+  const idMap = { all: 'statCardAll', read: 'statCardRead', unread: 'statCardUnread', borrowed: 'statCardBorrowed', allread: 'statCardAllRead' };
   document.getElementById(idMap[filter] || 'statCardAll')?.classList.add('active');
   if (currentPage === 'global') applyGlobalFilters();
   else applyFilters();
@@ -5920,18 +5926,21 @@ function updateStatCardLabels(page) {
       { id:'statCardRead',    label:'Read',     show:true  },
       { id:'statCardUnread',  label:'Unread',   show:true  },
       { id:'statCardBorrowed',label:'Out',      show:true  },
+      { id:'statCardAllRead', label:'All Read', show:true  },
     ],
     wishlist: [
       { id:'statCardAll',     label:'Wishlist', show:true  },
       { id:'statCardRead',    label:'Read',     show:true  },
       { id:'statCardUnread',  label:'Unread',   show:true  },
       { id:'statCardBorrowed',label:'Out',      show:false },
+      { id:'statCardAllRead', label:'All Read', show:false },
     ],
     global: [
       { id:'statCardAll',     label:'Owned',    show:true  },
       { id:'statCardRead',    label:'Read',     show:true  },
       { id:'statCardUnread',  label:'Unread',   show:true  },
       { id:'statCardBorrowed',label:'Wishlist', show:true  },
+      { id:'statCardAllRead', label:'All Read', show:false },
     ],
   };
   const list = defs[page] || defs.mylibrary;
