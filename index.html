@@ -2001,7 +2001,7 @@ const auth = getAuth(app);
 const db   = getFirestore(app);
 
 // ── DEFAULT DATA ─────────────────────────────────────────────────────────────
-const DEFAULT_GENRES = ['Non-Fiction','Fantasy','Science Fiction','Mystery','Thriller','Psychological Thriller','Crime','Romance','Young Adult','Historical Fiction','Literary Fiction','Horror','Adventure','Biography','Memoir','Self-Help',"Children's",'Graphic Novel','Classics','Poetry','Philosophy','Psychology','Physics','True Crime','Business','Technology','Humor','Dystopian','Gothic','Coming-of-Age','Mythology','Cooking','Travel','Art','Sports','Music','Politics','Science','History','War','Espionage','Spirituality'];
+const DEFAULT_GENRES = ['Non-Fiction','Fantasy','Science Fiction','Mystery','Thriller','Psychological Thriller','Crime','Romance','Young Adult','Historical Fiction','Literary Fiction','Horror','Adventure','Biography','Memoir','Self-Help',"Children's",'Graphic Novel','Classics','Poetry','Philosophy','Psychology','Physics','True Crime','Business','Technology','Humor','Dystopian','Gothic','Coming-of-Age','Mythology','Cooking','Travel','Art','Sports','Music','Politics','Science','History','War','Espionage','Spirituality','Medical','Academic'];
 const DEFAULT_LOCATIONS = ['Bookshelf 1']; // 'Borrowed' is always locked at bottom
 
 // ── STATE ────────────────────────────────────────────────────────────────────
@@ -4778,6 +4778,8 @@ const _GENRE_LUCIDE = {
   'Essays':                'pencil',
   'Manga':                 'layers',
   'Spirituality':          'sun',
+  'Medical':               'stethoscope',
+  'Academic':              'graduation-cap',
 };
 const _GENRE_SVG = {
   'Mythology': `<svg class="genre-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 11V7L6 5L7 3L8 5L7 7M12 11V6L11 4L12 2L13 4L12 6M17 11V7L16 5L17 3L18 5L17 7M7 11h10M12 11v11"/></svg>`,
