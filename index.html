@@ -255,7 +255,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 #dtab-panel-find { overflow: hidden; position: relative; }
 .rec-stack { width: 100%; height: 100%; overflow-y: scroll; scroll-snap-type: y mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; overscroll-behavior: none; }
 .rec-stack::-webkit-scrollbar { display: none; }
-.rec-slide { width: 100%; height: 100%; scroll-snap-align: start; scroll-snap-stop: always; position: relative; overflow: hidden; flex-shrink: 0; }
+.rec-slide { width: 100%; height: 100%; scroll-snap-align: start; scroll-snap-stop: always; position: relative; overflow: hidden; flex-shrink: 0; clip-path: inset(0); }
 /* Book cover */
 .rec-cover { position: absolute; inset: 0; display: flex; flex-direction: column; padding: 28px 24px 20px; transition: transform 0.35s cubic-bezier(0.25,0.46,0.45,0.94); will-change: transform; }
 .rec-cover.swiping { transition: none; }
@@ -279,9 +279,9 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .rec-divider.dots { background: none; text-align: center; font-size: 10px; opacity: 0.3; letter-spacing: 6px; height: auto; line-height: 1; }
 /* Text area */
 .rec-reason-chip { display: inline-flex; align-items: center; gap: 4px; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; padding: 3px 10px; font-size: 10px; color: rgba(255,255,255,0.7); font-style: italic; align-self: flex-start; margin-bottom: 10px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; z-index: 4; position: relative; }
-.rec-book-author { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; letter-spacing: 0.5px; opacity: 0.8; text-transform: uppercase; z-index: 4; position: relative; }
-.rec-book-title { font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 700; line-height: 1.2; margin-top: 4px; z-index: 4; position: relative; }
-.rec-book-series { font-size: 11px; opacity: 0.65; font-style: italic; margin-top: 5px; line-height: 1.4; z-index: 4; position: relative; }
+.rec-book-author { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; letter-spacing: 0.5px; opacity: 0.8; text-transform: uppercase; z-index: 4; position: relative; text-align: center; }
+.rec-book-title { font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 700; line-height: 1.2; margin-top: 4px; z-index: 4; position: relative; text-align: center; }
+.rec-book-series { font-size: 11px; opacity: 0.65; font-style: italic; margin-top: 5px; line-height: 1.4; z-index: 4; position: relative; text-align: center; }
 /* Genre graphic */
 .rec-genre-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; z-index: 4; min-height: 0; padding: 10px 0; }
 .rec-genre-cluster { position: relative; width: 140px; height: 130px; flex-shrink: 0; }
@@ -4678,16 +4678,16 @@ async function _runRecommendationAlgorithm() {
 // ── BOOK STACK VISUALS ────────────────────────────────────────────────────────
 
 const _REC_PALETTES = [
-  { bg:'#1d2535', fg:'#dce4f0', ac:'#7a9fc0' },
-  { bg:'#271c1c', fg:'#f0ddd8', ac:'#b07868' },
-  { bg:'#1b2820', fg:'#d4e8d4', ac:'#6a9870' },
-  { bg:'#231b2a', fg:'#e0d4ec', ac:'#8c74b8' },
-  { bg:'#28221a', fg:'#ede0c8', ac:'#b09458' },
-  { bg:'#1a2428', fg:'#ccd8e0', ac:'#4e8898' },
-  { bg:'#261e1a', fg:'#ead8cc', ac:'#9a6c58' },
-  { bg:'#1e2820', fg:'#cce8d4', ac:'#508868' },
-  { bg:'#241e30', fg:'#dcd4f4', ac:'#7868c0' },
-  { bg:'#2c2018', fg:'#f0e4cc', ac:'#c09050' },
+  { bg:'#172540', fg:'#d8eaf8', ac:'#60a8e0' },   // deep navy
+  { bg:'#3c1616', fg:'#f8ddd5', ac:'#d87060' },   // dark burgundy
+  { bg:'#103424', fg:'#c8f0d8', ac:'#48b870' },   // forest green
+  { bg:'#280e40', fg:'#ead8f8', ac:'#a868d8' },   // deep violet
+  { bg:'#3a2400', fg:'#f8e4b0', ac:'#d89820' },   // amber gold
+  { bg:'#082e38', fg:'#bcdce8', ac:'#30a0c0' },   // deep teal
+  { bg:'#3a1408', fg:'#f8dcc0', ac:'#d06030' },   // rust/terracotta
+  { bg:'#0c3020', fg:'#c0f0d0', ac:'#38b060' },   // emerald
+  { bg:'#1a0a3c', fg:'#d8ccf8', ac:'#7050d8' },   // indigo
+  { bg:'#3c2800', fg:'#f8e4b0', ac:'#c88000' },   // dark ochre
 ];
 
 const _REC_PATTERNS = [
@@ -4749,11 +4749,11 @@ function _genreClusterHtml(genres) {
 
 function _recCoverHtml(b, seed) {
   const pal    = _REC_PALETTES[seed % _REC_PALETTES.length];
-  const pat    = _REC_PATTERNS[(seed >> 3) % _REC_PATTERNS.length];
-  const frame  = _REC_FRAME_STYLES[(seed >> 5) % _REC_FRAME_STYLES.length];
-  const cornerIdx = (seed >> 7) % _REC_CORNER_SVGS.length;
-  const cornerSvg = _REC_CORNER_SVGS[cornerIdx];
-  const divStyle  = _REC_DIVIDER_STYLES[(seed >> 9) % _REC_DIVIDER_STYLES.length];
+  const pat    = _REC_PATTERNS[(seed >>> 3) % _REC_PATTERNS.length];
+  const frame  = _REC_FRAME_STYLES[(seed >>> 5) % _REC_FRAME_STYLES.length];
+  const cornerIdx = (seed >>> 7) % _REC_CORNER_SVGS.length;
+  const cornerSvg = _REC_CORNER_SVGS[cornerIdx] || '';
+  const divStyle  = _REC_DIVIDER_STYLES[(seed >>> 9) % _REC_DIVIDER_STYLES.length];
 
   const avg = b.ratingCount > 0 ? (b.ratingTotal / b.ratingCount) : 0;
   const stars = avg > 0 ? '★'.repeat(Math.round(avg)) + '☆'.repeat(5 - Math.round(avg)) : '';
@@ -4780,7 +4780,6 @@ function _recCoverHtml(b, seed) {
     <span class="rc tl">${cornerSvg}</span><span class="rc tr">${cornerSvg}</span>
     <span class="rc bl">${cornerSvg}</span><span class="rc br">${cornerSvg}</span>
   </div>
-  ${b._recReason ? `<div class="rec-reason-chip">${esc(b._recReason)}</div>` : ''}
   <div class="rec-book-author">${esc(b.author || '')}</div>
   <div class="rec-book-title">${esc(b.title || '')}</div>
   ${seriesHtml}
