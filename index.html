@@ -472,14 +472,25 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 /* Book Grid View — 2-col mini rec-style cards */
 .book-list.book-view { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px 16px 100px; }
 .book-list.book-view .series-group { display: contents; }
-.mini-book-card { background: linear-gradient(160deg, #231508 0%, #160d05 50%, #0a0603 100%); border-radius: 10px; aspect-ratio: 3/4; position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; cursor: pointer; border: 1px solid rgba(220,185,80,0.12); box-shadow: 0 3px 12px rgba(0,0,0,0.5); transition: transform 0.15s, box-shadow 0.15s; }
+.mini-book-card { border-radius: 10px; aspect-ratio: 3/4; position: relative; overflow: hidden; display: flex; flex-direction: column; cursor: pointer; box-shadow: 0 3px 12px rgba(0,0,0,0.5); transition: transform 0.15s, box-shadow 0.15s; }
 .mini-book-card:active { transform: scale(0.97); box-shadow: 0 1px 6px rgba(0,0,0,0.4); }
-.mbc-icon { position: absolute; top: 0; left: 0; right: 0; bottom: 42%; display: flex; align-items: center; justify-content: center; }
-.mbc-icon .lucide { width: 50px; height: 50px; color: var(--accent); opacity: 0.72; stroke-width: 1.5px; }
-.mbc-meta { position: relative; z-index: 2; padding: 28px 10px 10px; background: linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.65) 60%, transparent 100%); }
-.mbc-title { font-size: 12px; font-weight: 700; color: #f0e8d4; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 3px; }
-.mbc-author { font-size: 10px; color: rgba(240,232,212,0.55); font-family: 'DM Sans', sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mbc-read-badge { position: absolute; top: 7px; right: 7px; width: 20px; height: 20px; background: var(--accent); color: #1a1612; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; z-index: 3; }
+.mini-book-card .rec-frame { inset: 6px; }
+.mini-book-card .rec-corners { inset: 4px; }
+.mini-book-card .rc { width: 20px; height: 20px; }
+.mbc-title-block { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 22px 10px 6px; position: relative; z-index: 4; }
+.mbc-author { font-family: 'DM Sans', sans-serif; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; opacity: 0.75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; text-align: center; }
+.mbc-title { font-weight: 700; line-height: 1.2; text-align: center; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.mbc-series { font-family: 'DM Sans', sans-serif; font-size: 8px; font-style: italic; opacity: 0.6; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; }
+.mbc-genre-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; position: relative; z-index: 4; min-height: 0; padding: 0 8px; }
+.mini-book-card .rec-genre-cluster { flex: 1; min-height: 0; max-height: none; width: 100%; }
+.mini-book-card .rec-genre-cluster .lucide { stroke-width: 2.5px; }
+.mbc-footer { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px 14px; position: relative; z-index: 4; gap: 4px; flex-shrink: 0; }
+.mbc-status { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; border: 1.5px solid; line-height: 1; }
+.mbc-status.mbc-read { background: rgba(0,0,0,0.3); border-color: rgba(255,255,255,0.45); color: inherit; }
+.mbc-status.mbc-unread { background: rgba(160,20,20,0.35); border-color: rgba(220,70,70,0.6); color: #ff9090; }
+.mbc-rating { font-size: 9px; flex: 1; text-align: center; opacity: 0.75; letter-spacing: -0.5px; }
+.mbc-details-btn { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.25); border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: inherit; flex-shrink: 0; padding: 0; }
+.mbc-details-btn .lucide { width: 11px; height: 11px; }
 
 /* List view — spreadsheet rows */
 .series-group { border: 1px solid rgba(201,169,110,0.32); border-radius: var(--radius); overflow: hidden; }
@@ -3140,37 +3151,95 @@ function renderBooksGrid(list) {
 }
 
 function _miniBookCardHtml(b) {
-  const g = (b.genres||[])[0] || '';
-  const icon = _GENRE_LUCIDE[g] || 'book-open';
-  const fontFamily = _GENRE_FONT[g] || "'Playfair Display', serif";
+  const seed = _bookSeed(b.id);
+  const pal = _REC_PALETTES[seed % _REC_PALETTES.length];
+  const pat = _REC_PATTERNS[(seed >>> 3) % _REC_PATTERNS.length];
+  const frame = _REC_FRAME_STYLES[(seed >>> 5) % _REC_FRAME_STYLES.length];
+  const cornerSvg = _REC_CORNER_SVGS[(seed >>> 7) % _REC_CORNER_SVGS.length] || '';
+  const divStyle = _REC_DIVIDER_STYLES[(seed >>> 9) % _REC_DIVIDER_STYLES.length];
   const safeId = b.id.replace(/'/g, "\\'");
-  const readBadge = b.read ? '<div class="mbc-read-badge">✓</div>' : '';
-  return `<div class="mini-book-card" onclick="openBookInfo('${safeId}')">
-    <div class="mbc-icon"><i data-lucide="${icon}"></i></div>
-    <div class="mbc-meta">
-      <div class="mbc-title" style="font-family:${fontFamily}">${esc(b.title||'')}</div>
-      <div class="mbc-author">${esc(b.author||'')}</div>
-    </div>
-    ${readBadge}
-  </div>`;
+  const genres = (b.genres||[]).filter(g => g !== 'Non-Fiction');
+  const clusterHtml = genres.length ? _miniGenreClusterHtml(genres, pal.ac) : '';
+  const dividerHtml = divStyle === 'dots'
+    ? `<div class="rec-divider dots">· · ·</div>`
+    : `<div class="rec-divider${divStyle === 'ornate' ? ' ornate' : ''}"></div>`;
+  const seriesHtml = b.series
+    ? `<div class="mbc-series">${esc(b.series)}${b.seriesNumber ? ` #${b.seriesNumber}` : ''}</div>` : '';
+  const gbId = createGlobalBookId(b.title||'', b.author||'');
+  const gb = globalBookCache.find(x => x.id === gbId);
+  const avg = gb && gb.ratingCount > 0 ? (gb.ratingTotal / gb.ratingCount) : 0;
+  const stars = avg > 0 ? '★'.repeat(Math.round(avg)) + '☆'.repeat(5 - Math.round(avg)) : '';
+  const ratingHtml = stars ? `<div class="mbc-rating">${stars} ${avg.toFixed(1)}</div>` : '<div class="mbc-rating"></div>';
+  const statusCls = b.read ? 'mbc-read' : 'mbc-unread';
+  const statusIcon = b.read ? '✓' : '○';
+  return `<div class="mini-book-card ${frame}" style="background:${pal.bg};${pat ? pat+';' : ''}color:${pal.fg};" onclick="openBookInfo('${safeId}')">
+  <div class="rec-frame"></div>
+  <div class="rec-corners" style="color:${pal.ac}">
+    <span class="rc tl">${cornerSvg}</span><span class="rc tr">${cornerSvg}</span>
+    <span class="rc bl">${cornerSvg}</span><span class="rc br">${cornerSvg}</span>
+  </div>
+  <div class="mbc-title-block">
+    <div class="mbc-author">${esc(b.author||'')}</div>
+    ${_miniTitleHtml(b.title||'', b.genres)}
+    ${seriesHtml}
+  </div>
+  <div class="mbc-genre-area">
+    ${dividerHtml}
+    <div class="rec-genre-cluster">${clusterHtml}</div>
+    ${dividerHtml}
+  </div>
+  <div class="mbc-footer">
+    <div class="mbc-status ${statusCls}">${statusIcon}</div>
+    ${ratingHtml}
+    <button class="mbc-details-btn" onclick="event.stopPropagation();openBookInfo('${safeId}')"><i data-lucide="chevron-right"></i></button>
+  </div>
+</div>`;
 }
 
 function _miniGlobalBookCardHtml(b) {
-  const g = (b.genres||[])[0] || '';
-  const icon = _GENRE_LUCIDE[g] || 'book-open';
-  const fontFamily = _GENRE_FONT[g] || "'Playfair Display', serif";
+  const seed = _bookSeed(b.id);
+  const pal = _REC_PALETTES[seed % _REC_PALETTES.length];
+  const pat = _REC_PATTERNS[(seed >>> 3) % _REC_PATTERNS.length];
+  const frame = _REC_FRAME_STYLES[(seed >>> 5) % _REC_FRAME_STYLES.length];
+  const cornerSvg = _REC_CORNER_SVGS[(seed >>> 7) % _REC_CORNER_SVGS.length] || '';
+  const divStyle = _REC_DIVIDER_STYLES[(seed >>> 9) % _REC_DIVIDER_STYLES.length];
   const safeId = (b.id||'').replace(/'/g, "\\'");
+  const genres = (b.genres||[]).filter(g => g !== 'Non-Fiction');
+  const clusterHtml = genres.length ? _miniGenreClusterHtml(genres, pal.ac) : '';
+  const dividerHtml = divStyle === 'dots'
+    ? `<div class="rec-divider dots">· · ·</div>`
+    : `<div class="rec-divider${divStyle === 'ornate' ? ' ornate' : ''}"></div>`;
+  const seriesHtml = b.series
+    ? `<div class="mbc-series">${esc(b.series)}${b.seriesNumber ? ` #${b.seriesNumber}` : ''}</div>` : '';
+  const avg = b.ratingCount > 0 ? (b.ratingTotal / b.ratingCount) : 0;
+  const stars = avg > 0 ? '★'.repeat(Math.round(avg)) + '☆'.repeat(5 - Math.round(avg)) : '';
+  const ratingHtml = stars ? `<div class="mbc-rating">${stars} ${avg.toFixed(1)}</div>` : '<div class="mbc-rating"></div>';
   const personal = books.find(x => createGlobalBookId(x.title||'', x.author||'') === b.id);
   const isRead = personal ? !!personal.read : false;
-  const readBadge = isRead ? '<div class="mbc-read-badge">✓</div>' : '';
-  return `<div class="mini-book-card" onclick="openGlobalBookInfo('${safeId}')">
-    <div class="mbc-icon"><i data-lucide="${icon}"></i></div>
-    <div class="mbc-meta">
-      <div class="mbc-title" style="font-family:${fontFamily}">${esc(b.title||'')}</div>
-      <div class="mbc-author">${esc(b.author||'')}</div>
-    </div>
-    ${readBadge}
-  </div>`;
+  const statusCls = isRead ? 'mbc-read' : 'mbc-unread';
+  const statusIcon = isRead ? '✓' : '○';
+  return `<div class="mini-book-card ${frame}" style="background:${pal.bg};${pat ? pat+';' : ''}color:${pal.fg};" onclick="openGlobalBookInfo('${safeId}')">
+  <div class="rec-frame"></div>
+  <div class="rec-corners" style="color:${pal.ac}">
+    <span class="rc tl">${cornerSvg}</span><span class="rc tr">${cornerSvg}</span>
+    <span class="rc bl">${cornerSvg}</span><span class="rc br">${cornerSvg}</span>
+  </div>
+  <div class="mbc-title-block">
+    <div class="mbc-author">${esc(b.author||'')}</div>
+    ${_miniTitleHtml(b.title||'', b.genres)}
+    ${seriesHtml}
+  </div>
+  <div class="mbc-genre-area">
+    ${dividerHtml}
+    <div class="rec-genre-cluster">${clusterHtml}</div>
+    ${dividerHtml}
+  </div>
+  <div class="mbc-footer">
+    <div class="mbc-status ${statusCls}">${statusIcon}</div>
+    ${ratingHtml}
+    <button class="mbc-details-btn" onclick="event.stopPropagation();openGlobalBookInfo('${safeId}')"><i data-lucide="chevron-right"></i></button>
+  </div>
+</div>`;
 }
 
 function updateStats() {
@@ -4735,6 +4804,12 @@ function _ordinal(n) {
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
 
+const _MINI_CLUSTER_POS = [
+  [[50, 50, 68, 0, 1.0]],
+  [[38, 50, 62, -8, 1.0], [62, 50, 48, 7, 1.0]],
+  [[50, 44, 55, -5, 1.0], [33, 57, 44, 9, 1.0], [67, 57, 35, -6, 1.0]],
+];
+
 // Genre cluster positions: [left%, top%, sizePx, rotateDeg, opacity]
 // Positions [left%, top%, sizePx, rotateDeg, opacity] — sized to overlap slightly
 const _CLUSTER_POS = [
@@ -4751,6 +4826,22 @@ function _genreClusterHtml(genres) {
     const icon = _GENRE_LUCIDE[g] || 'book-open';
     const isCustom = !!_GENRE_SVG[g];
     const style = `position:absolute;left:${lp}%;top:${tp}%;width:${sz}px;height:${sz}px;transform:translate(-50%,-50%) rotate(${rot}deg);opacity:${op};color:var(--accent);`;
+    if (isCustom) {
+      return _GENRE_SVG[g].replace(/class="genre-svg( genre-filled)?"/, (m, filled) =>
+        filled ? `class="genre-filled" style="${style}"` : `style="${style}"`);
+    }
+    return `<i data-lucide="${icon}" style="${style}"></i>`;
+  }).join('');
+}
+
+function _miniGenreClusterHtml(genres, ac) {
+  const top = genres.slice(0, 3);
+  const positions = _MINI_CLUSTER_POS[Math.min(top.length - 1, 2)] || _MINI_CLUSTER_POS[0];
+  return top.map((g, i) => {
+    const [lp, tp, sz, rot, op] = positions[i] || [50,50,44,0,0.7];
+    const icon = _GENRE_LUCIDE[g] || 'book-open';
+    const isCustom = !!_GENRE_SVG[g];
+    const style = `position:absolute;left:${lp}%;top:${tp}%;width:${sz}px;height:${sz}px;transform:translate(-50%,-50%) rotate(${rot}deg);opacity:${op};color:${ac};`;
     if (isCustom) {
       return _GENRE_SVG[g].replace(/class="genre-svg( genre-filled)?"/, (m, filled) =>
         filled ? `class="genre-filled" style="${style}"` : `style="${style}"`);
@@ -4792,6 +4883,14 @@ const _GENRE_FONT = {
   'Poetry':                   "'IM Fell English', serif",
   'Philosophy':               "'IM Fell English', serif",
 };
+
+function _miniTitleHtml(title, genres) {
+  const fontFamily = (genres||[]).reduce((f, g) => f || _GENRE_FONT[g], null);
+  const fStyle = fontFamily ? `font-family:${fontFamily};` : '';
+  const len = (title||'').length;
+  const fs = len <= 8 ? 17 : len <= 14 ? 15 : len <= 22 ? 13 : len <= 32 ? 11 : 10;
+  return `<div class="mbc-title" style="font-size:${fs}px;${fStyle}">${esc(title)}</div>`;
+}
 
 function _recTitleHtml(title, genres) {
   const fontFamily = (genres || []).reduce((f, g) => f || _GENRE_FONT[g], null);
