@@ -285,7 +285,8 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .rec-genre-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 38px; position: relative; z-index: 4; min-height: 0; }
 .rec-genre-cluster { position: relative; width: 100%; flex: 1; min-height: 80px; max-height: 220px; }
 .rec-genre-cluster > svg path, .rec-genre-cluster > svg circle, .rec-genre-cluster > svg rect, .rec-genre-cluster > svg ellipse, .rec-genre-cluster > svg polygon, .rec-genre-cluster > svg line, .rec-genre-cluster > svg polyline { fill: none !important; stroke: var(--accent); stroke-width: 3px; stroke-linecap: round; stroke-linejoin: round; }
-.rec-genre-cluster > svg.genre-filled path { fill: var(--accent) !important; stroke: none !important; }
+.rec-genre-cluster > svg.genre-filled path { fill: var(--accent) !important; stroke: var(--accent) !important; stroke-width: 3px; paint-order: stroke fill; }
+.disc-list-avatar .genre-filled path, .tag-icon.genre-filled path { fill: var(--accent) !important; stroke: none !important; }
 .rec-genre-cluster .lucide { stroke-width: 3px; }
 .rec-genre-cluster > svg:not(.lucide) { filter: drop-shadow(0 1px 2px rgba(0,0,15,0.95)) drop-shadow(0 -1px 0 rgba(220,185,80,0.12)); }
 .rec-gi { position: absolute; transform-origin: center; }
@@ -5376,7 +5377,8 @@ const _GENRE_SVG = {
 function _genreIconHtml(genre, cls) {
   if (_GENRE_SVG[genre]) {
     const s = _GENRE_SVG[genre];
-    return cls ? s.replace('class="genre-svg"', `class="genre-svg ${cls}"`) : s;
+    return cls ? s.replace(/class="genre-svg( genre-filled)?"/, (m, f) =>
+      f ? `class="genre-svg genre-filled ${cls}"` : `class="genre-svg ${cls}"`) : s;
   }
   const icon = _GENRE_LUCIDE[genre] || 'book-open';
   return cls ? `<i data-lucide="${icon}" class="${cls}"></i>` : `<i data-lucide="${icon}"></i>`;
