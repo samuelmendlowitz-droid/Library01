@@ -2083,7 +2083,7 @@ All columns other than Author, Title, Series and Genres should be left empty or 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as fbSignOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, getDocsFromCache, query, where, limit, orderBy, startAfter, onSnapshot, serverTimestamp, increment, arrayUnion, arrayRemove, getCountFromServer } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, initializeFirestore, persistentLocalCache, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, getDocsFromCache, query, where, limit, orderBy, startAfter, onSnapshot, serverTimestamp, increment, arrayUnion, arrayRemove, getCountFromServer } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 // ── CONFIG ───────────────────────────────────────────────────────────────────
 const firebaseConfig = {
@@ -2098,7 +2098,9 @@ const firebaseConfig = {
 
 const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db   = getFirestore(app);
+let db;
+try { db = initializeFirestore(app, { localCache: persistentLocalCache() }); }
+catch(e) { db = getFirestore(app); }
 
 // ── DEFAULT DATA ─────────────────────────────────────────────────────────────
 const DEFAULT_GENRES = ['Non-Fiction','Fantasy','Epic Fantasy','Science Fiction','Mystery','Thriller','Psychological Thriller','Crime','Romance','Young Adult','Historical Fiction','Literary Fiction','Horror','Adventure','Biography','Memoir','Self-Help',"Children's",'Graphic Novel','Classics','Poetry','Philosophy','Psychology','Physics','True Crime','Business','Technology','Humor','Dystopian','Gothic','Coming-of-Age','Mythology','Cooking','Travel','Art','Sports','Music','Politics','Science','History','War','Espionage','Spirituality','Medical','Academic'];
@@ -2562,43 +2564,64 @@ let _globalLibraryCursor = null;
 let _globalLibraryExhausted = false;
 let _globalLibraryTotalCount = null; // actual Firestore document count
 const GLOBAL_FETCH_PAGE = 500; // docs fetched per Firestore request
+const _GLC_KEY = 'glb_v1';
+const _GLC_TTL = 30 * 60 * 1000; // 30 minutes
+function _saveGlobalCache(books, count) {
+  try { localStorage.setItem(_GLC_KEY, JSON.stringify({ books, count, ts: Date.now() })); } catch(e) {}
+}
+function _loadGlobalCache() {
+  try {
+    const raw = localStorage.getItem(_GLC_KEY);
+    if (!raw) return null;
+    const { books, count, ts } = JSON.parse(raw);
+    return (Date.now() - ts < _GLC_TTL) ? { books, count } : null;
+  } catch(e) { return null; }
+}
 
-async function preloadGlobalBooks() {
-  // Fetch popular books (popularity > 0, ordered by score) plus the first
-  // alphabetical page of all books. Popular books are deduplicated out of
-  // the alpha page so they aren't double-listed. The alpha cursor is saved
-  // for pagination via loadMoreGlobalBooks().
+async function _fetchGlobalFromFirestore() {
   try {
     const [popularSnap, alphaSnap, countSnap] = await Promise.all([
       getDocs(query(collection(db, 'globalLibrary'),
         where('popularity', '>', 0),
         orderBy('popularity', 'desc'),
-        limit(2000))),
+        limit(300))),
       getDocs(query(collection(db, 'globalLibrary'),
         orderBy('normalizedTitle', 'asc'),
         limit(GLOBAL_FETCH_PAGE))),
       getCountFromServer(collection(db, 'globalLibrary'))
     ]);
-
     const popularBooks = popularSnap.docs
       .map(d => ({ id: d.id, ...d.data() }))
       .filter(b => !isLikelyTestBook(b.title, b.author));
     const popularIds = new Set(popularBooks.map(b => b.id));
-
     const alphaBooks = alphaSnap.docs
       .map(d => ({ id: d.id, ...d.data() }))
       .filter(b => !isLikelyTestBook(b.title, b.author) && !popularIds.has(b.id));
-
     globalBookCache = [...popularBooks, ...alphaBooks];
     _globalLibraryCursor = alphaSnap.docs.length === GLOBAL_FETCH_PAGE
       ? alphaSnap.docs[alphaSnap.docs.length - 1] : null;
     _globalLibraryExhausted = alphaSnap.docs.length < GLOBAL_FETCH_PAGE;
     _globalLibraryTotalCount = countSnap.data().count;
+    _saveGlobalCache(popularBooks, _globalLibraryTotalCount);
+    if (currentPage === 'global') { syncUserBooksToCache(); applyGlobalFilters(); }
   } catch(e) {
     // globalLibrary inaccessible — autocomplete will use user's own books
   }
   _globalBooksPreloaded = true;
   _maybeResyncToGlobal();
+}
+
+async function preloadGlobalBooks() {
+  const cached = _loadGlobalCache();
+  if (cached) {
+    globalBookCache = cached.books;
+    _globalLibraryTotalCount = cached.count;
+    _globalBooksPreloaded = true;
+    _maybeResyncToGlobal();
+    _fetchGlobalFromFirestore(); // background refresh for fresh data + alpha cursor
+    return;
+  }
+  await _fetchGlobalFromFirestore();
 }
 
 // Called when the user is on the global library page and needs more books.
@@ -4573,6 +4596,8 @@ function _scheduleDedup() {
 
 const _recCache = { recs: null, ts: null };
 const _REC_TTL = 10 * 60 * 1000; // 10 minutes
+const _friendBooksCache = new Map(); // friendId → { ratings, ts }
+const _reviewCache = new Map();      // globalBookId → reviews array
 
 function _pearsonSim(ra, rb) {
   const common = Object.keys(ra).filter(id => rb[id] !== undefined);
@@ -4613,6 +4638,8 @@ async function _runRecommendationAlgorithm() {
   const accepted = (friendsList || []).filter(f => f.status === 'accepted');
   const friendResults = await Promise.allSettled(
     accepted.map(async f => {
+      const hit = _friendBooksCache.get(f.id);
+      if (hit && Date.now() - hit.ts < _REC_TTL) return { friend: f, ratings: hit.ratings };
       const snap = await getDocs(collection(db, 'users', f.id, 'books'));
       const ratings = {};
       snap.docs.forEach(d => {
@@ -4620,6 +4647,7 @@ async function _runRecommendationAlgorithm() {
         const gid = createGlobalBookId(b.title || '', b.author || '');
         if (b.rating) ratings[gid] = b.rating;
       });
+      _friendBooksCache.set(f.id, { ratings, ts: Date.now() });
       return { friend: f, ratings };
     })
   );
@@ -4904,9 +4932,12 @@ async function _loadRecSlideData(b) {
   const reviewsEl = document.getElementById('rreviews-' + b.id);
 
   try {
-    const snap = await getDocs(collection(db, 'globalLibrary', b.id, 'reviews'));
-    const allRevs = snap.docs.map(d => ({ uid: d.id, ...d.data() }))
-      .sort((a, z) => (z.timestamp?.seconds||0) - (a.timestamp?.seconds||0));
+    if (!_reviewCache.has(b.id)) {
+      const snap = await getDocs(collection(db, 'globalLibrary', b.id, 'reviews'));
+      _reviewCache.set(b.id, snap.docs.map(d => ({ uid: d.id, ...d.data() })));
+    }
+    const allRevs = _reviewCache.get(b.id)
+      .slice().sort((a, z) => (z.timestamp?.seconds||0) - (a.timestamp?.seconds||0));
     const withText = allRevs.filter(r => r.text);
 
     // Cover review snippet
@@ -5562,8 +5593,11 @@ function _buildReviewsSection(canWrite, myRating) {
 async function _loadAndRenderReviews(globalId) {
   _reviewBookGlobalId = globalId;
   try {
-    const snap = await getDocs(collection(db, 'globalLibrary', globalId, 'reviews'));
-    _reviewsData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (!_reviewCache.has(globalId)) {
+      const snap = await getDocs(collection(db, 'globalLibrary', globalId, 'reviews'));
+      _reviewCache.set(globalId, snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }
+    _reviewsData = _reviewCache.get(globalId);
   } catch(e) {
     _reviewsData = [];
   }
@@ -5672,6 +5706,7 @@ window.submitReview = async () => {
       timestamp: serverTimestamp(), avatarColor: userIconColor || ''
     };
     await setDoc(doc(db, 'globalLibrary', _reviewBookGlobalId, 'reviews', currentUser.uid), reviewData);
+    _reviewCache.delete(_reviewBookGlobalId);
     const idx = _reviewsData.findIndex(r => r.userId === currentUser.uid);
     const local = { id: currentUser.uid, ...reviewData, timestamp: { seconds: Date.now()/1000 } };
     if (idx >= 0) _reviewsData[idx] = local; else _reviewsData.push(local);
