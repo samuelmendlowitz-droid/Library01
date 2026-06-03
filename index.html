@@ -290,6 +290,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 /* Chip style variants */
 .rec-genre-chip { font-size: 12px; padding: 5px 12px; border-radius: 20px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.22); font-family: 'DM Sans', sans-serif; display: inline-flex; align-items: center; gap: 5px; }
 .rec-genre-chip .chip-icon { width: 13px; height: 13px; flex-shrink: 0; }
+.rec-genre-chip .genre-svg { color: var(--accent); fill: var(--accent); }
 .cst-badge .rec-genre-chip { border-radius: 5px; border: 1.5px solid rgba(255,255,255,0.35); background: rgba(0,0,0,0.2); }
 .cst-outline .rec-genre-chip { background: transparent; border: 1px solid rgba(255,255,255,0.45); }
 .cst-dot .rec-genre-chip { background: none; border: none; padding: 4px 8px; font-size: 12px; }
@@ -4757,7 +4758,7 @@ function _genreClusterHtml(genres) {
     const [lp, tp, sz, rot, op] = positions[i] || [50,50,80,0,0.7];
     const icon = _GENRE_LUCIDE[g] || 'book-open';
     const isCustom = !!_GENRE_SVG[g];
-    const style = `position:absolute;left:${lp}%;top:${tp}%;width:${sz}px;height:${sz}px;transform:translate(-50%,-50%) rotate(${rot}deg);opacity:${op};color:currentColor;`;
+    const style = `position:absolute;left:${lp}%;top:${tp}%;width:${sz}px;height:${sz}px;transform:translate(-50%,-50%) rotate(${rot}deg);opacity:${op};color:var(--accent);fill:var(--accent);`;
     if (isCustom) {
       return _GENRE_SVG[g].replace('class="genre-svg"', `style="${style}"`);
     }
