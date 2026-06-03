@@ -3111,7 +3111,8 @@ function renderBooks(list) {
     const locCls = isBorrowed ? 'tag borrowed-tag' : 'tag location';
     const gbId = createGlobalBookId(b.title||'', b.author||'');
     const gb = globalBookCache.find(x => x.id === gbId);
-    const locTag = currentBookView === 'grid' ? '' : ((b.location && b.location !== 'Wishlist') ? '<span class="' + locCls + '"><i data-lucide="map-pin" class="tag-icon"></i> ' + esc(b.location) + '</span>' : '');
+    const locDisplay = b.location === 'GlobalRead' ? 'Not Owned' : b.location;
+    const locTag = currentBookView === 'grid' ? '' : ((b.location && b.location !== 'Wishlist') ? '<span class="' + locCls + '"><i data-lucide="map-pin" class="tag-icon"></i> ' + esc(locDisplay) + '</span>' : '');
     return '<div class="book-card ' + readCls + ' ' + borCls + '" id="card-' + b.id + '">'
       + '<div class="book-check" onclick="toggleRead(\'' + b.id + '\',' + b.read + ')"><span class="check-icon">✓</span></div>'
       + '<div class="book-info">'
@@ -3150,7 +3151,7 @@ function renderBooksList(list) {
     const chkCls = isBorrowed ? 'lr-chk-btn borrowed' : 'lr-chk-btn';
     const series = b.series ? seriesIcon(b.seriesNumber) + (b.seriesTag ? esc(b.series) + ' <span style="opacity:0.65;font-weight:400">(' + esc(b.seriesTag) + ')</span>' : esc(b.series)) : '—';
     const genres = (b.genres||[]).slice(0,2).join(', ') || '—';
-    const loc = b.location && b.location !== 'Wishlist' ? esc(b.location) : '—';
+    const loc = b.location && b.location !== 'Wishlist' ? esc(b.location === 'GlobalRead' ? 'Not Owned' : b.location) : '—';
     return '<div class="list-row ' + readCls + '" id="card-' + b.id + '">'
       + '<div class="lr-check" onclick="toggleRead(\'' + b.id + '\',' + b.read + ')"><span class="lr-check-icon">✓</span></div>'
       + '<div class="lr-cell lr-title">' + esc(b.title) + '</div>'
@@ -3953,7 +3954,7 @@ function _renderBookInfoBody(b) {
   const isWishlist = b.location === 'Wishlist';
   const locSection = (b.location && !isWishlist) ? `<div class="info-section">
     <span class="info-section-label">Location</span>
-    <div class="info-chips"><span class="tag ${isBorrowed ? 'borrowed-tag' : 'location'}"><i data-lucide="map-pin" class="tag-icon"></i> ${esc(b.location)}</span></div>
+    <div class="info-chips"><span class="tag ${isBorrowed ? 'borrowed-tag' : 'location'}"><i data-lucide="map-pin" class="tag-icon"></i> ${esc(b.location === 'GlobalRead' ? 'Not Owned' : b.location)}</span></div>
   </div>` : '';
 
   const statusCls = b.read ? 'tag genre' : 'tag location';
