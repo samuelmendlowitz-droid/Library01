@@ -1872,6 +1872,11 @@ All columns other than Author, Title, Series and Genres should be left empty or 
           <span class="smi-arrow"><i data-lucide="chevron-right"></i></span>
         </button>
         <div id="ownerWipeSection" style="display:none;">
+          <button class="settings-menu-item" id="dedupRunBtn" onclick="manualRunDedup()">
+            <span class="smi-icon"><i data-lucide="git-merge"></i></span>
+            <div class="smi-text"><div class="smi-title">Deduplicate Library</div><div class="smi-sub" id="dedupSubText">Merge duplicate authors, books &amp; series</div></div>
+            <span class="smi-arrow"><i data-lucide="chevron-right"></i></span>
+          </button>
           <button class="settings-menu-item" onclick="document.getElementById('wipeConfirmSection').style.display='block';this.style.display='none'">
             <span class="smi-icon"><i data-lucide="trash-2"></i></span>
             <div class="smi-text"><div class="smi-title" style="color:var(--danger)">Wipe Global Library</div><div class="smi-sub">Delete all books from the shared global library</div></div>
@@ -2810,6 +2815,7 @@ async function loadBooks() {
     requestAnimationFrame(updateHeaderSpacer);
     _personalBooksLoaded = true;
     _maybeResyncToGlobal();
+    _scheduleDedup();
   } catch(e) {
     if (!books.length) showStatus('Error loading books. Please refresh.', 'error');
   }
@@ -4267,6 +4273,161 @@ function _renderHighlightsPanel(el, highlights, aboutMe) {
   refreshIcons();
 }
 
+// ── DEDUPLICATION SYSTEM ─────────────────────────────────────────────────────
+
+const _DEDUP_KEY      = 'lib01_lastDedupRun';
+const _DEDUP_INTERVAL = 24 * 60 * 60 * 1000;
+
+async function _runDedup(manual = false) {
+  if (!currentUser) return null;
+  const isAdmin = currentUser.email === 'samuelmendlowitz@gmail.com';
+  const now = Date.now();
+  if (!manual) {
+    const last = parseInt(localStorage.getItem(_DEDUP_KEY) || '0');
+    if (now - last < _DEDUP_INTERVAL) return null;
+  }
+
+  const snap = await getDocs(collection(db, 'globalLibrary'));
+  const allDocs = snap.docs.map(d => ({ _docId: d.id, ...d.data() }));
+
+  // ── Author canonicalization ────────────────────────────────────────────────
+  const authorGroups = {};
+  allDocs.forEach(b => {
+    if (!b.author) return;
+    const norm = normalizeBookText(b.author);
+    if (!authorGroups[norm]) authorGroups[norm] = {};
+    authorGroups[norm][b.author] = (authorGroups[norm][b.author] || 0) + 1;
+  });
+  const authorCanon = {};
+  Object.values(authorGroups).forEach(counts => {
+    const forms = Object.keys(counts);
+    if (forms.length < 2) return;
+    const canon = forms.sort((a, b) => counts[b] - counts[a] || a.localeCompare(b))[0];
+    forms.filter(f => f !== canon).forEach(f => { authorCanon[f] = canon; });
+  });
+
+  // ── Series canonicalization ────────────────────────────────────────────────
+  const seriesGroups = {};
+  allDocs.forEach(b => {
+    if (!b.series) return;
+    const norm = normalizeBookText(b.series);
+    if (!seriesGroups[norm]) seriesGroups[norm] = {};
+    seriesGroups[norm][b.series] = (seriesGroups[norm][b.series] || 0) + 1;
+  });
+  const seriesCanon = {};
+  Object.values(seriesGroups).forEach(counts => {
+    const forms = Object.keys(counts);
+    if (forms.length < 2) return;
+    const canon = forms.sort((a, b) => counts[b] - counts[a] || a.localeCompare(b))[0];
+    forms.filter(f => f !== canon).forEach(f => { seriesCanon[f] = canon; });
+  });
+
+  // ── Build per-doc update map ───────────────────────────────────────────────
+  const docUpdates = {}; // docId → fields
+  allDocs.forEach(b => {
+    const fixes = {};
+    if (b.author && authorCanon[b.author])  fixes.author  = authorCanon[b.author];
+    if (b.series && seriesCanon[b.series])  fixes.series  = seriesCanon[b.series];
+    if (Object.keys(fixes).length) docUpdates[b._docId] = fixes;
+  });
+
+  // ── Duplicate book detection (same canonical ID, different docId) ──────────
+  const idGroups = {};
+  allDocs.forEach(b => {
+    const canonAuthor = authorCanon[b.author] || b.author || '';
+    const gid = createGlobalBookId(b.title || '', canonAuthor);
+    if (!idGroups[gid]) idGroups[gid] = [];
+    idGroups[gid].push(b);
+  });
+
+  const deleteIds = [];
+  let mergedBooks = 0;
+  Object.values(idGroups).forEach(group => {
+    if (group.length < 2) return;
+    group.sort((a, b) => (b.ratingCount || 0) - (a.ratingCount || 0));
+    const winner = group[0];
+    const losers = group.slice(1);
+    const mergedGenres = [...new Set([...(winner.genres||[]), ...losers.flatMap(l => l.genres||[])])];
+    const mergedRatingTotal = group.reduce((s, d) => s + (d.ratingTotal || 0), 0);
+    const mergedRatingCount = group.reduce((s, d) => s + (d.ratingCount || 0), 0);
+    const mergedPopularity  = group.reduce((s, d) => s + (d.popularity  || 0), 0);
+    docUpdates[winner._docId] = {
+      ...(docUpdates[winner._docId] || {}),
+      genres: mergedGenres, ratingTotal: mergedRatingTotal,
+      ratingCount: mergedRatingCount, popularity: mergedPopularity,
+    };
+    losers.forEach(l => {
+      delete docUpdates[l._docId];
+      deleteIds.push(l._docId);
+    });
+    mergedBooks += losers.length;
+  });
+
+  // ── Execute global library updates (admin only) ────────────────────────────
+  if (isAdmin) {
+    await Promise.allSettled([
+      ...Object.entries(docUpdates).map(([id, fields]) => updateDoc(doc(db, 'globalLibrary', id), fields)),
+      ...deleteIds.map(id => deleteDoc(doc(db, 'globalLibrary', id))),
+    ]);
+  }
+
+  // ── Fix this user's personal books ────────────────────────────────────────
+  const personalOps = [];
+  books.forEach(b => {
+    const fixes = {};
+    if (b.author && authorCanon[b.author]) fixes.author = authorCanon[b.author];
+    if (b.series && seriesCanon[b.series]) fixes.series = seriesCanon[b.series];
+    if (Object.keys(fixes).length) {
+      personalOps.push(updateDoc(doc(db, 'users', currentUser.uid, 'books', b.id), fixes));
+      Object.assign(b, fixes); // update local state
+    }
+  });
+  await Promise.allSettled(personalOps);
+
+  // ── Update in-memory caches ────────────────────────────────────────────────
+  globalBookCache.forEach(b => {
+    if (b.author && authorCanon[b.author]) b.author = authorCanon[b.author];
+    if (b.series && seriesCanon[b.series]) b.series = seriesCanon[b.series];
+  });
+
+  localStorage.setItem(_DEDUP_KEY, now.toString());
+  return {
+    authors:       Object.keys(authorCanon).length,
+    series:        Object.keys(seriesCanon).length,
+    mergedBooks,
+    globalUpdates: Object.keys(docUpdates).length,
+    personalFixed: personalOps.length,
+  };
+}
+
+window.manualRunDedup = async function() {
+  const btn  = document.getElementById('dedupRunBtn');
+  const sub  = document.getElementById('dedupSubText');
+  const orig = sub.textContent;
+  if (btn) btn.style.pointerEvents = 'none';
+  sub.textContent = 'Scanning…';
+  try {
+    const r = await _runDedup(true);
+    const parts = [];
+    if (r.authors)       parts.push(`${r.authors} author variant${r.authors !== 1 ? 's' : ''} merged`);
+    if (r.series)        parts.push(`${r.series} series variant${r.series !== 1 ? 's' : ''} merged`);
+    if (r.mergedBooks)   parts.push(`${r.mergedBooks} duplicate book${r.mergedBooks !== 1 ? 's' : ''} removed`);
+    sub.textContent = parts.length ? parts.join(' · ') : 'No duplicates found';
+    setTimeout(() => { sub.textContent = orig; }, 6000);
+  } catch(e) {
+    sub.textContent = 'Error: ' + (e.message || 'Unknown error');
+    setTimeout(() => { sub.textContent = orig; }, 5000);
+  } finally {
+    if (btn) btn.style.pointerEvents = '';
+  }
+};
+
+function _scheduleDedup() {
+  if (!currentUser || currentUser.email !== 'samuelmendlowitz@gmail.com') return;
+  // Run silently in background after a short delay so it doesn't block initial render
+  setTimeout(() => _runDedup(false).catch(() => {}), 8000);
+}
+
 // ── FIND MY NEXT BOOK — RECOMMENDATION ENGINE ────────────────────────────────
 
 const _recCache = { recs: null, ts: null };
@@ -5581,6 +5742,16 @@ window.openSettingsSection = (section) => {
     if (ownerSection) ownerSection.style.display = currentUser && currentUser.email === 'samuelmendlowitz@gmail.com' ? '' : 'none';
     const wcs = document.getElementById('wipeConfirmSection');
     if (wcs) wcs.style.display = 'none';
+    const sub = document.getElementById('dedupSubText');
+    if (sub && !sub.dataset.busy) {
+      const last = parseInt(localStorage.getItem(_DEDUP_KEY) || '0');
+      if (last) {
+        const minsAgo = Math.round((Date.now() - last) / 60000);
+        sub.textContent = minsAgo < 2 ? 'Last run: just now' : minsAgo < 60 ? `Last run: ${minsAgo} min ago` : `Last run: ${Math.round(minsAgo/60)}h ago`;
+      } else {
+        sub.textContent = 'Merge duplicate authors, books & series';
+      }
+    }
     const wipeMenuBtn = document.querySelector('[onclick*="wipeConfirmSection"]');
     if (wipeMenuBtn) wipeMenuBtn.style.display = '';
   }
