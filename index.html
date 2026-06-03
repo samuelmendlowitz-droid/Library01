@@ -26,7 +26,7 @@
 })();
 </script>
 <title>Miriam's Library</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=Cinzel+Decorative:wght@400;700&family=Cinzel:wght@400;600&family=Creepster&family=Cormorant+Garamond:ital,wght@0,400;1,400&family=Orbitron:wght@400;700&family=Special+Elite&family=Rye&family=Pacifico&family=Nunito:wght@400;700&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <style>
 :root {
@@ -4787,9 +4787,9 @@ function _ordinal(n) {
 // Genre cluster positions: [left%, top%, sizePx, rotateDeg, opacity]
 // Positions [left%, top%, sizePx, rotateDeg, opacity] — sized to overlap slightly
 const _CLUSTER_POS = [
-  [[50, 50, 120, 0, 0.92]],
-  [[39, 50, 108, -8, 0.90], [61, 50, 84, 7, 0.76]],
-  [[50, 46, 96, -5, 0.92], [34, 57, 78, 9, 0.74], [66, 57, 62, -6, 0.60]],
+  [[50, 50, 120, 0, 1.0]],
+  [[39, 50, 108, -8, 1.0], [61, 50, 84, 7, 1.0]],
+  [[50, 46, 96, -5, 1.0], [34, 57, 78, 9, 1.0], [66, 57, 62, -6, 1.0]],
 ];
 
 function _genreClusterHtml(genres) {
@@ -4809,11 +4809,46 @@ function _genreClusterHtml(genres) {
 }
 
 // Compute dynamic title HTML: fills width with ~1cm margin each side
-function _recTitleHtml(title) {
+const _GENRE_FONT = {
+  'Fantasy':                  "'Cinzel Decorative', serif",
+  'Epic Fantasy':             "'Cinzel Decorative', serif",
+  'Epic fantasy':             "'Cinzel Decorative', serif",
+  'Mythology':                "'Cinzel Decorative', serif",
+  'Paranormal':               "'Cinzel Decorative', serif",
+  'Horror':                   "'Creepster', cursive",
+  'Gothic':                   "'Creepster', cursive",
+  'Romance':                  "'Cormorant Garamond', serif",
+  'Science Fiction':          "'Orbitron', sans-serif",
+  'Dystopian':                "'Orbitron', sans-serif",
+  'Technology':               "'Orbitron', sans-serif",
+  'Mystery':                  "'Special Elite', cursive",
+  'Thriller':                 "'Special Elite', cursive",
+  'Psychological Thriller':   "'Special Elite', cursive",
+  'Crime':                    "'Special Elite', cursive",
+  'Espionage':                "'Special Elite', cursive",
+  'True Crime':               "'Special Elite', cursive",
+  'Historical Fiction':       "'Cinzel', serif",
+  'Classics':                 "'Cinzel', serif",
+  'History':                  "'Cinzel', serif",
+  'War':                      "'Cinzel', serif",
+  'Young Adult':              "'Nunito', sans-serif",
+  "Children's":               "'Nunito', sans-serif",
+  'Coming-of-Age':            "'Nunito', sans-serif",
+  'Adventure':                "'Rye', cursive",
+  'Humor':                    "'Pacifico', cursive",
+  'Cooking':                  "'Pacifico', cursive",
+  'Literary Fiction':         "'IM Fell English', serif",
+  'Poetry':                   "'IM Fell English', serif",
+  'Philosophy':               "'IM Fell English', serif",
+};
+
+function _recTitleHtml(title, genres) {
+  const fontFamily = (genres || []).reduce((f, g) => f || _GENRE_FONT[g], null);
+  const fontStyle = fontFamily ? `font-family:${fontFamily};` : '';
   const w = Math.max(240, (window.innerWidth || 390) - 48 - 76);
   if (title.length <= 30) {
     const fs = Math.min(46, Math.max(20, Math.floor(w / (title.length * 0.52))));
-    return `<div class="rec-book-title" style="font-size:${fs}px">${esc(title)}</div>`;
+    return `<div class="rec-book-title" style="font-size:${fs}px;${fontStyle}">${esc(title)}</div>`;
   }
   const mid = Math.floor(title.length / 2);
   let split = mid;
@@ -4823,7 +4858,7 @@ function _recTitleHtml(title) {
   }
   const l1 = title.slice(0, split).trim(), l2 = title.slice(split).trim();
   const fs = Math.min(46, Math.max(16, Math.floor(w / (Math.max(l1.length, l2.length) * 0.52))));
-  return `<div class="rec-book-title" style="font-size:${fs}px">${esc(l1)}<br>${esc(l2)}</div>`;
+  return `<div class="rec-book-title" style="font-size:${fs}px;${fontStyle}">${esc(l1)}<br>${esc(l2)}</div>`;
 }
 
 function _recCoverHtml(b, seed, paletteIdxOverride) {
@@ -4866,7 +4901,7 @@ function _recCoverHtml(b, seed, paletteIdxOverride) {
   </div>
   <div class="rec-title-block">
     <div class="rec-book-author">${esc(b.author || '')}</div>
-    ${_recTitleHtml(b.title || '')}
+    ${_recTitleHtml(b.title || '', b.genres)}
     ${seriesHtml}
   </div>
   <div class="rec-genre-area">
