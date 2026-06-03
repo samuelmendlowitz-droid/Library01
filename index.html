@@ -3209,7 +3209,7 @@ function refreshIcons() {
 // ── GLOBAL LIBRARY VIEW ───────────────────────────────────────────────────────
 window.setBookView = (view) => {
   currentBookView = view;
-  const icons = { card: 'layout-list', grid: 'layout-grid', list: 'list' };
+  const icons = { card: 'layout-list', book: 'layout-grid' };
   const iconEl = document.getElementById('viewBtnIcon');
   if (iconEl) { iconEl.dataset.lucide = icons[view]; refreshIcons(); }
   if (currentPage === 'global') applyGlobalFilters();
@@ -6223,9 +6223,8 @@ window.setSort = (sort) => {
 };
 
 window.cycleBookView = () => {
-  const views = ['card','grid','list'];
-  currentBookView = views[(views.indexOf(currentBookView) + 1) % views.length];
-  const icons = { card:'layout-list', grid:'layout-grid', list:'list' };
+  currentBookView = currentBookView === 'card' ? 'book' : 'card';
+  const icons = { card: 'layout-list', book: 'layout-grid' };
   const iconEl = document.getElementById('viewBtnIcon');
   if (iconEl) { iconEl.dataset.lucide = icons[currentBookView]; refreshIcons(); }
   if (currentPage === 'global') applyGlobalFilters();
