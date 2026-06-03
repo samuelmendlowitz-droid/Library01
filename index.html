@@ -285,7 +285,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .rec-genre-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 38px; position: relative; z-index: 4; min-height: 0; }
 .rec-genre-cluster { position: relative; width: 100%; flex: 1; min-height: 80px; max-height: 220px; }
 .rec-genre-cluster > svg path, .rec-genre-cluster > svg circle, .rec-genre-cluster > svg rect, .rec-genre-cluster > svg ellipse, .rec-genre-cluster > svg polygon, .rec-genre-cluster > svg line, .rec-genre-cluster > svg polyline { fill: none !important; stroke: var(--accent); stroke-width: 3px; stroke-linecap: round; stroke-linejoin: round; }
-.rec-genre-cluster > svg.genre-filled path { fill: var(--accent) !important; stroke: var(--accent) !important; stroke-width: 3px; paint-order: stroke fill; }
+.rec-genre-cluster > svg.genre-filled path { fill: var(--accent) !important; stroke: var(--accent) !important; stroke-width: 8px; paint-order: stroke fill; }
 .disc-list-avatar .genre-filled path, .tag-icon.genre-filled path { fill: var(--accent) !important; stroke: none !important; }
 .rec-genre-cluster .lucide { stroke-width: 3px; }
 .rec-genre-cluster > svg:not(.lucide) { filter: drop-shadow(0 1px 2px rgba(0,0,15,0.95)) drop-shadow(0 -1px 0 rgba(220,185,80,0.12)); }
@@ -328,8 +328,9 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .rec-page-avg-stars { font-size: 17px; color: #b06010; letter-spacing: 1px; }
 .rec-page-avg-num { font-size: 14px; font-weight: 700; color: #1a1005; font-family: 'DM Sans', sans-serif; }
 .rec-page-avg-sub { font-size: 11px; color: rgba(80,40,0,0.6); font-family: 'DM Sans', sans-serif; }
-.rec-page-footer-link { padding: 8px 0 4px; text-align: right; }
-.rec-page-footer-link button { background: none; border: none; color: #6a4010; font-size: 12px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; }
+.rec-action-btn { width: 100%; padding: 9px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; font-family: 'DM Sans', sans-serif; cursor: pointer; margin: 0; text-align: center; }
+.rec-action-primary { background: #6a4010; color: #f7f2e4; border: none; }
+.rec-action-secondary { background: transparent; border: 1.5px solid #6a4010; color: #6a4010; }
 /* Friend rows on paper page */
 .rec-friend-row { display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(80,40,0,0.12); }
 .rec-friend-avatar { width: 28px; height: 28px; border-radius: 50%; background: rgba(80,40,0,0.1); border: 1px solid rgba(80,40,0,0.18); display: flex; align-items: center; justify-content: center; font-family: 'Playfair Display', serif; font-size: 12px; color: #6a4010; flex-shrink: 0; }
@@ -4929,6 +4930,71 @@ function _recCoverHtml(b, seed, paletteIdxOverride) {
 function _recInsideHtml(b) {
   const safeId = (b.id || '').replace(/'/g, "\\'");
   const bid = esc(b.id || '');
+
+  const personal = books.find(x => createGlobalBookId(x.title||'', x.author||'') === b.id);
+  const isRead = personal ? !!personal.read : false;
+  const isOwned = personal && personal.location !== 'Wishlist' && personal.location !== 'GlobalRead';
+  const isWishlisted = personal && personal.location === 'Wishlist';
+  const isGlobalRead = personal && personal.location === 'GlobalRead';
+
+  const seriesHtml = b.series ? `<div class="rec-page-section">
+    <div class="rec-page-section-label">Series</div>
+    <div class="rec-page-section-body">${esc(b.series)}${b.seriesNumber ? ` #${b.seriesNumber}` : ''}</div>
+  </div>` : '';
+
+  const genresHtml = (b.genres||[]).length ? `<div class="rec-page-section">
+    <div class="rec-page-section-label">Genres</div>
+    <div class="rec-page-section-body" style="display:flex;flex-wrap:wrap;gap:5px;">${(b.genres||[]).map(g =>
+      `<span style="display:inline-block;background:rgba(120,70,10,0.1);border:1px solid rgba(120,70,10,0.2);border-radius:12px;padding:3px 9px;font-size:11px;color:#5a3010;">${esc(g)}</span>`
+    ).join('')}</div>
+  </div>` : '';
+
+  const popularityHtml = b.popularity ? `<div class="rec-page-section">
+    <div class="rec-page-section-label">Popularity</div>
+    <div class="rec-page-section-body">★ ${b.popularity} reader${b.popularity!==1?'s':''}</div>
+  </div>` : '';
+
+  const globalRatingHtml = `<div class="rec-page-section">
+    <div class="rec-page-section-label">Global rating</div>
+    <div class="rec-page-section-body">${b.ratingCount > 0
+      ? `<div class="rec-page-avg"><span class="rec-page-avg-stars">${'★'.repeat(Math.round(b.ratingTotal/b.ratingCount))}${'☆'.repeat(5-Math.round(b.ratingTotal/b.ratingCount))}</span><span class="rec-page-avg-num">${(b.ratingTotal/b.ratingCount).toFixed(1)}</span><span class="rec-page-avg-sub">(${b.ratingCount} rating${b.ratingCount!==1?'s':''})</span></div>`
+      : '<span style="opacity:0.5;font-style:italic;">No ratings yet</span>'}</div>
+  </div>`;
+
+  let statusHtml = '';
+  if (isOwned) {
+    statusHtml = `<div class="rec-page-section">
+      <div class="rec-page-section-label">Status</div>
+      <div class="rec-page-section-body" style="display:flex;flex-wrap:wrap;gap:5px;">
+        <span style="background:rgba(60,120,60,0.12);border:1px solid rgba(60,120,60,0.25);border-radius:12px;padding:3px 9px;font-size:11px;color:#2a6020;">✓ In your library</span>
+        ${isRead ? '<span style="background:rgba(60,120,60,0.12);border:1px solid rgba(60,120,60,0.25);border-radius:12px;padding:3px 9px;font-size:11px;color:#2a6020;">✓ Read</span>' : ''}
+      </div>
+    </div>`;
+  } else if (isWishlisted) {
+    statusHtml = `<div class="rec-page-section">
+      <div class="rec-page-section-label">Status</div>
+      <div class="rec-page-section-body"><span style="background:rgba(100,60,10,0.1);border:1px solid rgba(100,60,10,0.2);border-radius:12px;padding:3px 9px;font-size:11px;color:#6a4010;">♡ On your wishlist</span></div>
+    </div>`;
+  } else if (isRead || isGlobalRead) {
+    statusHtml = `<div class="rec-page-section">
+      <div class="rec-page-section-label">Status</div>
+      <div class="rec-page-section-body"><span style="background:rgba(60,120,60,0.12);border:1px solid rgba(60,120,60,0.25);border-radius:12px;padding:3px 9px;font-size:11px;color:#2a6020;">✓ Marked as read</span></div>
+    </div>`;
+  }
+
+  let actionsHtml = '';
+  if (!isOwned) {
+    actionsHtml = `<div class="rec-page-section" style="display:flex;flex-direction:column;gap:8px;">`;
+    if (!isRead && !isGlobalRead) {
+      actionsHtml += `<button class="rec-action-btn rec-action-primary" onclick="markGlobalRead('${safeId}')">✓ Mark as Read</button>`;
+    }
+    if (!isWishlisted) {
+      actionsHtml += `<button class="rec-action-btn rec-action-secondary" onclick="addGlobalToWishlist('${safeId}')">♡ Add to Wishlist</button>`;
+    }
+    actionsHtml += `<button class="rec-action-btn rec-action-secondary" onclick="addGlobalBookToCollection('${safeId}')">+ Add to Library</button>`;
+    actionsHtml += `</div>`;
+  }
+
   return `<div class="rec-inside" data-bookid="${bid}">
   <div class="rec-page-crease"></div>
   <div class="rec-right-page">
@@ -4936,6 +5002,12 @@ function _recInsideHtml(b) {
       <i data-lucide="chevron-left"></i> Back
     </button>
     <div class="rec-page-book-title">${esc(b.title||'')} — ${esc(b.author||'')}</div>
+    ${seriesHtml}
+    ${genresHtml}
+    ${popularityHtml}
+    ${globalRatingHtml}
+    ${statusHtml}
+    ${actionsHtml}
     <div class="rec-page-section">
       <div class="rec-page-section-label">Friends who've read this</div>
       <div id="rfriends-${bid}" class="rec-page-section-body rec-page-loading">Loading…</div>
@@ -4945,15 +5017,8 @@ function _recInsideHtml(b) {
       <div id="rfavg-${bid}" class="rec-page-section-body">—</div>
     </div>
     <div class="rec-page-section">
-      <div class="rec-page-section-label">Global rating</div>
-      <div id="rgrating-${bid}" class="rec-page-section-body">${b.ratingCount > 0 ? `<div class="rec-page-avg"><span class="rec-page-avg-stars">${'★'.repeat(Math.round(b.ratingTotal/b.ratingCount))}${'☆'.repeat(5-Math.round(b.ratingTotal/b.ratingCount))}</span><span class="rec-page-avg-num">${(b.ratingTotal/b.ratingCount).toFixed(1)}</span><span class="rec-page-avg-sub">(${b.ratingCount} rating${b.ratingCount!==1?'s':''})</span></div>` : '<span style="opacity:0.5;font-style:italic;">No ratings yet</span>'}</div>
-    </div>
-    <div class="rec-page-section">
       <div class="rec-page-section-label">Reviews</div>
       <div id="rreviews-${bid}" class="rec-page-section-body rec-page-loading">Loading…</div>
-    </div>
-    <div class="rec-page-footer-link">
-      <button onclick="openGlobalBookInfo('${safeId}')">Full details →</button>
     </div>
     <div style="height:40px"></div>
   </div>
