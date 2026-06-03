@@ -2815,6 +2815,7 @@ async function loadBooks() {
     requestAnimationFrame(updateHeaderSpacer);
     _personalBooksLoaded = true;
     _maybeResyncToGlobal();
+    _migrateFictionRemoval();
     _scheduleDedup();
   } catch(e) {
     if (!books.length) showStatus('Error loading books. Please refresh.', 'error');
@@ -4274,6 +4275,45 @@ function _renderHighlightsPanel(el, highlights, aboutMe) {
 }
 
 // ── DEDUPLICATION SYSTEM ─────────────────────────────────────────────────────
+
+// One-time migration: strip 'Fiction' from everywhere it may have been saved
+async function _migrateFictionRemoval() {
+  if (!currentUser) return;
+  const migKey = 'lib01_noFiction_v1';
+  if (localStorage.getItem(migKey)) return;
+
+  const hadIt = orderedGenres.includes('Fiction');
+  orderedGenres = orderedGenres.filter(g => g !== 'Fiction');
+  if (hadIt) saveSettings();
+
+  // Personal books
+  const toFix = books.filter(b => (b.genres||[]).includes('Fiction'));
+  await Promise.allSettled(
+    toFix.map(b => updateDoc(doc(db, 'users', currentUser.uid, 'books', b.id),
+      { genres: arrayRemove('Fiction') }))
+  );
+  toFix.forEach(b => { b.genres = (b.genres||[]).filter(g => g !== 'Fiction'); });
+
+  // Global library (any user can update globalLibrary docs via existing rules)
+  try {
+    const snap = await getDocs(query(collection(db, 'globalLibrary'),
+      where('genres', 'array-contains', 'Fiction')));
+    await Promise.allSettled(
+      snap.docs.map(d => updateDoc(doc(db, 'globalLibrary', d.id),
+        { genres: arrayRemove('Fiction') }))
+    );
+    globalBookCache.forEach(b => {
+      if ((b.genres||[]).includes('Fiction'))
+        b.genres = b.genres.filter(g => g !== 'Fiction');
+    });
+  } catch(_) {}
+
+  localStorage.setItem(migKey, '1');
+  // Refresh visible UI if on a page that shows genres
+  if (['mylibrary','wishlist','global'].includes(currentPage)) {
+    buildGenreFilters(); applyFilters();
+  }
+}
 
 const _DEDUP_KEY      = 'lib01_lastDedupRun';
 const _DEDUP_INTERVAL = 24 * 60 * 60 * 1000;
