@@ -5917,8 +5917,16 @@ async function _loadAndRenderReviews(globalId) {
   _reviewBookGlobalId = globalId;
   try {
     if (!_reviewCache.has(globalId)) {
-      const snap = await getDocs(collection(db, 'globalLibrary', globalId, 'reviews'));
-      _reviewCache.set(globalId, snap.docs.map(d => ({ id: d.id, ...d.data() })));
+      const [reviewSnap, likeSnap] = await Promise.all([
+        getDocs(collection(db, 'globalLibrary', globalId, 'reviews')),
+        getDocs(collection(db, 'globalLibrary', globalId, 'reviewLikes'))
+      ]);
+      const likesMap = {};
+      likeSnap.docs.forEach(d => { likesMap[d.id] = d.data().likedBy || []; });
+      _reviewCache.set(globalId, reviewSnap.docs.map(d => {
+        const data = d.data();
+        return { id: d.id, ...data, likedBy: likesMap[d.id] || data.likedBy || [] };
+      }));
     }
     _reviewsData = _reviewCache.get(globalId);
   } catch(e) {
@@ -5991,17 +5999,19 @@ window.toggleReviewLike = async (reviewId, e) => {
   review.likedBy = alreadyLiked ? likedBy.filter(x => x !== uid) : [...likedBy, uid];
   _renderReviewList();
   try {
-    await updateDoc(doc(db, 'globalLibrary', _reviewBookGlobalId, 'reviews', reviewId), {
+    await setDoc(doc(db, 'globalLibrary', _reviewBookGlobalId, 'reviewLikes', reviewId), {
       likedBy: alreadyLiked ? arrayRemove(uid) : arrayUnion(uid)
-    });
+    }, { merge: true });
     if (_reviewCache.has(_reviewBookGlobalId)) {
       const cached = _reviewCache.get(_reviewBookGlobalId);
       const cr = cached.find(r => (r.id || r.userId) === reviewId);
       if (cr) cr.likedBy = review.likedBy;
     }
-  } catch(_) {
+  } catch(err) {
+    console.error('toggleReviewLike:', err);
     review.likedBy = likedBy;
     _renderReviewList();
+    showStatus('Could not save like.', 'error'); setTimeout(hideStatus, 2000);
   }
 };
 
@@ -6056,7 +6066,10 @@ window.submitReview = async () => {
   if (!text) { showStatus('Write something before submitting.', 'error'); setTimeout(hideStatus, 2000); return; }
   const personal = books.find(x => createGlobalBookId(x.title||'', x.author||'') === _reviewBookGlobalId);
   const rating = personal ? (personal.rating || 0) : 0;
-  if (!rating) { showStatus('Rate the book first to write a review.', 'error'); setTimeout(hideStatus, 2000); return; }
+  if (!rating) {
+    const msg = personal ? 'Rate this book first (tap the stars) to write a review.' : 'Open the book from your library and rate it first.';
+    showStatus(msg, 'error'); setTimeout(hideStatus, 3000); return;
+  }
   const displayName = userUsername || currentUser.displayName || currentUser.email || 'Anonymous';
   const btn = document.getElementById('review-submit-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
@@ -6068,13 +6081,15 @@ window.submitReview = async () => {
     await setDoc(doc(db, 'globalLibrary', _reviewBookGlobalId, 'reviews', currentUser.uid), reviewData);
     _reviewCache.delete(_reviewBookGlobalId);
     const idx = _reviewsData.findIndex(r => r.userId === currentUser.uid);
-    const local = { id: currentUser.uid, ...reviewData, timestamp: { seconds: Date.now()/1000 } };
+    const existingLikedBy = idx >= 0 ? (_reviewsData[idx].likedBy || []) : [];
+    const local = { id: currentUser.uid, ...reviewData, timestamp: { seconds: Date.now()/1000 }, likedBy: existingLikedBy };
     if (idx >= 0) _reviewsData[idx] = local; else _reviewsData.push(local);
     _renderReviewList();
     if (ta && idx < 0) ta.value = '';
     showStatus('Review saved!', 'success'); setTimeout(hideStatus, 2000);
   } catch(e) {
-    showStatus('Error saving review.', 'error'); setTimeout(hideStatus, 2000);
+    console.error('submitReview:', e);
+    showStatus('Error saving review.', 'error'); setTimeout(hideStatus, 3000);
   }
   if (btn) { btn.disabled = false; btn.textContent = 'Post Review'; }
 };
