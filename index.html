@@ -4514,123 +4514,167 @@ async function _runDedup(manual = false) {
     if (now - last < _DEDUP_INTERVAL) return null;
   }
 
-  // Use the in-memory cache (already fetched at startup) instead of
-  // re-fetching the whole collection — avoids the unbounded network read
-  // that caused the scan to hang on mobile.
+  // Use in-memory cache (populated at startup) — no unbounded network read.
   const allDocs = globalBookCache
     .filter(b => !b._localOnly)
     .map(b => ({
       _docId: b.id, title: b.title || '', author: b.author || '',
-      series: b.series || '', genres: b.genres || [],
+      series: b.series || '', genres: Array.isArray(b.genres) ? [...b.genres] : [],
       ratingTotal: b.ratingTotal || 0, ratingCount: b.ratingCount || 0,
       popularity: b.popularity || 0,
     }));
-  if (!allDocs.length) return { authors: 0, series: 0, mergedBooks: 0, globalUpdates: 0, personalFixed: 0 };
+  if (!allDocs.length) return { authors: 0, series: 0, titles: 0, genres: 0, globalUpdates: 0, personalFixed: 0 };
 
-  // Stamp throttle before any computation so a mid-run crash doesn't loop.
+  // Stamp throttle now so a mid-run crash doesn't cause a retry loop.
   localStorage.setItem(_DEDUP_KEY, now.toString());
 
-  // ── Author canonicalization (fuzzy) ──────────────────────────────────────
-  // Collect normalized → { rawForm: count } so we can fuzzy-cluster norms.
-  const _normToRaws = {};
-  allDocs.forEach(b => {
-    if (!b.author) return;
-    const norm = normalizeBookText(b.author);
-    if (!_normToRaws[norm]) _normToRaws[norm] = {};
-    _normToRaws[norm][b.author] = (_normToRaws[norm][b.author] || 0) + 1;
-  });
+  const docUpdates = {}; // docId → Firestore field patch
+  const deleteSet  = new Set();
 
-  // Cluster normalized keys: two norms merge when edit distance ≤ 2 AND both
-  // have at least 6 chars (guards against short names like "Amy" ≈ "Ann").
-  const _normKeys = Object.keys(_normToRaws);
-  const _normVisited = new Set();
-  const _authorClusters = [];
-  _normKeys.forEach(k => {
-    if (_normVisited.has(k)) return;
-    const cluster = [k];
-    _normVisited.add(k);
-    _normKeys.forEach(k2 => {
-      if (_normVisited.has(k2)) return;
-      // Length must be ≥ 6 and differ by ≤ 2 (can't be closer than that otherwise).
-      if (Math.min(k.length, k2.length) < 6 || Math.abs(k.length - k2.length) > 2) return;
-      if (_editDist(k, k2) <= 2) { cluster.push(k2); _normVisited.add(k2); }
-    });
-    _authorClusters.push(cluster);
-  });
+  function _score(d) { return (d.popularity || 0) + (d.ratingCount || 0) * 2; }
 
-  // Within each cluster pick the most-used raw spelling as canonical.
-  const authorCanon = {};
-  _authorClusters.forEach(cluster => {
-    const allRaws = {};
-    cluster.forEach(nk => {
-      Object.entries(_normToRaws[nk]).forEach(([raw, cnt]) => {
-        allRaws[raw] = (allRaws[raw] || 0) + cnt;
-      });
-    });
-    const forms = Object.keys(allRaws);
-    if (forms.length < 2) return;
-    const canon = forms.sort((a, b) => allRaws[b] - allRaws[a] || a.localeCompare(b))[0];
-    forms.filter(f => f !== canon).forEach(f => { authorCanon[f] = canon; });
-  });
-
-  // ── Series canonicalization ────────────────────────────────────────────────
-  const seriesGroups = {};
-  allDocs.forEach(b => {
-    if (!b.series) return;
-    const norm = normalizeBookText(b.series);
-    if (!seriesGroups[norm]) seriesGroups[norm] = {};
-    seriesGroups[norm][b.series] = (seriesGroups[norm][b.series] || 0) + 1;
-  });
-  const seriesCanon = {};
-  Object.values(seriesGroups).forEach(counts => {
-    const forms = Object.keys(counts);
-    if (forms.length < 2) return;
-    const canon = forms.sort((a, b) => counts[b] - counts[a] || a.localeCompare(b))[0];
-    forms.filter(f => f !== canon).forEach(f => { seriesCanon[f] = canon; });
-  });
-
-  // ── Build per-doc update map ───────────────────────────────────────────────
-  const docUpdates = {}; // docId → fields
-  allDocs.forEach(b => {
-    const fixes = {};
-    if (b.author && authorCanon[b.author])  fixes.author  = authorCanon[b.author];
-    if (b.series && seriesCanon[b.series])  fixes.series  = seriesCanon[b.series];
-    if (Object.keys(fixes).length) docUpdates[b._docId] = fixes;
-  });
-
-  // ── Duplicate book detection (same canonical ID, different docId) ──────────
-  const idGroups = {};
-  allDocs.forEach(b => {
-    const canonAuthor = authorCanon[b.author] || b.author || '';
-    const gid = createGlobalBookId(b.title || '', canonAuthor);
-    if (!idGroups[gid]) idGroups[gid] = [];
-    idGroups[gid].push(b);
-  });
-
-  const deleteIds = [];
-  let mergedBooks = 0;
-  Object.values(idGroups).forEach(group => {
-    if (group.length < 2) return;
-    group.sort((a, b) => (b.ratingCount || 0) - (a.ratingCount || 0));
-    const winner = group[0];
-    const losers = group.slice(1);
-    const mergedGenres = [...new Set([...(winner.genres||[]), ...losers.flatMap(l => l.genres||[])])];
-    const mergedRatingTotal = group.reduce((s, d) => s + (d.ratingTotal || 0), 0);
-    const mergedRatingCount = group.reduce((s, d) => s + (d.ratingCount || 0), 0);
-    const mergedPopularity  = group.reduce((s, d) => s + (d.popularity  || 0), 0);
-    docUpdates[winner._docId] = {
+  // Absorb loser into winner: sum stats, union genres, queue loser for deletion.
+  function _absorb(winner, loser) {
+    if (deleteSet.has(loser._docId) || deleteSet.has(winner._docId)) return;
+    deleteSet.add(loser._docId);
+    delete docUpdates[loser._docId];
+    const patch = {
       ...(docUpdates[winner._docId] || {}),
-      genres: mergedGenres, ratingTotal: mergedRatingTotal,
-      ratingCount: mergedRatingCount, popularity: mergedPopularity,
+      genres:      [...new Set([...(winner.genres || []), ...(loser.genres || [])])],
+      ratingTotal: (winner.ratingTotal || 0) + (loser.ratingTotal || 0),
+      ratingCount: (winner.ratingCount || 0) + (loser.ratingCount || 0),
+      popularity:  (winner.popularity  || 0) + (loser.popularity  || 0),
     };
-    losers.forEach(l => {
-      delete docUpdates[l._docId];
-      deleteIds.push(l._docId);
+    docUpdates[winner._docId] = patch;
+    Object.assign(winner, patch);
+  }
+
+  // Sorted-sequential fuzzy cluster helper.
+  // sorts keys, walks forward with lookahead; clusters adjacent keys within
+  // edit distance ≤ 2 (both sides must be ≥ minLen to avoid short collisions).
+  function _sortedCluster(normToRaws, minLen) {
+    const keys = Object.keys(normToRaws).sort();
+    const seen = new Set();
+    const canon = {}; // non-canonical raw → canonical raw
+    for (let i = 0; i < keys.length; i++) {
+      const k = keys[i];
+      if (seen.has(k)) continue;
+      seen.add(k);
+      const cluster = [k];
+      for (let j = i + 1; j < keys.length && j < i + 25; j++) {
+        const k2 = keys[j];
+        if (seen.has(k2)) continue;
+        if (Math.abs(k.length - k2.length) > 2 || Math.min(k.length, k2.length) < minLen) continue;
+        if (_editDist(k, k2) <= 2) { cluster.push(k2); seen.add(k2); }
+      }
+      if (cluster.length < 2) continue;
+      // Merge all raw spellings across this cluster; pick most-used as canonical.
+      const allRaws = {};
+      cluster.forEach(nk => {
+        Object.entries(normToRaws[nk]).forEach(([raw, cnt]) => {
+          allRaws[raw] = (allRaws[raw] || 0) + cnt;
+        });
+      });
+      const forms = Object.keys(allRaws);
+      const best  = forms.sort((a, b) => allRaws[b] - allRaws[a] || a.localeCompare(b))[0];
+      forms.filter(f => f !== best).forEach(f => { canon[f] = best; });
+    }
+    return canon;
+  }
+
+  // Build normKey → { rawSpelling: count } for a field across allDocs.
+  function _buildNormMap(field) {
+    const map = {};
+    allDocs.forEach(b => {
+      const raw = b[field]; if (!raw) return;
+      const nk = normalizeBookText(raw);
+      if (!map[nk]) map[nk] = {};
+      map[nk][raw] = (map[nk][raw] || 0) + 1;
     });
-    mergedBooks += losers.length;
+    return map;
+  }
+
+  // ── 1. Author normalization (sorted sequential, edit distance ≤ 2) ─────────
+  const authorCanon = _sortedCluster(_buildNormMap('author'), 5);
+  allDocs.forEach(b => {
+    const canon = authorCanon[b.author]; if (!canon) return;
+    docUpdates[b._docId] = { ...(docUpdates[b._docId] || {}),
+      author: canon, normalizedAuthor: normalizeBookText(canon) };
+    b.author = canon;
   });
 
-  // ── Execute global library updates (admin only) ────────────────────────────
+  // ── 2. Series normalization (sorted sequential, edit distance ≤ 2) ─────────
+  const seriesCanon = _sortedCluster(_buildNormMap('series'), 4);
+  allDocs.forEach(b => {
+    const canon = seriesCanon[b.series]; if (!canon) return;
+    docUpdates[b._docId] = { ...(docUpdates[b._docId] || {}),
+      series: canon, normalizedSeries: normalizeBookText(canon) };
+    b.series = canon;
+  });
+
+  // ── 3. Title dedup (sorted by normalizedTitle, sequential walk) ─────────────
+  // Two books merge when title edit distance ≤ 2 AND author edit distance ≤ 2.
+  const sortedDocs = allDocs
+    .filter(b => !deleteSet.has(b._docId))
+    .sort((a, b) => normalizeBookText(a.title).localeCompare(normalizeBookText(b.title)));
+
+  let titlesMerged = 0;
+  for (let i = 0; i < sortedDocs.length - 1; i++) {
+    const b1 = sortedDocs[i];
+    if (deleteSet.has(b1._docId)) continue;
+    const nt1 = normalizeBookText(b1.title);
+    const na1 = normalizeBookText(b1.author);
+    for (let j = i + 1; j < sortedDocs.length && j < i + 25; j++) {
+      const b2 = sortedDocs[j];
+      if (deleteSet.has(b2._docId)) continue;
+      const nt2 = normalizeBookText(b2.title);
+      if (Math.abs(nt1.length - nt2.length) > 2) continue;
+      if (_editDist(nt1, nt2) > 2) continue;
+      // Title close — also require author close
+      const na2 = normalizeBookText(b2.author);
+      if (_editDist(na1, na2) > 2) continue;
+      const winner = _score(b1) >= _score(b2) ? b1 : b2;
+      _absorb(winner, winner === b1 ? b2 : b1);
+      titlesMerged++;
+    }
+  }
+
+  // ── 4. Genre normalization (all-pairs on small genre set) ───────────────────
+  const genreCounts = {};
+  allDocs.forEach(b => {
+    if (deleteSet.has(b._docId)) return;
+    (b.genres || []).forEach(g => { if (g) genreCounts[g] = (genreCounts[g] || 0) + 1; });
+  });
+  const genreList = Object.keys(genreCounts).sort();
+  const genreSeen = new Set();
+  const genreCanon = {};
+  for (let i = 0; i < genreList.length; i++) {
+    const g = genreList[i]; if (genreSeen.has(g)) continue;
+    genreSeen.add(g);
+    const ng = normalizeBookText(g);
+    for (let j = i + 1; j < genreList.length; j++) {
+      const g2 = genreList[j]; if (genreSeen.has(g2)) continue;
+      const ng2 = normalizeBookText(g2);
+      if (Math.abs(ng.length - ng2.length) > 2 || ng.length < 3) continue;
+      if (_editDist(ng, ng2) <= 2) {
+        genreSeen.add(g2);
+        const best = genreCounts[g] >= genreCounts[g2] ? g : g2;
+        genreCanon[best === g ? g2 : g] = best;
+      }
+    }
+  }
+  let genreFixed = 0;
+  allDocs.forEach(b => {
+    if (deleteSet.has(b._docId) || !b.genres?.length) return;
+    const fixed = [...new Set(b.genres.map(g => genreCanon[g] || g))];
+    const changed = fixed.length !== b.genres.length || fixed.some((g, i) => g !== b.genres[i]);
+    if (!changed) return;
+    docUpdates[b._docId] = { ...(docUpdates[b._docId] || {}), genres: fixed };
+    b.genres = fixed; genreFixed++;
+  });
+
+  // ── 5. Write to Firestore (admin only) ─────────────────────────────────────
+  const deleteIds = [...deleteSet];
   if (isAdmin) {
     await Promise.allSettled([
       ...Object.entries(docUpdates).map(([id, fields]) => updateDoc(doc(db, 'globalLibrary', id), fields)),
@@ -4638,31 +4682,32 @@ async function _runDedup(manual = false) {
     ]);
   }
 
-  // ── Fix this user's personal books ────────────────────────────────────────
+  // ── 6. Fix personal books ──────────────────────────────────────────────────
   const personalOps = [];
   books.forEach(b => {
     const fixes = {};
     if (b.author && authorCanon[b.author]) fixes.author = authorCanon[b.author];
     if (b.series && seriesCanon[b.series]) fixes.series = seriesCanon[b.series];
-    if (Object.keys(fixes).length) {
-      personalOps.push(updateDoc(doc(db, 'users', currentUser.uid, 'books', b.id), fixes));
-      Object.assign(b, fixes); // update local state
-    }
+    if (b.genres?.some(g => genreCanon[g])) fixes.genres = b.genres.map(g => genreCanon[g] || g);
+    if (!Object.keys(fixes).length) return;
+    personalOps.push(updateDoc(doc(db, 'users', currentUser.uid, 'books', b.id), fixes));
+    Object.assign(b, fixes);
   });
   await Promise.allSettled(personalOps);
 
-  // ── Update in-memory cache ────────────────────────────────────────────────
-  const _deletedSet = new Set(deleteIds);
-  globalBookCache = globalBookCache.filter(b => !_deletedSet.has(b.id));
+  // ── 7. Update in-memory cache ──────────────────────────────────────────────
+  globalBookCache = globalBookCache.filter(b => !deleteSet.has(b.id));
   globalBookCache.forEach(b => {
-    if (b.author && authorCanon[b.author]) b.author = authorCanon[b.author];
-    if (b.series && seriesCanon[b.series]) b.series = seriesCanon[b.series];
+    if (authorCanon[b.author]) b.author = authorCanon[b.author];
+    if (seriesCanon[b.series]) b.series = seriesCanon[b.series];
+    if (b.genres) b.genres = b.genres.map(g => genreCanon[g] || g);
   });
 
   return {
-    authors:       Object.keys(authorCanon).length,
-    series:        Object.keys(seriesCanon).length,
-    mergedBooks,
+    authors: Object.keys(authorCanon).length,
+    series:  Object.keys(seriesCanon).length,
+    titles:  titlesMerged,
+    genres:  Object.keys(genreCanon).length,
     globalUpdates: Object.keys(docUpdates).length,
     personalFixed: personalOps.length,
   };
@@ -4677,9 +4722,10 @@ window.manualRunDedup = async function() {
   try {
     const r = await _runDedup(true);
     const parts = [];
-    if (r.authors)       parts.push(`${r.authors} author variant${r.authors !== 1 ? 's' : ''} merged`);
-    if (r.series)        parts.push(`${r.series} series variant${r.series !== 1 ? 's' : ''} merged`);
-    if (r.mergedBooks)   parts.push(`${r.mergedBooks} duplicate book${r.mergedBooks !== 1 ? 's' : ''} removed`);
+    if (r.authors) parts.push(`${r.authors} author variant${r.authors !== 1 ? 's' : ''} merged`);
+    if (r.series)  parts.push(`${r.series} series variant${r.series !== 1 ? 's' : ''} merged`);
+    if (r.titles)  parts.push(`${r.titles} duplicate title${r.titles !== 1 ? 's' : ''} removed`);
+    if (r.genres)  parts.push(`${r.genres} genre variant${r.genres !== 1 ? 's' : ''} normalised`);
     sub.textContent = parts.length ? parts.join(' · ') : 'No duplicates found';
     setTimeout(() => { sub.textContent = orig; }, 6000);
   } catch(e) {
