@@ -2114,7 +2114,7 @@ let _discoverGenresListSort   = 'count-desc';
 let currentSort = 'popularity-desc';
 let _personalSort = 'title-asc';
 let _globalSort   = 'popularity-desc';
-let currentBookView = 'card'; // 'card' | 'book'
+let currentBookView = localStorage.getItem('bookView') || 'book'; // 'card' | 'book'
 let filterPanelOpen = false;
 let sortPanelOpen = false;
 let addSelectedGenres = [], editSelectedGenres = [];
@@ -2389,6 +2389,8 @@ onAuthStateChanged(auth, async user => {
     document.getElementById('mainApp').style.display = 'block';
     document.getElementById('settingsUserName').textContent = user.displayName || '';
     document.getElementById('settingsUserEmail').textContent = user.email || '';
+    const _vbi = document.getElementById('viewBtnIcon');
+    if (_vbi) _vbi.dataset.lucide = currentBookView === 'book' ? 'layout-grid' : 'layout-list';
     // measure header height after it's visible
     requestAnimationFrame(updateHeaderSpacer);
     await loadSettings(); // also loads borrowLog
@@ -6333,6 +6335,7 @@ window.setSort = (sort) => {
 
 window.cycleBookView = () => {
   currentBookView = currentBookView === 'card' ? 'book' : 'card';
+  localStorage.setItem('bookView', currentBookView);
   const icons = { card: 'layout-list', book: 'layout-grid' };
   const iconEl = document.getElementById('viewBtnIcon');
   if (iconEl) { iconEl.dataset.lucide = icons[currentBookView]; refreshIcons(); }
