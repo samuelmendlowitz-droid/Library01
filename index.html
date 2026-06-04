@@ -355,7 +355,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .friend-last-msg { flex: 1; min-width: 0; font-size: 12px; color: var(--text3); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; text-align: right; }
 .friend-last-msg.from-them { color: var(--text2); }
 .friend-msg-subtitle { font-size: 10px; opacity: 0.7; margin-top: 2px; -webkit-line-clamp: 1; }
-.chat-unread-dot { position: absolute; top: 9px; right: 10px; width: 9px; height: 9px; border-radius: 50%; background: #c9a96e; box-shadow: 0 0 5px rgba(201,169,110,0.55); pointer-events: none; }
+.friend-card.chat-unread { border-color: rgba(201,169,110,0.45); box-shadow: 0 0 14px rgba(201,169,110,0.2), 0 0 4px rgba(201,169,110,0.1); }
 .club-card-subjects { display: flex; flex-wrap: wrap; gap: 5px; width: 100%; padding-top: 2px; }
 .club-subject-tag { font-size: 10px; padding: 2px 8px; border-radius: 10px; background: var(--surface3); border: 1px solid var(--border); color: var(--text2); font-family: 'DM Sans', sans-serif; white-space: nowrap; }
 .club-privacy-row { display: flex; align-items: center; gap: 5px; }
@@ -7072,16 +7072,17 @@ async function loadLastChatMessages() {
   renderChats();
 }
 
+function _chatMsgMs(msg) {
+  if (!msg) return 0;
+  return msg.createdAt?.toDate?.()?.getTime?.() || (msg.createdAt?.seconds * 1000) || 0;
+}
+
 function chatMsgTimestamp(fid) {
-  const m = chatLastMessages[fid];
-  if (!m) return 0;
-  return m.createdAt?.toDate?.()?.getTime?.() || m.createdAt?.seconds * 1000 || 0;
+  return _chatMsgMs(chatLastMessages[fid]);
 }
 
 function clubMsgTimestamp(cid) {
-  const m = clubLastMessages[cid];
-  if (!m) return 0;
-  return m.createdAt?.toDate?.()?.getTime?.() || m.createdAt?.seconds * 1000 || 0;
+  return _chatMsgMs(clubLastMessages[cid]);
 }
 
 function renderChatList(friendsFiltered, clubsFiltered) {
@@ -7136,9 +7137,9 @@ function renderChatList(friendsFiltered, clubsFiltered) {
       const sid = jsStr(item.id), sdn = jsStr(item.displayName || item.username);
       const lastMsg = chatLastMessages[item.id];
       const fromMe = lastMsg?.fromUid === currentUser?.uid;
-      const isUnread = lastMsg && !fromMe;
       const notifOn = localStorage.getItem('notif_muted_' + item.id) !== 'true'; // ON by default
-      const dotHtml = (notifOn && isUnread) ? '<div class="chat-unread-dot"></div>' : '';
+      const lastReadMs = parseInt(localStorage.getItem('chat_read_' + item.id) || '0');
+      const isUnread = notifOn && lastMsg && !fromMe && _chatMsgMs(lastMsg) > lastReadMs;
       let msgInner = '';
       if (lastMsg) {
         if (lastMsg.type === 'friend_added') msgInner = esc('👋 You are now friends');
@@ -7149,8 +7150,7 @@ function renderChatList(friendsFiltered, clubsFiltered) {
       const msgHtml = msgInner
         ? '<div class="friend-last-msg' + (!fromMe ? ' from-them' : '') + '">' + msgInner + '</div>'
         : '<div class="friend-last-msg" style="opacity:0.3;font-style:italic">No messages yet</div>';
-      return '<div class="friend-card" data-friend-id="' + esc(item.id) + '" data-chat-action="friend" data-uid="' + esc(item.id) + '" data-dn="' + esc(item.displayName || item.username) + '" style="cursor:pointer;align-items:flex-start">'
-        + dotHtml
+      return '<div class="friend-card' + (isUnread ? ' chat-unread' : '') + '" data-friend-id="' + esc(item.id) + '" data-chat-action="friend" data-uid="' + esc(item.id) + '" data-dn="' + esc(item.displayName || item.username) + '" style="cursor:pointer;align-items:flex-start">'
         + renderAvatarHtml(item.id, item.displayName, item.username)
         + '<div class="friend-info" style="flex:0 0 auto;min-width:0;max-width:110px">'
         + '<div class="friend-name">' + esc(item.displayName || item.username) + '</div>'
@@ -7167,11 +7167,10 @@ function renderChatList(friendsFiltered, clubsFiltered) {
       ].slice(0, 8);
       const clubLastMsg = clubLastMessages[item.id];
       const clubFromMe = clubLastMsg?.fromUid === currentUser?.uid;
-      const clubUnread = clubLastMsg && !clubFromMe;
       const clubNotifOn = localStorage.getItem('clubnotif_on_' + item.id) === 'true'; // OFF by default
-      const dotHtml = (clubNotifOn && clubUnread) ? '<div class="chat-unread-dot"></div>' : '';
-      return '<div class="friend-card" data-chat-action="club" data-club-id="' + esc(item.id) + '" style="cursor:pointer;align-items:center;gap:10px">'
-        + dotHtml
+      const clubLastReadMs = parseInt(localStorage.getItem('chat_read_' + item.id) || '0');
+      const clubUnread = clubNotifOn && clubLastMsg && !clubFromMe && _chatMsgMs(clubLastMsg) > clubLastReadMs;
+      return '<div class="friend-card' + (clubUnread ? ' chat-unread' : '') + '" data-chat-action="club" data-club-id="' + esc(item.id) + '" style="cursor:pointer;align-items:center;gap:10px">'
         + '<div class="club-avatar" style="background:' + esc(item.bgColor) + ';flex-shrink:0">' + esc(item.emoji) + '</div>'
         + '<div style="flex:1;min-width:0">'
         + '<div class="friend-name">' + esc(item.name) + '</div>'
@@ -7458,6 +7457,9 @@ const FLIB_SORT_OPTS = [
 ];
 
 window.openFriendDetails = (uid, name) => {
+  localStorage.setItem('chat_read_' + uid, Date.now());
+  const glowEl = document.querySelector('.friend-card[data-friend-id="' + uid + '"]');
+  if (glowEl) glowEl.classList.remove('chat-unread');
   friendDetailsUid = uid; friendDetailsName = name;
   const firstName = name.split(' ')[0];
   document.getElementById('friendDetailsFirstName').textContent = firstName;
@@ -7916,6 +7918,9 @@ window.submitCreateClub = async () => {
 
 // ── CLUB DETAILS ──────────────────────────────────────────────────────────────
 window.openClubDetails = async (clubId) => {
+  localStorage.setItem('chat_read_' + clubId, Date.now());
+  const glowEl = document.querySelector('.friend-card[data-club-id="' + clubId + '"]');
+  if (glowEl) glowEl.classList.remove('chat-unread');
   currentClubId = clubId;
   const snap = await getDoc(clubDoc(clubId));
   if (!snap.exists()) { showStatus('Club not found', 'error'); return; }
