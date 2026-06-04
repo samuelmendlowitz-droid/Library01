@@ -2589,11 +2589,11 @@ async function _fetchGlobalFromFirestore() {
       getCountFromServer(collection(db, 'globalLibrary'))
     ]);
     const popularBooks = popularSnap.docs
-      .map(d => ({ id: d.id, ...d.data() }))
+      .map(d => _fmtBook({ id: d.id, ...d.data() }))
       .filter(b => !isLikelyTestBook(b.title, b.author));
     const popularIds = new Set(popularBooks.map(b => b.id));
     const alphaBooks = alphaSnap.docs
-      .map(d => ({ id: d.id, ...d.data() }))
+      .map(d => _fmtBook({ id: d.id, ...d.data() }))
       .filter(b => !isLikelyTestBook(b.title, b.author) && !popularIds.has(b.id));
     globalBookCache = [...popularBooks, ...alphaBooks];
     _globalLibraryCursor = alphaSnap.docs.length === GLOBAL_FETCH_PAGE
@@ -2612,7 +2612,7 @@ async function _fetchGlobalFromFirestore() {
 async function preloadGlobalBooks() {
   const cached = _loadGlobalCache();
   if (cached) {
-    globalBookCache = cached.books;
+    globalBookCache = cached.books.map(_fmtBook);
     _globalLibraryTotalCount = cached.count;
     _globalBooksPreloaded = true;
     _maybeResyncToGlobal();
@@ -2631,7 +2631,7 @@ async function loadMoreGlobalBooks() {
       startAfter(_globalLibraryCursor), limit(GLOBAL_FETCH_PAGE));
     const snap = await getDocs(q);
     const existingIds = new Set(globalBookCache.map(b => b.id));
-    const page = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+    const page = snap.docs.map(d => _fmtBook({ id: d.id, ...d.data() }))
       .filter(b => !isLikelyTestBook(b.title, b.author) && !existingIds.has(b.id));
     globalBookCache.push(...page);
     _globalLibraryCursor = snap.docs.length === GLOBAL_FETCH_PAGE ? snap.docs[snap.docs.length - 1] : null;
@@ -2805,6 +2805,45 @@ function normalizeBookText(str = '') {
     .trim();
 }
 
+const _SMALL_WORDS = new Set([
+  'a','an','the','and','but','or','nor','for','so','yet',
+  'of','in','on','at','to','by','as','up','with','via','from','into','than','vs'
+]);
+function _fmtTitle(str) {
+  if (!str) return str;
+  let first = true;
+  return str.replace(/\S+/g, word => {
+    const lower = word.toLowerCase();
+    const cap = lower.charAt(0).toUpperCase() + lower.slice(1);
+    if (first) { first = false; return cap; }
+    return _SMALL_WORDS.has(lower) ? lower : cap;
+  });
+}
+function _fmtAuthorWord(w) {
+  if (!w) return w;
+  const isU = w === w.toUpperCase(), isL = w === w.toLowerCase();
+  if (!isU && !isL) return w;                              // mixed case — keep as-is (McAllister, etc.)
+  if (/^([a-zA-Z]\.)+$/.test(w)) return w.toUpperCase(); // j.k. → J.K.
+  if (/^[a-zA-Z]$/.test(w)) return w.toUpperCase() + '.'; // j → J.
+  if (/^[a-zA-Z]'[a-zA-Z]/i.test(w) && w.length >= 3)    // o'brien → O'Brien
+    return w[0].toUpperCase() + "'" + w[2].toUpperCase() + w.slice(3).toLowerCase();
+  return w[0].toUpperCase() + w.slice(1).toLowerCase();
+}
+function _fmtAuthor(str) {
+  if (!str) return str;
+  return str.split(/(\s+)/).map(chunk =>
+    /^\s+$/.test(chunk) ? chunk :
+    chunk.includes('-') ? chunk.split('-').map(_fmtAuthorWord).join('-') :
+    _fmtAuthorWord(chunk)
+  ).join('');
+}
+function _fmtBook(b) {
+  if (b.title)  b.title  = _fmtTitle(b.title);
+  if (b.author) b.author = _fmtAuthor(b.author);
+  if (b.series) b.series = _fmtTitle(b.series);
+  return b;
+}
+
 function createGlobalBookId(title = '', author = '') {
   return normalizeBookText(title) + '__' + normalizeBookText(author);
 }
@@ -2909,7 +2948,7 @@ async function loadBooks() {
   try {
     const cached = await getDocsFromCache(q);
     if (!cached.empty) {
-      books = cached.docs.map(d => ({ id: d.id, ...d.data() }));
+      books = cached.docs.map(d => _fmtBook({ id: d.id, ...d.data() }));
       hideStatus();
       buildGenreFilters(); buildStatusFilters(); applyFilters(); updateStats();
       syncUserBooksToCache();
@@ -2923,7 +2962,7 @@ async function loadBooks() {
   }
   try {
     const snap = await getDocs(q);
-    books = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    books = snap.docs.map(d => _fmtBook({ id: d.id, ...d.data() }));
     hideStatus();
     buildGenreFilters(); buildStatusFilters(); applyFilters(); updateStats();
     syncUserBooksToCache();
@@ -7638,7 +7677,7 @@ window.setFriendDetailsTab = (tab) => {
       document.getElementById('flibSortBtn')?.classList.remove('active');
       flibFilterOpen = false; flibSortOpen = false;
       getDocs(query(collection(db, 'users', friendDetailsUid, 'books'), orderBy('addedAt', 'asc'))).then(snap => {
-        friendLibBooks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        friendLibBooks = snap.docs.map(d => _fmtBook({ id: d.id, ...d.data() }));
         buildFlibGenreFilters(); buildFlibSortOptions(); renderFriendLibStats(); applyFriendLibFilters();
       }).catch(() => {
         document.getElementById('friendLibList').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text3)">Could not load library.</div>';
