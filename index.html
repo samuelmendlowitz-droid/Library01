@@ -4484,6 +4484,24 @@ async function _migrateFictionRemoval() {
   }
 }
 
+// Levenshtein edit distance, capped at 4 for performance.
+function _editDist(a, b) {
+  if (a === b) return 0;
+  if (Math.abs(a.length - b.length) > 3) return 99;
+  const lb = b.length;
+  const row = Array.from({length: lb + 1}, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = i;
+    for (let j = 1; j <= lb; j++) {
+      const tmp = row[j - 1];
+      row[j - 1] = prev;
+      prev = a[i - 1] === b[j - 1] ? tmp : Math.min(tmp, row[j], prev) + 1;
+    }
+    row[lb] = prev;
+  }
+  return row[lb];
+}
+
 const _DEDUP_KEY      = 'lib01_lastDedupRun';
 const _DEDUP_INTERVAL = 24 * 60 * 60 * 1000;
 
@@ -4499,19 +4517,47 @@ async function _runDedup(manual = false) {
   const snap = await getDocs(collection(db, 'globalLibrary'));
   const allDocs = snap.docs.map(d => ({ _docId: d.id, ...d.data() }));
 
-  // ── Author canonicalization ────────────────────────────────────────────────
-  const authorGroups = {};
+  // ── Author canonicalization (fuzzy) ──────────────────────────────────────
+  // Collect normalized → { rawForm: count } so we can fuzzy-cluster norms.
+  const _normToRaws = {};
   allDocs.forEach(b => {
     if (!b.author) return;
     const norm = normalizeBookText(b.author);
-    if (!authorGroups[norm]) authorGroups[norm] = {};
-    authorGroups[norm][b.author] = (authorGroups[norm][b.author] || 0) + 1;
+    if (!_normToRaws[norm]) _normToRaws[norm] = {};
+    _normToRaws[norm][b.author] = (_normToRaws[norm][b.author] || 0) + 1;
   });
+
+  // Cluster normalized keys: two norms merge when edit distance ≤ 2 AND both
+  // have at least 6 chars (guards against short names like "Amy" ≈ "Ann").
+  const _normKeys = Object.keys(_normToRaws);
+  const _normVisited = new Set();
+  const _authorClusters = [];
+  _normKeys.forEach(k => {
+    if (_normVisited.has(k)) return;
+    const cluster = [k];
+    _normVisited.add(k);
+    _normKeys.forEach(k2 => {
+      if (_normVisited.has(k2)) return;
+      if (Math.min(k.length, k2.length) >= 6 && _editDist(k, k2) <= 2) {
+        cluster.push(k2);
+        _normVisited.add(k2);
+      }
+    });
+    _authorClusters.push(cluster);
+  });
+
+  // Within each cluster pick the most-used raw spelling as canonical.
   const authorCanon = {};
-  Object.values(authorGroups).forEach(counts => {
-    const forms = Object.keys(counts);
+  _authorClusters.forEach(cluster => {
+    const allRaws = {};
+    cluster.forEach(nk => {
+      Object.entries(_normToRaws[nk]).forEach(([raw, cnt]) => {
+        allRaws[raw] = (allRaws[raw] || 0) + cnt;
+      });
+    });
+    const forms = Object.keys(allRaws);
     if (forms.length < 2) return;
-    const canon = forms.sort((a, b) => counts[b] - counts[a] || a.localeCompare(b))[0];
+    const canon = forms.sort((a, b) => allRaws[b] - allRaws[a] || a.localeCompare(b))[0];
     forms.filter(f => f !== canon).forEach(f => { authorCanon[f] = canon; });
   });
 
@@ -4570,6 +4616,47 @@ async function _runDedup(manual = false) {
       deleteIds.push(l._docId);
     });
     mergedBooks += losers.length;
+  });
+
+  // ── Fuzzy title+author duplicate detection ────────────────────────────────
+  // Catches books that slipped through exact dedup because BOTH title and
+  // author have slight spelling differences (≤ 2 edits each).
+  // Min 5 normalized chars on both to avoid false-positives on short strings.
+  const _deleteSet = new Set(deleteIds);
+  const _remaining = allDocs.filter(b => !_deleteSet.has(b._docId));
+  const _fuzzyDone = new Set();
+  _remaining.forEach(b1 => {
+    if (_fuzzyDone.has(b1._docId)) return;
+    const nt1 = normalizeBookText(b1.title || '');
+    const na1 = normalizeBookText(authorCanon[b1.author] || b1.author || '');
+    _remaining.forEach(b2 => {
+      if (b1._docId === b2._docId || _fuzzyDone.has(b2._docId)) return;
+      const nt2 = normalizeBookText(b2.title || '');
+      const na2 = normalizeBookText(authorCanon[b2.author] || b2.author || '');
+      if (nt1 === nt2 && na1 === na2) return; // already handled by exact pass
+      const tDist = Math.min(nt1.length, nt2.length) >= 5 ? _editDist(nt1, nt2) : (nt1 === nt2 ? 0 : 99);
+      const aDist = Math.min(na1.length, na2.length) >= 5 ? _editDist(na1, na2) : (na1 === na2 ? 0 : 99);
+      if (tDist > 2 || aDist > 2) return;
+      // Fuzzy match — pick winner by popularity+ratings, keep loser's data merged in
+      const score1 = (b1.popularity || 0) + (b1.ratingCount || 0) * 2;
+      const score2 = (b2.popularity || 0) + (b2.ratingCount || 0) * 2;
+      const winner = score1 >= score2 ? b1 : b2;
+      const loser  = winner === b1 ? b2 : b1;
+      _fuzzyDone.add(loser._docId);
+      _deleteSet.add(loser._docId);
+      deleteIds.push(loser._docId);
+      delete docUpdates[loser._docId];
+      const mGenres = [...new Set([...(winner.genres || []), ...(loser.genres || [])])];
+      docUpdates[winner._docId] = {
+        ...(docUpdates[winner._docId] || {}),
+        genres: mGenres,
+        ratingTotal: (winner.ratingTotal || 0) + (loser.ratingTotal || 0),
+        ratingCount: (winner.ratingCount || 0) + (loser.ratingCount || 0),
+        popularity:  (winner.popularity  || 0) + (loser.popularity  || 0),
+      };
+      mergedBooks++;
+    });
+    _fuzzyDone.add(b1._docId);
   });
 
   // ── Execute global library updates (admin only) ────────────────────────────
