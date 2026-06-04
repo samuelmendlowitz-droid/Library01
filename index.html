@@ -7207,6 +7207,7 @@ let requestFilter = 'all';
 let clubsList = [];
 let clubLastMessages = {};
 let currentClubId = null, currentClubData = null, currentClubRole = null;
+let _clubLikedMessages = new Set();
 let clubChatListener = null;
 let clubBookPickerOpen = false;
 let discoverMode = 'friends';
@@ -8134,9 +8135,13 @@ window.openClubDetails = async (clubId) => {
   const glowEl = document.querySelector('.friend-card[data-club-id="' + clubId + '"]');
   if (glowEl) glowEl.classList.remove('chat-unread');
   currentClubId = clubId;
-  const snap = await getDoc(clubDoc(clubId));
+  const [snap, memberSnap] = await Promise.all([
+    getDoc(clubDoc(clubId)),
+    getDoc(clubMemberDoc(clubId, currentUser.uid))
+  ]);
   if (!snap.exists()) { showStatus('Club not found', 'error'); return; }
   currentClubData = { id: clubId, ...snap.data() };
+  _clubLikedMessages = new Set(memberSnap.data()?.likedMessages || []);
   currentClubRole = (currentClubData.adminUids||[]).includes(currentUser.uid) ? 'admin' : 'member';
   document.getElementById('clubDetailIcon').textContent = currentClubData.emoji || '📚';
   document.getElementById('clubDetailIcon').style.background = currentClubData.bgColor || '#2d2520';
@@ -8156,7 +8161,7 @@ window.openClubDetails = async (clubId) => {
 window.closeClubDetails = () => {
   document.getElementById('clubDetailModal').classList.remove('open');
   stopClubChatListener();
-  currentClubId = null; currentClubData = null; currentClubRole = null;
+  currentClubId = null; currentClubData = null; currentClubRole = null; _clubLikedMessages = new Set();
 };
 
 window.setClubTab = (tab) => {
@@ -8208,9 +8213,8 @@ function renderClubMessages(msgs) {
     const isAdmin = (currentClubData?.adminUids||[]).includes(m.fromUid);
     const adminBadge = isAdmin ? '<span class="admin-badge">admin</span>' : '';
     const senderLine = !mine ? '<div class="chat-sender">' + esc(m.displayName||m.fromUsername||'') + adminBadge + '</div>' : '';
-    const likedBy = m.likedBy || [];
-    const iLiked = likedBy.includes(currentUser.uid);
-    const likeCount = likedBy.length;
+    const iLiked = _clubLikedMessages.has(m.id);
+    const likeCount = (m.likedBy || []).length;
     const likeBtn = '<button class="like-btn' + (iLiked?' liked':'') + '" onclick="toggleClubMsgLike(\'' + jsStr(m.id) + '\',event)">'
       + _heartSvg() + (likeCount > 0 ? '<span class="like-count">' + likeCount + '</span>' : '') + '</button>';
     const footer = '<div class="chat-msg-footer">' + likeBtn + '<div class="chat-time">' + ts + '</div></div>';
@@ -8247,14 +8251,18 @@ window.toggleClubMsgLike = async (msgId, e) => {
   const uid = currentUser.uid;
   const btn = e.target.closest('.like-btn');
   if (!btn) return;
-  const isLiked = btn.classList.contains('liked');
+  const isLiked = _clubLikedMessages.has(msgId);
+  if (isLiked) _clubLikedMessages.delete(msgId); else _clubLikedMessages.add(msgId);
   btn.classList.toggle('liked', !isLiked);
   try {
-    await updateDoc(doc(db, 'clubs', currentClubId, 'messages', msgId), {
-      likedBy: isLiked ? arrayRemove(uid) : arrayUnion(uid)
-    });
-  } catch(_) {
+    await setDoc(clubMemberDoc(currentClubId, uid), {
+      likedMessages: isLiked ? arrayRemove(msgId) : arrayUnion(msgId)
+    }, { merge: true });
+  } catch(err) {
+    console.error('toggleClubMsgLike:', err);
+    if (isLiked) _clubLikedMessages.add(msgId); else _clubLikedMessages.delete(msgId);
     btn.classList.toggle('liked', isLiked);
+    showStatus('Could not save like.', 'error'); setTimeout(hideStatus, 2000);
   }
 };
 
