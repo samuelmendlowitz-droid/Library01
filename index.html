@@ -486,8 +486,8 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .mini-book-card .rec-genre-cluster .lucide { stroke-width: 2.5px; }
 .mbc-genre-labels { font-size: 8px; opacity: 0.6; text-align: center; font-family: 'DM Sans', sans-serif; line-height: 1.4; padding: 0 6px; }
 .mbc-location { font-size: 7.5px; opacity: 0.45; text-align: center; font-family: 'DM Sans', sans-serif; font-style: italic; }
-.mbc-footer { display: flex; align-items: center; justify-content: space-between; padding: 5px 26px 12px; position: relative; z-index: 4; gap: 4px; flex-shrink: 0; }
-.mbc-status { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; border: 1.5px solid rgba(201,169,110,0.5); background: rgba(0,0,0,0.3); color: transparent; line-height: 1; }
+.mbc-footer { display: flex; align-items: center; justify-content: space-between; padding: 5px 26px 20px; position: relative; z-index: 4; gap: 4px; flex-shrink: 0; }
+.mbc-status { width: 22px; height: 22px; min-width: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; border: 1.5px solid rgba(201,169,110,0.5); background: rgba(0,0,0,0.3); color: transparent; line-height: 1; box-sizing: border-box; }
 .mbc-status.mbc-read { border-color: #c9a96e; background: rgba(201,169,110,0.15); color: #c9a96e; }
 .mbc-rating { font-size: 9px; flex: 1; text-align: center; opacity: 0.75; letter-spacing: -0.5px; }
 .mbc-details-btn { background: rgba(0,0,0,0.3); border: 1px solid rgba(201,169,110,0.4); border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #c9a96e; flex-shrink: 0; padding: 0; }
@@ -3168,7 +3168,7 @@ function _miniBookCardHtml(b) {
     ? `<div class="mbc-series">${esc(b.series)}${b.seriesNumber ? ` #${b.seriesNumber}` : ''}</div>` : '';
   const gbId = createGlobalBookId(b.title||'', b.author||'');
   const gb = globalBookCache.find(x => x.id === gbId);
-  const avg = gb && gb.ratingCount > 0 ? (gb.ratingTotal / gb.ratingCount) : 0;
+  const avg = (gb && gb.ratingCount > 0) ? gb.ratingTotal / gb.ratingCount : (b.rating || 0);
   const stars = avg > 0 ? '★'.repeat(Math.round(avg)) + '☆'.repeat(5 - Math.round(avg)) : '';
   const ratingHtml = stars ? `<div class="mbc-rating">${stars} ${avg.toFixed(1)}</div>` : '<div class="mbc-rating"></div>';
   const statusCls = b.read ? 'mbc-read' : 'mbc-unread';
@@ -3636,15 +3636,13 @@ async function updateGlobalRating(title, author, oldRating, newRating) {
   try {
     const globalId = createGlobalBookId(title, author);
     const globalRef = doc(db, 'globalLibrary', globalId);
-    const snap = await getDoc(globalRef);
-    if (!snap.exists()) return;
     const ratingDelta = (newRating || 0) - (oldRating || 0);
     const countDelta = (newRating ? 1 : 0) - (oldRating ? 1 : 0);
     if (ratingDelta === 0 && countDelta === 0) return;
-    await updateDoc(globalRef, {
+    await setDoc(globalRef, {
       ratingTotal: increment(ratingDelta),
       ratingCount: increment(countDelta)
-    });
+    }, { merge: true });
     const cached = globalBookCache.find(b => b.id === globalId);
     if (cached) {
       cached.ratingTotal = (cached.ratingTotal || 0) + ratingDelta;
@@ -3984,7 +3982,7 @@ function _renderBookInfoBody(b) {
   const gb = globalBookCache.find(x => x.id === gbId);
   const ratingTotal = gb ? (gb.ratingTotal || 0) : 0;
   const ratingCount = gb ? (gb.ratingCount || 0) : 0;
-  const avg = ratingCount ? (ratingTotal / ratingCount) : null;
+  const avg = ratingCount ? (ratingTotal / ratingCount) : (b.rating || null);
   const filled = avg ? Math.round(avg) : 0;
   const communityStars = Array.from({length:5}, (_,i) =>
     `<span style="font-size:20px;color:${i < filled ? '#f5a623' : 'var(--surface3)'}">★</span>`
