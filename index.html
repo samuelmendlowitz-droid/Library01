@@ -2417,6 +2417,9 @@ onAuthStateChanged(auth, async user => {
     orderedGenres    = [...DEFAULT_GENRES];
     orderedLocations = [...DEFAULT_LOCATIONS];
     borrowerLog = [];
+    _communityLoaded = false;
+    friendsList = []; friendRequests = []; sentRequests = [];
+    chatLastMessages = {}; clubLastMessages = {}; clubsList = [];
     document.getElementById('loginScreen').style.display = 'flex';
     document.getElementById('mainApp').style.display = 'none';
   }
@@ -7006,6 +7009,7 @@ const CLUB_COLORS = ['#2d2520','#1e2d3a','#1a2e24','#2e1e28','#261e2e','#1e1e1e'
 const AVATAR_COLORS = ['#8B3A3A','#2F5F9A','#2A7A50','#7A3A8B','#8B6030','#2A7070','#6B3A70','#8B5A30','#2A3A7A','#5A3A2A'];
 let userIconChar = '', userIconColor = '';
 const profileCache = {};
+let _communityLoaded = false;
 
 function initCommunityPage() {
   communitySubtab = 'chats';
@@ -7018,9 +7022,15 @@ function initCommunityPage() {
     const el = document.getElementById('comm-' + t);
     if (el) el.style.display = t === 'chats' ? '' : 'none';
   });
+  if (_communityLoaded) { renderChats(); return; }
   loadFriends().then(async () => {
     await loadFriendProfiles();
-    loadClubs().then(() => { renderChats(); loadLastChatMessages(); loadLastClubMessages(); });
+    loadClubs().then(() => {
+      _communityLoaded = true;
+      renderChats();
+      loadLastChatMessages();
+      loadLastClubMessages();
+    });
   });
 }
 
@@ -7139,7 +7149,7 @@ function renderChatList(friendsFiltered, clubsFiltered) {
       const msgHtml = msgInner
         ? '<div class="friend-last-msg' + (!fromMe ? ' from-them' : '') + '">' + msgInner + '</div>'
         : '<div class="friend-last-msg" style="opacity:0.3;font-style:italic">No messages yet</div>';
-      return '<div class="friend-card" data-friend-id="' + esc(item.id) + '" style="cursor:pointer;align-items:flex-start" onclick="openFriendDetails(\'' + sid + '\',\'' + sdn + '\')">'
+      return '<div class="friend-card" data-friend-id="' + esc(item.id) + '" data-chat-action="friend" data-uid="' + esc(item.id) + '" data-dn="' + esc(item.displayName || item.username) + '" style="cursor:pointer;align-items:flex-start">'
         + dotHtml
         + renderAvatarHtml(item.id, item.displayName, item.username)
         + '<div class="friend-info" style="flex:0 0 auto;min-width:0;max-width:110px">'
@@ -7148,7 +7158,6 @@ function renderChatList(friendsFiltered, clubsFiltered) {
         + msgHtml
         + '</div>';
     } else {
-      const sid = jsStr(item.id);
       const privIcon = _privIcon[item.privacy] || 'lock';
       const allSubjects = [
         ...item.subjects.books.map(v => esc(v)),
@@ -7156,28 +7165,45 @@ function renderChatList(friendsFiltered, clubsFiltered) {
         ...item.subjects.genres.map(v => esc(v)),
         ...item.subjects.series.map(v => esc(v))
       ].slice(0, 8);
-      const subjectsHtml = allSubjects.length
-        ? '<div class="club-card-subjects">' + allSubjects.map(v => '<span class="club-subject-tag">' + v + '</span>').join('') + '</div>'
-        : '';
       const clubLastMsg = clubLastMessages[item.id];
       const clubFromMe = clubLastMsg?.fromUid === currentUser?.uid;
       const clubUnread = clubLastMsg && !clubFromMe;
       const clubNotifOn = localStorage.getItem('clubnotif_on_' + item.id) === 'true'; // OFF by default
       const dotHtml = (clubNotifOn && clubUnread) ? '<div class="chat-unread-dot"></div>' : '';
-      return '<div class="friend-card" style="cursor:pointer;flex-direction:column;align-items:stretch;gap:8px" onclick="openClubDetails(\'' + sid + '\')">'
+      return '<div class="friend-card" data-chat-action="club" data-club-id="' + esc(item.id) + '" style="cursor:pointer;align-items:center;gap:10px">'
         + dotHtml
-        + '<div style="display:flex;align-items:center;gap:12px">'
-        + '<div class="club-avatar" style="background:' + esc(item.bgColor) + '">' + esc(item.emoji) + '</div>'
+        + '<div class="club-avatar" style="background:' + esc(item.bgColor) + ';flex-shrink:0">' + esc(item.emoji) + '</div>'
         + '<div style="flex:1;min-width:0">'
         + '<div class="friend-name">' + esc(item.name) + '</div>'
         + '<div class="friend-username club-privacy-row"><i data-lucide="' + privIcon + '"></i>' + item.memberCount + ' member' + (item.memberCount !== 1 ? 's' : '') + '</div>'
-        + '</div></div>'
-        + subjectsHtml
+        + '</div>'
+        + (allSubjects.length ? '<div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end;max-width:45%;flex-shrink:0">' + allSubjects.map(v => '<span class="club-subject-tag">' + v + '</span>').join('') + '</div>' : '')
         + '</div>';
     }
   }).join('');
   refreshIcons();
 }
+
+// Delegated handler for chat-list card taps.
+// touchstart captures card data before any async re-render can replace the element.
+let _chatTapPending = null;
+document.addEventListener('touchstart', e => {
+  const card = e.target.closest('#comm-chats [data-chat-action]');
+  _chatTapPending = card ? { action: card.dataset.chatAction, uid: card.dataset.uid, dn: card.dataset.dn, clubId: card.dataset.clubId } : null;
+}, { passive: true });
+document.addEventListener('touchmove', () => { _chatTapPending = null; }, { passive: true });
+document.addEventListener('click', e => {
+  let d = _chatTapPending;
+  _chatTapPending = null;
+  if (!d) {
+    const card = e.target.closest('[data-chat-action]');
+    if (!card || !document.getElementById('comm-chats-list')?.contains(card)) return;
+    d = { action: card.dataset.chatAction, uid: card.dataset.uid, dn: card.dataset.dn, clubId: card.dataset.clubId };
+  }
+  if (!d.action) return;
+  if (d.action === 'friend') openFriendDetails(d.uid, d.dn);
+  else if (d.action === 'club') openClubDetails(d.clubId);
+});
 
 function renderChats() {
   const q = (document.getElementById('chatSearch')?.value || '').toLowerCase().trim();
