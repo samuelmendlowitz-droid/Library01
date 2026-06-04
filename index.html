@@ -5917,16 +5917,11 @@ async function _loadAndRenderReviews(globalId) {
   _reviewBookGlobalId = globalId;
   try {
     if (!_reviewCache.has(globalId)) {
-      const [reviewSnap, likeSnap] = await Promise.all([
-        getDocs(collection(db, 'globalLibrary', globalId, 'reviews')),
-        getDocs(collection(db, 'globalLibrary', globalId, 'reviewLikes'))
-      ]);
-      const likesMap = {};
-      likeSnap.docs.forEach(d => { likesMap[d.id] = d.data().likedBy || []; });
-      _reviewCache.set(globalId, reviewSnap.docs.map(d => {
-        const data = d.data();
-        return { id: d.id, ...data, likedBy: likesMap[d.id] || data.likedBy || [] };
-      }));
+      const gbSnap = await getDoc(doc(db, 'globalLibrary', globalId));
+      const reviewsMap = gbSnap.exists() ? (gbSnap.data()?.reviews || {}) : {};
+      _reviewCache.set(globalId, Object.entries(reviewsMap).map(([uid, data]) => ({
+        id: uid, userId: uid, ...data, likedBy: data.likedBy || []
+      })));
     }
     _reviewsData = _reviewCache.get(globalId);
   } catch(e) {
@@ -5999,9 +5994,9 @@ window.toggleReviewLike = async (reviewId, e) => {
   review.likedBy = alreadyLiked ? likedBy.filter(x => x !== uid) : [...likedBy, uid];
   _renderReviewList();
   try {
-    await setDoc(doc(db, 'globalLibrary', _reviewBookGlobalId, 'reviewLikes', reviewId), {
-      likedBy: alreadyLiked ? arrayRemove(uid) : arrayUnion(uid)
-    }, { merge: true });
+    await updateDoc(doc(db, 'globalLibrary', _reviewBookGlobalId), {
+      [`reviews.${reviewId}.likedBy`]: alreadyLiked ? arrayRemove(uid) : arrayUnion(uid)
+    });
     if (_reviewCache.has(_reviewBookGlobalId)) {
       const cached = _reviewCache.get(_reviewBookGlobalId);
       const cr = cached.find(r => (r.id || r.userId) === reviewId);
@@ -6074,22 +6069,36 @@ window.submitReview = async () => {
   const btn = document.getElementById('review-submit-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
   try {
+    const uid = currentUser.uid;
     const reviewData = {
-      userId: currentUser.uid, username: displayName, rating, text,
+      userId: uid, username: displayName, rating, text,
       timestamp: serverTimestamp(), avatarColor: userIconColor || ''
     };
-    await setDoc(doc(db, 'globalLibrary', _reviewBookGlobalId, 'reviews', currentUser.uid), reviewData);
+    const gbRef = doc(db, 'globalLibrary', _reviewBookGlobalId);
+    try {
+      await updateDoc(gbRef, { [`reviews.${uid}`]: reviewData });
+    } catch(e2) {
+      if (e2?.code !== 'not-found') throw e2;
+      // Parent doc doesn't exist yet — create it with this review
+      await setDoc(gbRef, {
+        title: personal?.title || '', author: personal?.author || '',
+        normalizedTitle: normalizeBookText(personal?.title || ''),
+        normalizedAuthor: normalizeBookText(personal?.author || ''),
+        reviews: { [uid]: reviewData }
+      });
+    }
     _reviewCache.delete(_reviewBookGlobalId);
-    const idx = _reviewsData.findIndex(r => r.userId === currentUser.uid);
+    const idx = _reviewsData.findIndex(r => r.userId === uid);
     const existingLikedBy = idx >= 0 ? (_reviewsData[idx].likedBy || []) : [];
-    const local = { id: currentUser.uid, ...reviewData, timestamp: { seconds: Date.now()/1000 }, likedBy: existingLikedBy };
+    const local = { id: uid, userId: uid, ...reviewData, timestamp: { seconds: Date.now()/1000 }, likedBy: existingLikedBy };
     if (idx >= 0) _reviewsData[idx] = local; else _reviewsData.push(local);
     _renderReviewList();
-    if (ta && idx < 0) ta.value = '';
+    if (ta) ta.value = '';
     showStatus('Review saved!', 'success'); setTimeout(hideStatus, 2000);
   } catch(e) {
     console.error('submitReview:', e);
-    showStatus('Error saving review.', 'error'); setTimeout(hideStatus, 3000);
+    showStatus('Error saving review: ' + (e?.code || e?.message || 'unknown'), 'error');
+    setTimeout(hideStatus, 6000);
   }
   if (btn) { btn.disabled = false; btn.textContent = 'Post Review'; }
 };
