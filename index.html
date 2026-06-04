@@ -351,8 +351,11 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .friends-list { padding: 10px 16px 100px; display: flex; flex-direction: column; gap: 8px; }
 .find-search { padding: 14px 16px 8px; }
 .find-results { padding: 0 16px 100px; display: flex; flex-direction: column; gap: 8px; }
-.friend-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; display: flex; align-items: center; gap: 12px; }
+.friend-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; display: flex; align-items: center; gap: 12px; position: relative; }
 .friend-last-msg { flex: 1; min-width: 0; font-size: 12px; color: var(--text3); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; text-align: right; }
+.friend-last-msg.from-them { color: var(--text2); }
+.friend-msg-subtitle { font-size: 10px; opacity: 0.7; margin-top: 2px; -webkit-line-clamp: 1; }
+.chat-unread-dot { position: absolute; top: 9px; right: 10px; width: 9px; height: 9px; border-radius: 50%; background: #c9a96e; box-shadow: 0 0 5px rgba(201,169,110,0.55); pointer-events: none; }
 .club-card-subjects { display: flex; flex-wrap: wrap; gap: 5px; width: 100%; padding-top: 2px; }
 .club-subject-tag { font-size: 10px; padding: 2px 8px; border-radius: 10px; background: var(--surface3); border: 1px solid var(--border); color: var(--text2); font-family: 'DM Sans', sans-serif; white-space: nowrap; }
 .club-privacy-row { display: flex; align-items: center; gap: 5px; }
@@ -7122,17 +7125,22 @@ function renderChatList(friendsFiltered, clubsFiltered) {
     if (item._type === 'friend') {
       const sid = jsStr(item.id), sdn = jsStr(item.displayName || item.username);
       const lastMsg = chatLastMessages[item.id];
-      let preview = '';
+      const fromMe = lastMsg?.fromUid === currentUser?.uid;
+      const isUnread = lastMsg && !fromMe;
+      const notifOn = localStorage.getItem('notif_muted_' + item.id) !== 'true'; // ON by default
+      const dotHtml = (notifOn && isUnread) ? '<div class="chat-unread-dot"></div>' : '';
+      let msgInner = '';
       if (lastMsg) {
-        if (lastMsg.type === 'friend_added') preview = '👋 You are now friends';
-        else if (lastMsg.type === 'book_ref') preview = '📖 ' + (lastMsg.bookTitle || 'Book');
-        else if (lastMsg.type === 'borrow_request') preview = '📚 Borrow request';
-        else preview = lastMsg.text || '';
+        if (lastMsg.type === 'friend_added') msgInner = esc('👋 You are now friends');
+        else if (lastMsg.type === 'book_ref') msgInner = esc('📖 ' + (lastMsg.bookTitle || 'Book'));
+        else if (lastMsg.type === 'borrow_request') msgInner = 'Borrow request' + (lastMsg.bookTitle ? '<div class="friend-msg-subtitle">' + esc(lastMsg.bookTitle) + '</div>' : '');
+        else msgInner = esc(lastMsg.text || '');
       }
-      const msgHtml = preview
-        ? '<div class="friend-last-msg">' + esc(preview) + '</div>'
+      const msgHtml = msgInner
+        ? '<div class="friend-last-msg' + (!fromMe ? ' from-them' : '') + '">' + msgInner + '</div>'
         : '<div class="friend-last-msg" style="opacity:0.3;font-style:italic">No messages yet</div>';
       return '<div class="friend-card" data-friend-id="' + esc(item.id) + '" style="cursor:pointer;align-items:flex-start" onclick="openFriendDetails(\'' + sid + '\',\'' + sdn + '\')">'
+        + dotHtml
         + renderAvatarHtml(item.id, item.displayName, item.username)
         + '<div class="friend-info" style="flex:0 0 auto;min-width:0;max-width:110px">'
         + '<div class="friend-name">' + esc(item.displayName || item.username) + '</div>'
@@ -7150,8 +7158,14 @@ function renderChatList(friendsFiltered, clubsFiltered) {
       ].slice(0, 8);
       const subjectsHtml = allSubjects.length
         ? '<div class="club-card-subjects">' + allSubjects.map(v => '<span class="club-subject-tag">' + v + '</span>').join('') + '</div>'
-        : (item.description ? '<div style="font-size:11px;color:var(--text3);margin-top:4px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">' + esc(item.description) + '</div>' : '');
+        : '';
+      const clubLastMsg = clubLastMessages[item.id];
+      const clubFromMe = clubLastMsg?.fromUid === currentUser?.uid;
+      const clubUnread = clubLastMsg && !clubFromMe;
+      const clubNotifOn = localStorage.getItem('clubnotif_on_' + item.id) === 'true'; // OFF by default
+      const dotHtml = (clubNotifOn && clubUnread) ? '<div class="chat-unread-dot"></div>' : '';
       return '<div class="friend-card" style="cursor:pointer;flex-direction:column;align-items:stretch;gap:8px" onclick="openClubDetails(\'' + sid + '\')">'
+        + dotHtml
         + '<div style="display:flex;align-items:center;gap:12px">'
         + '<div class="club-avatar" style="background:' + esc(item.bgColor) + '">' + esc(item.emoji) + '</div>'
         + '<div style="flex:1;min-width:0">'
@@ -8121,10 +8135,10 @@ async function renderClubSettingsContent() {
     refreshIcons();
   } else {
     // Member view
-    const muted = localStorage.getItem('clubnotif_muted_' + currentClubId) === 'true';
+    const clubNotifOn = localStorage.getItem('clubnotif_on_' + currentClubId) === 'true';
     el.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0 14px;border-bottom:1px solid var(--border);margin-bottom:14px">'
       + '<div><div style="font-size:14px;color:var(--text);font-weight:500">Notifications</div><div style="font-size:12px;color:var(--text3);margin-top:2px">New messages in this club</div></div>'
-      + '<label class="ios-toggle"><input type="checkbox" id="clubNotifToggle" onchange="saveClubNotifPref(this.checked)"' + (!muted ? ' checked' : '') + '><span class="ios-slider"></span></label>'
+      + '<label class="ios-toggle"><input type="checkbox" id="clubNotifToggle" onchange="saveClubNotifPref(this.checked)"' + (clubNotifOn ? ' checked' : '') + '><span class="ios-slider"></span></label>'
       + '</div>'
       + '<button onclick="confirmLeaveClub()" style="margin-bottom:20px;background:none;border:1px solid var(--danger);color:var(--danger);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;padding:9px 14px;border-radius:var(--radius-sm);font-family:\'DM Sans\',sans-serif;width:100%;justify-content:center"><i data-lucide="log-out" style="width:14px;height:14px"></i> Leave Club</button>'
       + '<div style="font-size:12px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Members (' + members.length + ')</div>'
@@ -8249,8 +8263,8 @@ async function deleteClub() {
 
 window.saveClubNotifPref = (enabled) => {
   if (!currentClubId) return;
-  if (enabled) localStorage.removeItem('clubnotif_muted_' + currentClubId);
-  else localStorage.setItem('clubnotif_muted_' + currentClubId, 'true');
+  if (enabled) localStorage.setItem('clubnotif_on_' + currentClubId, 'true');
+  else localStorage.removeItem('clubnotif_on_' + currentClubId);
 };
 
 window.sendFriendRequestFromClub = async (uid, username) => {
