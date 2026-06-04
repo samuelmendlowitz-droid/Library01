@@ -4514,11 +4514,20 @@ async function _runDedup(manual = false) {
     if (now - last < _DEDUP_INTERVAL) return null;
   }
 
-  const snap = await getDocs(collection(db, 'globalLibrary'));
-  const allDocs = snap.docs.map(d => ({ _docId: d.id, ...d.data() }));
+  // Use the in-memory cache (already fetched at startup) instead of
+  // re-fetching the whole collection — avoids the unbounded network read
+  // that caused the scan to hang on mobile.
+  const allDocs = globalBookCache
+    .filter(b => !b._localOnly)
+    .map(b => ({
+      _docId: b.id, title: b.title || '', author: b.author || '',
+      series: b.series || '', genres: b.genres || [],
+      ratingTotal: b.ratingTotal || 0, ratingCount: b.ratingCount || 0,
+      popularity: b.popularity || 0,
+    }));
+  if (!allDocs.length) return { authors: 0, series: 0, mergedBooks: 0, globalUpdates: 0, personalFixed: 0 };
 
-  // Stamp throttle timestamp NOW (before heavy work) so a mid-run crash
-  // doesn't cause the dedup to retry on every subsequent page load.
+  // Stamp throttle before any computation so a mid-run crash doesn't loop.
   localStorage.setItem(_DEDUP_KEY, now.toString());
 
   // ── Author canonicalization (fuzzy) ──────────────────────────────────────
@@ -4642,7 +4651,9 @@ async function _runDedup(manual = false) {
   });
   await Promise.allSettled(personalOps);
 
-  // ── Update in-memory caches ────────────────────────────────────────────────
+  // ── Update in-memory cache ────────────────────────────────────────────────
+  const _deletedSet = new Set(deleteIds);
+  globalBookCache = globalBookCache.filter(b => !_deletedSet.has(b.id));
   globalBookCache.forEach(b => {
     if (b.author && authorCanon[b.author]) b.author = authorCanon[b.author];
     if (b.series && seriesCanon[b.series]) b.series = seriesCanon[b.series];
