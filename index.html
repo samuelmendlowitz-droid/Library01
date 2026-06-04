@@ -532,6 +532,13 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .review-item { border-top:1px solid var(--border);padding:12px 0; }
 .review-item:first-child { border-top:none; }
 .review-item-header { display:flex;align-items:flex-start;gap:8px;margin-bottom:4px; }
+.like-btn { display:inline-flex;align-items:center;gap:3px;background:none;border:none;cursor:pointer;color:var(--text3);font-size:11px;padding:3px 6px;border-radius:8px;transition:color 0.15s;font-family:'DM Sans',sans-serif;line-height:1;-webkit-tap-highlight-color:transparent; }
+.like-btn:hover { color:#e05; }
+.like-btn.liked { color:#e05; }
+.like-btn .like-icon { width:13px;height:13px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;transition:fill 0.15s,stroke 0.15s; }
+.like-btn.liked .like-icon { fill:#e05;stroke:#e05; }
+.like-count { font-size:11px;line-height:1; }
+.chat-msg-footer { display:flex;align-items:center;gap:5px;margin-top:3px;padding:0 4px; }
 .review-avatar { width:28px;height:28px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0; }
 .review-user { font-size:13px;font-weight:600;color:var(--text);line-height:1.3; }
 .review-date { font-size:11px;color:var(--text3);white-space:nowrap;padding-top:2px; }
@@ -5925,6 +5932,10 @@ async function _loadAndRenderReviews(globalId) {
   }
 }
 
+function _heartSvg() {
+  return '<svg class="like-icon" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
+}
+
 function _renderReviewList() {
   const listEl = document.getElementById('review-list');
   if (!listEl) return;
@@ -5947,6 +5958,13 @@ function _renderReviewList() {
     const displayName = r.username || r.displayName || 'Anonymous';
     const char = displayName[0].toUpperCase();
     const avatarStyle = r.avatarColor ? `background:${r.avatarColor};` : '';
+    const likedBy = r.likedBy || [];
+    const iLiked = !!(currentUser && likedBy.includes(currentUser.uid));
+    const likeCount = likedBy.length;
+    const rid = esc(r.id || r.userId || '');
+    const likeBtn = currentUser
+      ? `<button class="like-btn${iLiked?' liked':''}" onclick="toggleReviewLike('${rid}',event)">${_heartSvg()}${likeCount > 0 ? '<span class="like-count">'+likeCount+'</span>' : ''}</button>`
+      : '';
     return `<div class="review-item">
       <div class="review-item-header">
         <div class="review-avatar" style="${avatarStyle}">${esc(char)}</div>
@@ -5957,9 +5975,35 @@ function _renderReviewList() {
         <div class="review-date">${dateStr}</div>
       </div>
       ${r.text ? `<div class="review-text">${esc(r.text)}</div>` : ''}
+      ${likeBtn ? `<div style="display:flex;justify-content:flex-end;margin-top:4px;">${likeBtn}</div>` : ''}
     </div>`;
   }).join('');
 }
+
+window.toggleReviewLike = async (reviewId, e) => {
+  e.stopPropagation();
+  if (!currentUser || !_reviewBookGlobalId || !reviewId) return;
+  const uid = currentUser.uid;
+  const review = _reviewsData.find(r => (r.id || r.userId) === reviewId);
+  if (!review) return;
+  const likedBy = review.likedBy || [];
+  const alreadyLiked = likedBy.includes(uid);
+  review.likedBy = alreadyLiked ? likedBy.filter(x => x !== uid) : [...likedBy, uid];
+  _renderReviewList();
+  try {
+    await updateDoc(doc(db, 'globalLibrary', _reviewBookGlobalId, 'reviews', reviewId), {
+      likedBy: alreadyLiked ? arrayRemove(uid) : arrayUnion(uid)
+    });
+    if (_reviewCache.has(_reviewBookGlobalId)) {
+      const cached = _reviewCache.get(_reviewBookGlobalId);
+      const cr = cached.find(r => (r.id || r.userId) === reviewId);
+      if (cr) cr.likedBy = review.likedBy;
+    }
+  } catch(_) {
+    review.likedBy = likedBy;
+    _renderReviewList();
+  }
+};
 
 window.toggleReviewDropdown = (which) => {
   const sortDd   = document.getElementById('review-sort-dropdown');
@@ -8124,6 +8168,8 @@ function stopClubChatListener() {
 function renderClubMessages(msgs) {
   const el = document.getElementById('clubChatMessages');
   if (!el) return;
+  const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+  const prevLastId = el.dataset.lastMsgId || '';
   if (!msgs.length) {
     el.innerHTML = '<div style="padding:40px 0;text-align:center;color:var(--text3);font-size:13px">No messages yet. Say hello! 👋</div>';
     return;
@@ -8138,6 +8184,12 @@ function renderClubMessages(msgs) {
     const isAdmin = (currentClubData?.adminUids||[]).includes(m.fromUid);
     const adminBadge = isAdmin ? '<span class="admin-badge">admin</span>' : '';
     const senderLine = !mine ? '<div class="chat-sender">' + esc(m.displayName||m.fromUsername||'') + adminBadge + '</div>' : '';
+    const likedBy = m.likedBy || [];
+    const iLiked = likedBy.includes(currentUser.uid);
+    const likeCount = likedBy.length;
+    const likeBtn = '<button class="like-btn' + (iLiked?' liked':'') + '" onclick="toggleClubMsgLike(\'' + jsStr(m.id) + '\',event)">'
+      + _heartSvg() + (likeCount > 0 ? '<span class="like-count">' + likeCount + '</span>' : '') + '</button>';
+    const footer = '<div class="chat-msg-footer">' + likeBtn + '<div class="chat-time">' + ts + '</div></div>';
     if (m.type === 'book_ref') {
       const gbId = createGlobalBookId(m.bookTitle||'', m.bookAuthor||'');
       const gb = globalBookCache.find(x => x.id === gbId);
@@ -8154,14 +8206,33 @@ function renderClubMessages(msgs) {
         + (m.bookAuthor ? '<div class="chat-book-author">' + esc(m.bookAuthor) + '</div>' : '')
         + (ratingStr ? '<div style="margin-top:3px">' + ratingStr + '</div>' : '')
         + '<div class="chat-book-footer"><div class="chat-book-tags">' + genrePills + seriesStr + '</div>' + starBtn + '</div>'
-        + '</div><div class="chat-time">' + ts + '</div></div>';
+        + '</div>' + footer + '</div>';
     }
     return '<div class="chat-wrap ' + side + '">' + senderLine
       + '<div class="chat-bubble ' + side + '">' + esc(m.text||'') + '</div>'
-      + '<div class="chat-time">' + ts + '</div></div>';
+      + footer + '</div>';
   }).join('');
-  el.scrollTop = el.scrollHeight;
+  const newLastId = msgs[msgs.length - 1]?.id || '';
+  el.dataset.lastMsgId = newLastId;
+  if (atBottom || newLastId !== prevLastId) el.scrollTop = el.scrollHeight;
 }
+
+window.toggleClubMsgLike = async (msgId, e) => {
+  e.stopPropagation();
+  if (!currentUser || !currentClubId || !msgId) return;
+  const uid = currentUser.uid;
+  const btn = e.target.closest('.like-btn');
+  if (!btn) return;
+  const isLiked = btn.classList.contains('liked');
+  btn.classList.toggle('liked', !isLiked);
+  try {
+    await updateDoc(doc(db, 'clubs', currentClubId, 'messages', msgId), {
+      likedBy: isLiked ? arrayRemove(uid) : arrayUnion(uid)
+    });
+  } catch(_) {
+    btn.classList.toggle('liked', isLiked);
+  }
+};
 
 window.sendClubMessage = async () => {
   const input = document.getElementById('clubChatInput');
