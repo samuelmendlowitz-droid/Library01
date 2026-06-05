@@ -3257,7 +3257,7 @@ function _seriesBoxSetHtml(books, isGlobal) {
   const genreTagsHtml = genres.slice(0, 3).map(g =>
     `<span class="tag genre" style="font-size:9px;padding:2px 6px;">${_genreIconHtml(g,'tag-icon')}${esc(g)}</span>`
   ).join('');
-  const seriesTitleFont = _GENRE_FONT[genres[0]] || "'Playfair Display', serif";
+  const seriesTitleFont = genres.filter(g => !_FONT_SKIP_GENRES.has(g)).reduce((f, g) => f || _GENRE_FONT[g], null) || "'Playfair Display', serif";
   const spinesHtml = books.map((b, i) => {
     const spinePalIdx = (boxPalIdx + 1 + i) % _REC_PALETTES.length;
     const bPal = _REC_PALETTES[spinePalIdx];
@@ -5268,6 +5268,7 @@ const _GENRE_FONT = {
   'War':                      "'Cinzel', serif",
   'Young Adult':              "'Nunito', sans-serif",
   "Children's":               "'Nunito', sans-serif",
+  // NOTE: Young Adult / Adult / New Adult are excluded from auto-font selection via _FONT_SKIP_GENRES
   'Coming-of-Age':            "'Nunito', sans-serif",
   'Adventure':                "'Rye', cursive",
   'Humor':                    "'Pacifico', cursive",
@@ -5276,9 +5277,10 @@ const _GENRE_FONT = {
   'Poetry':                   "'IM Fell English', serif",
   'Philosophy':               "'IM Fell English', serif",
 };
+const _FONT_SKIP_GENRES = new Set(['Young Adult', 'Adult', 'New Adult']);
 
 function _miniTitleHtml(title, genres) {
-  const fontFamily = (genres||[]).reduce((f, g) => f || _GENRE_FONT[g], null);
+  const fontFamily = (genres||[]).filter(g => !_FONT_SKIP_GENRES.has(g)).reduce((f, g) => f || _GENRE_FONT[g], null);
   const fStyle = fontFamily ? `font-family:${fontFamily};` : '';
   const len = (title||'').length;
   const fs = len <= 8 ? 17 : len <= 14 ? 15 : len <= 22 ? 13 : len <= 32 ? 11 : 10;
@@ -5286,7 +5288,7 @@ function _miniTitleHtml(title, genres) {
 }
 
 function _recTitleHtml(title, genres) {
-  const fontFamily = (genres || []).reduce((f, g) => f || _GENRE_FONT[g], null);
+  const fontFamily = (genres || []).filter(g => !_FONT_SKIP_GENRES.has(g)).reduce((f, g) => f || _GENRE_FONT[g], null);
   const fontStyle = fontFamily ? `font-family:${fontFamily};` : '';
   const w = Math.max(240, (window.innerWidth || 390) - 48 - 76);
   if (title.length <= 30) {
