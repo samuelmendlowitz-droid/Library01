@@ -3984,23 +3984,29 @@ window.openAddModal = () => {
 
 // ── GOOGLE BOOKS SPELL CHECK ──────────────────────────────────────────────────
 async function _queryGoogleBooks(title, author) {
+  // AbortSignal.timeout() isn't available on older Safari — use AbortController + setTimeout
+  const controller = new AbortController();
+  const tid = setTimeout(() => controller.abort(), 9000);
   try {
-    // Use intitle: for title precision but author as plain text so misspelled authors don't block the search
-    const q = encodeURIComponent(`intitle:${title} ${author}`);
-    const resp = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=5&fields=items(volumeInfo(title,authors))`, { signal: AbortSignal.timeout(8000) });
+    const q = encodeURIComponent(title + ' ' + author);
+    const resp = await fetch(
+      `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=5&fields=items(volumeInfo(title,authors))`,
+      { signal: controller.signal }
+    );
+    clearTimeout(tid);
     if (!resp.ok) return null;
     const data = await resp.json();
     if (!data.items?.length) return null;
-    // Pick the item whose title best matches ours
     const normInput = title.trim().toLowerCase();
     const best = data.items.find(item => {
       const t = (item.volumeInfo?.title || '').trim().toLowerCase();
-      return t === normInput || t.startsWith(normInput) || normInput.startsWith(t);
+      // match if title equals ours, or API title starts with ours (subtitle appended), or ours starts with API title
+      return t === normInput || t.startsWith(normInput) || normInput.startsWith(t.split(':')[0].trim());
     }) || data.items[0];
     const info = best.volumeInfo;
     if (!info?.title) return null;
     return { title: info.title.trim(), author: ((info.authors||[])[0] || '').trim() };
-  } catch { return null; }
+  } catch { clearTimeout(tid); return null; }
 }
 
 function _spellDiffers(a, b) {
@@ -4092,12 +4098,19 @@ window.openSpellScan = async () => {
   document.getElementById('spellScanProgress').style.display = 'none';
 
   if (suggestions.length === 0) {
-    document.getElementById('spellScanEmpty').style.display = 'block';
+    const emptyEl = document.getElementById('spellScanEmpty');
+    emptyEl.style.display = 'block';
+    // Show count so user knows the scan actually ran
+    const countNote = emptyEl.querySelector('.scan-checked-note') || document.createElement('div');
+    countNote.className = 'scan-checked-note';
+    countNote.style.cssText = 'font-size:12px;color:var(--text3);margin-top:8px;';
+    countNote.textContent = `Checked ${scannable.length} book${scannable.length !== 1 ? 's' : ''}.`;
+    if (!emptyEl.contains(countNote)) emptyEl.appendChild(countNote);
     return;
   }
 
   document.getElementById('spellScanSummary').textContent =
-    `Found ${suggestions.length} possible spelling issue${suggestions.length !== 1 ? 's' : ''} in the global library. Review each suggestion below:`;
+    `Found ${suggestions.length} issue${suggestions.length !== 1 ? 's' : ''} in ${scannable.length} books. Review each suggestion below:`;
 
   const listEl = document.getElementById('spellScanList');
   listEl.innerHTML = suggestions.map((s, idx) => {
