@@ -505,20 +505,18 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 
 /* Series Box Set — book view */
 .series-boxset { grid-column: 1 / -1; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 18px rgba(0,0,0,0.65); position: relative; }
-.sbs-header { padding: 11px 14px 9px; display: flex; flex-direction: column; gap: 2px; border-bottom: 1px solid rgba(255,255,255,0.12); position: relative; z-index: 2; }
+.sbs-header { padding: 11px 14px 9px; display: flex; flex-direction: row; align-items: flex-start; justify-content: space-between; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.12); position: relative; z-index: 2; }
+.sbs-header-left { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
 .sbs-series-title { font-family: 'Playfair Display', serif; font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
 .sbs-author-name { font-family: 'DM Sans', sans-serif; font-size: 9px; opacity: 0.62; text-transform: uppercase; letter-spacing: 0.7px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sbs-genre-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+.sbs-genre-row { display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; flex-shrink: 0; max-width: 55%; }
 .sbs-spines { display: flex; flex-direction: row; padding: 8px 8px 10px; gap: 4px; overflow-x: auto; }
-.sbs-spine { flex: 1; min-width: 42px; max-width: 70px; height: 148px; position: relative; overflow: hidden; cursor: pointer; border-radius: 4px 4px 3px 3px; display: flex; flex-direction: column; align-items: center; padding: 6px 3px 5px; box-shadow: 2px 0 8px rgba(0,0,0,0.5), -1px 0 3px rgba(0,0,0,0.25); transition: transform 0.15s, box-shadow 0.15s; flex-shrink: 0; }
+.sbs-spine { flex: 1; min-width: 44px; max-width: 72px; height: 190px; position: relative; overflow: hidden; cursor: pointer; border-radius: 4px 4px 3px 3px; display: flex; flex-direction: column; align-items: center; padding: 6px 3px 6px; box-shadow: 2px 0 8px rgba(0,0,0,0.5), -1px 0 3px rgba(0,0,0,0.25); transition: transform 0.15s, box-shadow 0.15s; flex-shrink: 0; }
 .sbs-spine:active { transform: scale(0.96) translateY(1px); }
 .sbs-spine-num { font-family: 'DM Sans', sans-serif; font-size: 8px; font-weight: 700; text-align: center; flex-shrink: 0; margin-bottom: 3px; letter-spacing: 0.3px; }
 .sbs-spine-title-wrap { flex: 1; min-height: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; width: 100%; }
-.sbs-spine-title { font-size: 9px; font-weight: 700; writing-mode: vertical-rl; transform: rotate(180deg); text-align: center; overflow: hidden; line-height: 1.3; white-space: nowrap; text-overflow: ellipsis; max-height: 100%; }
-.sbs-spine-bottom { display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 2px; flex-shrink: 0; margin-top: 4px; flex-wrap: wrap; }
-.sbs-spine-icon { width: 11px; height: 11px; opacity: 0.72; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.sbs-icon { width: 11px !important; height: 11px !important; }
-.sbs-spine-icon svg { width: 11px !important; height: 11px !important; }
+.sbs-spine-title { font-size: 9px; font-weight: 700; writing-mode: vertical-rl; transform: rotate(180deg); text-align: center; overflow: hidden; line-height: 1.3; max-height: 100%; }
+.sbs-spine-rating { font-size: 8px; opacity: 0.8; text-align: center; flex-shrink: 0; margin-top: 4px; letter-spacing: -0.5px; }
 
 /* List view — spreadsheet rows */
 .series-group { border: 1px solid rgba(201,169,110,0.32); border-radius: var(--radius); overflow: hidden; }
@@ -3265,23 +3263,32 @@ function _seriesBoxSetHtml(books, isGlobal) {
     const safeId = (b.id||'').replace(/'/g, "\\'");
     const numLabel = (b.seriesNumber != null && b.seriesNumber !== '') ? `#${b.seriesNumber}` : (b.seriesTag || '');
     const openFn = isGlobal ? `openGlobalBookInfo('${safeId}')` : `openBookInfo('${safeId}')`;
-    const spineGenres = (b.genres||[]).filter(g => g !== 'Non-Fiction').slice(0, 2);
-    const spineIconsHtml = spineGenres.map(g =>
-      `<span class="sbs-spine-icon">${_genreIconHtml(g, 'sbs-icon')}</span>`
-    ).join('');
+    let avg = 0;
+    if (isGlobal) {
+      avg = (b.ratingCount > 0) ? b.ratingTotal / b.ratingCount : 0;
+    } else {
+      const gbId = createGlobalBookId(b.title||'', b.author||'');
+      const gb = globalBookCache.find(x => x.id === gbId);
+      avg = (gb && gb.ratingCount > 0) ? gb.ratingTotal / gb.ratingCount : (b.rating || 0);
+    }
+    const ratingHtml = avg > 0
+      ? `<div class="sbs-spine-rating" style="color:${bPal.ac}">${'★'.repeat(Math.round(avg))}${'☆'.repeat(5 - Math.round(avg))}</div>`
+      : '<div class="sbs-spine-rating"></div>';
     const titleFont = _GENRE_FONT[(b.genres||[])[0]] || "'Playfair Display', serif";
     return `<div class="sbs-spine" style="background:${bPal.bg};${bPat ? bPat+';' : ''}color:${bPal.fg};" onclick="${openFn}">
   <div class="sbs-spine-num" style="color:${bPal.ac}">${esc(numLabel)}</div>
   <div class="sbs-spine-title-wrap">
     <div class="sbs-spine-title" style="font-family:${titleFont};">${esc(b.title||'')}</div>
   </div>
-  <div class="sbs-spine-bottom">${spineIconsHtml}</div>
+  ${ratingHtml}
 </div>`;
   }).join('');
   return `<div class="series-boxset" style="background:${boxPal.bg};${boxPat ? boxPat+';' : ''}color:${boxPal.fg};">
   <div class="sbs-header">
-    <div class="sbs-series-title">${esc(first.series||'')}</div>
-    <div class="sbs-author-name">${esc(first.author||'')}</div>
+    <div class="sbs-header-left">
+      <div class="sbs-series-title">${esc(first.series||'')}</div>
+      <div class="sbs-author-name">${esc(first.author||'')}</div>
+    </div>
     ${genreTagsHtml ? `<div class="sbs-genre-row">${genreTagsHtml}</div>` : ''}
   </div>
   <div class="sbs-spines">${spinesHtml}</div>
