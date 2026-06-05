@@ -3202,7 +3202,7 @@ function renderBooks(list) {
     const locDisplay = b.location === 'GlobalRead' ? 'Not Owned' : b.location;
     const locTag = (b.location && b.location !== 'Wishlist') ? '<span class="' + locCls + '"><i data-lucide="map-pin" class="tag-icon"></i> ' + esc(locDisplay) + '</span>' : '';
     return '<div class="book-card ' + readCls + ' ' + borCls + '" id="card-' + b.id + '">'
-      + '<div class="book-check" onclick="toggleRead(\'' + b.id + '\',' + b.read + ')"><span class="check-icon">✓</span></div>'
+      + '<div class="book-check" onclick="toggleRead(\'' + b.id + '\')"><span class="check-icon">✓</span></div>'
       + '<div class="book-info">'
       + '<div class="book-title">' + esc(b.title) + '</div>'
       + '<div class="book-author">' + esc(b.author||'') + '</div>'
@@ -3283,7 +3283,7 @@ function _miniBookCardHtml(b) {
     ${ratingHtml}
     <div class="mbc-details-btn"><i data-lucide="chevron-right"></i></div>
   </div>
-  <button style="position:absolute;bottom:0;left:0;width:40px;height:40px;background:none;border:none;cursor:pointer;z-index:10;padding:0;" onclick="toggleRead('${safeId}',${b.read})" aria-label="Toggle read"></button>
+  <button style="position:absolute;bottom:0;left:0;width:40px;height:40px;background:none;border:none;cursor:pointer;z-index:10;padding:0;" onclick="toggleRead('${safeId}')" aria-label="Toggle read"></button>
   <button style="position:absolute;bottom:0;right:0;width:40px;height:40px;background:none;border:none;cursor:pointer;z-index:10;padding:0;" onclick="openBookInfo('${safeId}')" aria-label="Open details"></button>
 </div>`;
 }
@@ -3952,7 +3952,10 @@ window.deleteFromEdit = async () => {
 };
 
 // ── READ TOGGLE ───────────────────────────────────────────────────────────────
-window.toggleRead = async (id, currentRead) => {
+window.toggleRead = async (id) => {
+  const b = books.find(x => x.id === id);
+  if (!b) return;
+  const currentRead = !!b.read;
   const newVal = !currentRead;
   const card = document.getElementById('card-' + id);
   if (card) {
@@ -3964,16 +3967,15 @@ window.toggleRead = async (id, currentRead) => {
       statusEl.textContent = newVal ? '✓' : '';
     }
   }
-  const b = books.find(x => x.id === id);
-  if (b) b.read = newVal;
+  b.read = newVal;
   updateStats();
   try {
     await updateBook(id, { read: newVal });
-    if (newVal && currentUser && b) {
+    if (newVal && currentUser) {
       _openRateReviewPrompt(id, createGlobalBookId(b.title||'', b.author||''));
     }
   }
-  catch(e) { if (b) b.read = currentRead; applyFilters(); }
+  catch(e) { b.read = currentRead; applyFilters(); }
 };
 
 window.moveWishlistToLibrary = id => {
