@@ -3985,18 +3985,28 @@ window.openAddModal = () => {
 // ── GOOGLE BOOKS SPELL CHECK ──────────────────────────────────────────────────
 async function _queryGoogleBooks(title, author) {
   try {
-    const q = encodeURIComponent(`intitle:${title} inauthor:${author}`);
-    const resp = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1&fields=items(volumeInfo(title,authors))`, { signal: AbortSignal.timeout(5000) });
+    // Use intitle: for title precision but author as plain text so misspelled authors don't block the search
+    const q = encodeURIComponent(`intitle:${title} ${author}`);
+    const resp = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=5&fields=items(volumeInfo(title,authors))`, { signal: AbortSignal.timeout(8000) });
     if (!resp.ok) return null;
     const data = await resp.json();
-    const info = data.items?.[0]?.volumeInfo;
-    if (!info || !info.title) return null;
+    if (!data.items?.length) return null;
+    // Pick the item whose title best matches ours
+    const normInput = title.trim().toLowerCase();
+    const best = data.items.find(item => {
+      const t = (item.volumeInfo?.title || '').trim().toLowerCase();
+      return t === normInput || t.startsWith(normInput) || normInput.startsWith(t);
+    }) || data.items[0];
+    const info = best.volumeInfo;
+    if (!info?.title) return null;
     return { title: info.title.trim(), author: ((info.authors||[])[0] || '').trim() };
   } catch { return null; }
 }
 
 function _spellDiffers(a, b) {
-  return b && a.trim().toLowerCase() !== b.trim().toLowerCase();
+  if (!b) return false;
+  const norm = s => s.trim().toLowerCase().replace(/\s+/g, ' ');
+  return norm(a) !== norm(b);
 }
 
 let _spellSuggestData = {};
@@ -4011,7 +4021,7 @@ async function _triggerSpellCheck(mode) {
   if (title.length < 2 || author.length < 2) return;
   const result = await _queryGoogleBooks(title, author);
   if (!result) return;
-  const titleDiff  = _spellDiffers(title,  result.title);
+  const titleDiff  = _spellDiffers(title, result.title) && !result.title.toLowerCase().startsWith(title.trim().toLowerCase());
   const authorDiff = _spellDiffers(author, result.author);
   if (!titleDiff && !authorDiff) { boxEl.style.display = 'none'; return; }
   _spellSuggestData[mode] = result;
@@ -4068,13 +4078,14 @@ window.openSpellScan = async () => {
     document.getElementById('spellScanBar').style.width = `${Math.round((i / scannable.length) * 100)}%`;
     const result = await _queryGoogleBooks(b.title, b.author);
     if (result) {
-      const titleDiff  = _spellDiffers(b.title,  result.title);
+      // Ignore title "differences" that are just the API appending a subtitle
+      const titleDiff  = _spellDiffers(b.title, result.title) && !result.title.toLowerCase().startsWith(b.title.trim().toLowerCase());
       const authorDiff = _spellDiffers(b.author, result.author);
       if (titleDiff || authorDiff) {
         suggestions.push({ gbRef: b._ref, gbId: b.id, current: b, suggest: result, titleDiff, authorDiff });
       }
     }
-    if (i < scannable.length - 1) await new Promise(r => setTimeout(r, 250));
+    if (i < scannable.length - 1) await new Promise(r => setTimeout(r, 350));
   }
 
   document.getElementById('spellScanBar').style.width = '100%';
