@@ -599,7 +599,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 
 /* MODALS */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 300; display: flex; align-items: flex-end; backdrop-filter: blur(4px); opacity: 0; pointer-events: none; transition: opacity 0.25s; }
-.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal-overlay.open { opacity: 1; pointer-events: all; overscroll-behavior: contain; touch-action: pan-y; }
 .modal { background: var(--surface); border-radius: 20px 20px 0 0; padding: 24px 20px 44px; width: 100%; border-top: 1px solid var(--border); transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.32,0.72,0,1); max-height: calc(100dvh - 48px); overflow-y: auto; position: relative; }
 .modal-overlay.open .modal { transform: translateY(0); }
 .modal.full-sheet { height: calc(100dvh - 48px); max-height: none; padding: 0; display: flex; flex-direction: column; overflow: hidden; will-change: transform; }
@@ -6338,10 +6338,12 @@ window.openBulkAdd = () => {
   const copyBtn = document.getElementById('copyPromptBtn');
   if (copyBtn) { copyBtn.classList.remove('success-flash'); copyBtn.innerHTML = '<i data-lucide="clipboard"></i> Copy Prompt'; refreshIcons(); }
   document.getElementById('bulkOverlay').classList.add('open');
+  _lockBodyScroll();
 };
 
 window.closeBulkAdd = () => {
   document.getElementById('bulkOverlay').classList.remove('open');
+  _unlockBodyScroll();
 };
 
 window.closeBulkOnOverlay = e => {
@@ -6462,8 +6464,15 @@ window.handleCsvUpload = async e => {
 };
 
 // ── MODAL HELPERS ─────────────────────────────────────────────────────────────
-window.openModal  = id => document.getElementById(id).classList.add('open');
-window.closeModal = id => document.getElementById(id).classList.remove('open');
+let _scrollLockDepth = 0;
+function _lockBodyScroll() {
+  if (++_scrollLockDepth === 1) document.body.style.overflow = 'hidden';
+}
+function _unlockBodyScroll() {
+  if (--_scrollLockDepth <= 0) { _scrollLockDepth = 0; document.body.style.overflow = ''; }
+}
+window.openModal  = id => { document.getElementById(id).classList.add('open'); _lockBodyScroll(); };
+window.closeModal = id => { document.getElementById(id).classList.remove('open'); _unlockBodyScroll(); };
 window.closeOnOverlay = (e, id) => { if (e.target.id === id) closeModal(id); };
 
 // ── STATUS ────────────────────────────────────────────────────────────────────
@@ -6801,6 +6810,7 @@ window.openSettings = () => {
   buildManageLists();
   backToSettingsHome();
   document.getElementById('settingsOverlay').classList.add('open');
+  _lockBodyScroll();
   refreshIcons();
 };
 
@@ -6884,6 +6894,7 @@ window.closeSettings = () => {
   const sheet = document.getElementById('settingsSheet');
   sheet.style.transform = '';
   document.getElementById('settingsOverlay').classList.remove('open');
+  _unlockBodyScroll();
 };
 
 window.closeSettingsOnOverlay = e => {
@@ -6930,9 +6941,9 @@ function makeSwipeable(headerId, sheetId, closeFn) {
     }
   }
 
-  // Touch
+  // Touch — touchmove must be non-passive so preventDefault() can block page scroll
   header.addEventListener('touchstart', e => onStart(e.touches[0].clientY), { passive: true });
-  header.addEventListener('touchmove',  e => onMove(e.touches[0].clientY),  { passive: true });
+  header.addEventListener('touchmove',  e => { onMove(e.touches[0].clientY); if (dragging) e.preventDefault(); }, { passive: false });
   header.addEventListener('touchend',   () => onEnd());
 
   // Mouse (desktop)
