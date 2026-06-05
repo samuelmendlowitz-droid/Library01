@@ -3279,7 +3279,7 @@ function _miniBookCardHtml(b) {
     ${dividerHtml}
   </div>
   <div class="mbc-footer">
-    <div class="mbc-status ${statusCls}">${statusIcon}</div>
+    <div class="mbc-status ${statusCls}" style="cursor:pointer;" onclick="event.stopPropagation();toggleRead('${safeId}',${b.read})">${statusIcon}</div>
     ${ratingHtml}
     <button class="mbc-details-btn" onclick="event.stopPropagation();openBookInfo('${safeId}')"><i data-lucide="chevron-right"></i></button>
   </div>
