@@ -544,6 +544,18 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .review-write-box { background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:16px; }
 .review-textarea { width:100%;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;padding:10px 12px;resize:vertical;min-height:72px;box-sizing:border-box;outline:none; }
 .review-textarea:focus { border-color:var(--accent); }
+.spell-suggest { background:rgba(255,200,60,0.1);border:1px solid rgba(255,200,60,0.35);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--text2);margin-top:-4px;margin-bottom:8px;display:flex;gap:8px;align-items:center;line-height:1.4; }
+.spell-suggest-text { flex:1; }
+.spell-suggest-text em { font-style:normal;color:var(--text);font-weight:600; }
+.spell-suggest-apply { background:var(--accent);color:#1a1612;border:none;border-radius:4px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;white-space:nowrap; }
+.spell-suggest-dismiss { background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:0 2px;line-height:1;flex-shrink:0; }
+.scan-result-item { padding:12px 0;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px; }
+.scan-result-item:first-child { border-top:none; }
+.scan-result-current { font-size:13px;color:var(--text3); }
+.scan-result-suggest { font-size:13px;color:var(--text);font-weight:500; }
+.scan-result-actions { display:flex;gap:8px;margin-top:2px; }
+.scan-apply-btn { padding:5px 14px;background:var(--accent);color:#1a1612;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif; }
+.scan-skip-btn { padding:5px 14px;background:var(--surface3);color:var(--text2);border:1px solid var(--border);border-radius:6px;font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif; }
 .review-item { border-top:1px solid var(--border);padding:12px 0; }
 .review-item:first-child { border-top:none; }
 .review-item-header { display:flex;align-items:flex-start;gap:8px;margin-bottom:4px; }
@@ -1633,16 +1645,17 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
       <div class="form-group">
         <label class="form-label">Book Title *</label>
         <div class="autocomplete-wrap">
-          <input class="form-input" id="newTitle" placeholder="e.g. The Great Gatsby" oninput="handleGlobalTitleSearch()">
+          <input class="form-input" id="newTitle" placeholder="e.g. The Great Gatsby" oninput="handleGlobalTitleSearch()" onblur="scheduleSpellCheck('add')">
           <div class="autocomplete-dropdown" id="titleAutocomplete"></div>
         </div>
       </div>
       <div class="form-group"><label class="form-label">Author *</label>
         <div class="autocomplete-wrap">
-          <input class="form-input" id="newAuthor" placeholder="e.g. F. Scott Fitzgerald" oninput="handleAuthorSearch()" autocomplete="off">
+          <input class="form-input" id="newAuthor" placeholder="e.g. F. Scott Fitzgerald" oninput="handleAuthorSearch()" onblur="scheduleSpellCheck('add')" autocomplete="off">
           <div class="autocomplete-dropdown" id="authorAutocomplete"></div>
         </div>
       </div>
+      <div id="spellSuggestAdd" class="spell-suggest" style="display:none;"></div>
       <div class="form-group">
         <label class="form-label">Series <span style="font-weight:300;text-transform:none;letter-spacing:0">(optional)</span></label>
         <div style="display:flex;gap:8px;align-items:center;">
@@ -1708,8 +1721,9 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
       </div>
     </div>
     <div class="modal-body">
-      <div class="form-group"><label class="form-label">Book Title *</label><input class="form-input" id="editTitle"></div>
-      <div class="form-group"><label class="form-label">Author *</label><input class="form-input" id="editAuthor"></div>
+      <div class="form-group"><label class="form-label">Book Title *</label><input class="form-input" id="editTitle" onblur="scheduleSpellCheck('edit')"></div>
+      <div class="form-group"><label class="form-label">Author *</label><input class="form-input" id="editAuthor" onblur="scheduleSpellCheck('edit')"></div>
+      <div id="spellSuggestEdit" class="spell-suggest" style="display:none;"></div>
       <div class="form-group">
         <label class="form-label">Series <span style="font-weight:300;text-transform:none;letter-spacing:0">(optional)</span></label>
         <div style="display:flex;gap:8px;align-items:center;">
@@ -1833,6 +1847,38 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
     <div style="display:flex;gap:10px;">
       <button class="btn-submit" id="rrSaveBtn" onclick="submitRateReview()" style="flex:1;">Save</button>
       <button class="btn-submit" onclick="closeModal('rateReviewModal')" style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text1);">Skip</button>
+    </div>
+  </div>
+</div>
+
+<!-- SPELL SCAN MODAL -->
+<div class="modal-overlay" id="spellScanModal" onclick="closeOnOverlay(event,'spellScanModal')">
+  <div class="modal full-sheet" id="spellScanSheet">
+    <div class="modal-header" id="spellScanHeader">
+      <div class="modal-handle"></div>
+      <div class="modal-header-row">
+        <div class="modal-title"><i data-lucide="spell-check"></i> Spell Check Library</div>
+        <button class="modal-close" onclick="closeModal('spellScanModal')"><i data-lucide="x"></i></button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div id="spellScanProgress" style="display:none;">
+        <div style="font-size:13px;color:var(--text2);margin-bottom:10px;" id="spellScanStatus">Scanning your library…</div>
+        <div style="height:4px;background:var(--surface3);border-radius:2px;overflow:hidden;margin-bottom:20px;">
+          <div id="spellScanBar" style="height:100%;background:var(--accent);border-radius:2px;width:0%;transition:width 0.3s;"></div>
+        </div>
+      </div>
+      <div id="spellScanResults" style="display:none;">
+        <div id="spellScanSummary" style="font-size:13px;color:var(--text2);margin-bottom:16px;"></div>
+        <div id="spellScanList"></div>
+        <button class="btn-submit" onclick="closeModal('spellScanModal')" style="margin-top:20px;">Done</button>
+      </div>
+      <div id="spellScanEmpty" style="display:none;text-align:center;padding:40px 0;">
+        <div style="font-size:32px;margin-bottom:12px;">✓</div>
+        <div style="font-size:15px;font-weight:600;color:var(--text);">All Clear!</div>
+        <div style="font-size:13px;color:var(--text3);margin-top:6px;">No spelling issues found in your library.</div>
+        <button class="btn-submit" onclick="closeModal('spellScanModal')" style="margin-top:24px;">Done</button>
+      </div>
     </div>
   </div>
 </div>
@@ -2012,6 +2058,11 @@ All columns other than Author, Title, Series and Genres should be left empty or 
         <button class="settings-menu-item" onclick="exportLibraryAsCsv()">
           <span class="smi-icon"><i data-lucide="upload"></i></span>
           <div class="smi-text"><div class="smi-title">Export Library</div><div class="smi-sub">Download your personal library as a CSV</div></div>
+          <span class="smi-arrow"><i data-lucide="chevron-right"></i></span>
+        </button>
+        <button class="settings-menu-item" onclick="closeSettings();openSpellScan()">
+          <span class="smi-icon"><i data-lucide="spell-check"></i></span>
+          <div class="smi-text"><div class="smi-title">Spell Check Library</div><div class="smi-sub">Verify titles &amp; authors against Google Books</div></div>
           <span class="smi-arrow"><i data-lucide="chevron-right"></i></span>
         </button>
         <div id="ownerWipeSection" style="display:none;">
@@ -3926,7 +3977,142 @@ window.openAddModal = () => {
   document.getElementById('newSeriesNumVal').textContent = '1';
   document.getElementById('newSeriesNumLabel').textContent = '1';
   buildGenreGrid('addGenreGrid', addSelectedGenres);
+  const sba = document.getElementById('spellSuggestAdd');
+  if (sba) sba.style.display = 'none';
   openModal('addModal');
+};
+
+// ── GOOGLE BOOKS SPELL CHECK ──────────────────────────────────────────────────
+async function _queryGoogleBooks(title, author) {
+  try {
+    const q = encodeURIComponent(`intitle:${title} inauthor:${author}`);
+    const resp = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1&fields=items(volumeInfo(title,authors))`, { signal: AbortSignal.timeout(5000) });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    const info = data.items?.[0]?.volumeInfo;
+    if (!info || !info.title) return null;
+    return { title: info.title.trim(), author: ((info.authors||[])[0] || '').trim() };
+  } catch { return null; }
+}
+
+function _spellDiffers(a, b) {
+  return b && a.trim().toLowerCase() !== b.trim().toLowerCase();
+}
+
+let _spellSuggestData = {};
+
+async function _triggerSpellCheck(mode) {
+  const titleEl  = document.getElementById(mode === 'add' ? 'newTitle'  : 'editTitle');
+  const authorEl = document.getElementById(mode === 'add' ? 'newAuthor' : 'editAuthor');
+  const boxEl    = document.getElementById(mode === 'add' ? 'spellSuggestAdd' : 'spellSuggestEdit');
+  if (!titleEl || !authorEl || !boxEl) return;
+  const title = titleEl.value.trim();
+  const author = authorEl.value.trim();
+  if (title.length < 2 || author.length < 2) return;
+  const result = await _queryGoogleBooks(title, author);
+  if (!result) return;
+  const titleDiff  = _spellDiffers(title,  result.title);
+  const authorDiff = _spellDiffers(author, result.author);
+  if (!titleDiff && !authorDiff) { boxEl.style.display = 'none'; return; }
+  _spellSuggestData[mode] = result;
+  const parts = [];
+  if (titleDiff)  parts.push(`<em>${esc(result.title)}</em>`);
+  if (authorDiff) parts.push(`by <em>${esc(result.author)}</em>`);
+  boxEl.innerHTML = `<span class="spell-suggest-text">Did you mean: ${parts.join(' ')}?</span>`
+    + `<button class="spell-suggest-apply" onclick="_applySpellSuggest('${mode}')">Apply</button>`
+    + `<button class="spell-suggest-dismiss" onclick="this.parentElement.style.display='none'">✕</button>`;
+  boxEl.style.display = 'flex';
+}
+
+let _spellCheckTimers = {};
+window.scheduleSpellCheck = (mode) => {
+  clearTimeout(_spellCheckTimers[mode]);
+  _spellCheckTimers[mode] = setTimeout(() => _triggerSpellCheck(mode), 600);
+};
+
+window._applySpellSuggest = (mode) => {
+  const data = _spellSuggestData[mode];
+  if (!data) return;
+  const titleEl  = document.getElementById(mode === 'add' ? 'newTitle'  : 'editTitle');
+  const authorEl = document.getElementById(mode === 'add' ? 'newAuthor' : 'editAuthor');
+  if (titleEl  && data.title)  titleEl.value  = data.title;
+  if (authorEl && data.author) authorEl.value = data.author;
+  const boxEl = document.getElementById(mode === 'add' ? 'spellSuggestAdd' : 'spellSuggestEdit');
+  if (boxEl) boxEl.style.display = 'none';
+};
+
+// ── SPELL SCAN (Settings) ──────────────────────────────────────────────────────
+window.openSpellScan = async () => {
+  document.getElementById('spellScanProgress').style.display = 'block';
+  document.getElementById('spellScanResults').style.display = 'none';
+  document.getElementById('spellScanEmpty').style.display = 'none';
+  document.getElementById('spellScanBar').style.width = '0%';
+  document.getElementById('spellScanStatus').textContent = 'Scanning your library…';
+  openModal('spellScanModal');
+
+  const scannable = books.filter(b => b.title && b.author && b.location !== 'GlobalRead');
+  const suggestions = [];
+  for (let i = 0; i < scannable.length; i++) {
+    const b = scannable[i];
+    document.getElementById('spellScanStatus').textContent = `Checking ${i + 1} of ${scannable.length}…`;
+    document.getElementById('spellScanBar').style.width = `${Math.round((i / scannable.length) * 100)}%`;
+    const result = await _queryGoogleBooks(b.title, b.author);
+    if (result) {
+      const titleDiff  = _spellDiffers(b.title,  result.title);
+      const authorDiff = _spellDiffers(b.author, result.author);
+      if (titleDiff || authorDiff) {
+        suggestions.push({ id: b.id, current: b, suggest: result, titleDiff, authorDiff });
+      }
+    }
+    // throttle: 200ms between requests to avoid rate limiting
+    if (i < scannable.length - 1) await new Promise(r => setTimeout(r, 200));
+  }
+
+  document.getElementById('spellScanBar').style.width = '100%';
+  document.getElementById('spellScanProgress').style.display = 'none';
+
+  if (suggestions.length === 0) {
+    document.getElementById('spellScanEmpty').style.display = 'block';
+    return;
+  }
+
+  document.getElementById('spellScanSummary').textContent =
+    `Found ${suggestions.length} possible spelling issue${suggestions.length !== 1 ? 's' : ''}. Review each suggestion below:`;
+
+  const listEl = document.getElementById('spellScanList');
+  listEl.innerHTML = suggestions.map((s, idx) => {
+    const parts = [];
+    if (s.titleDiff)  parts.push(`Title: <em>${esc(s.suggest.title)}</em>`);
+    if (s.authorDiff) parts.push(`Author: <em>${esc(s.suggest.author)}</em>`);
+    return `<div class="scan-result-item" id="scan-item-${idx}">
+      <div class="scan-result-current">Current: ${esc(s.current.title)} — ${esc(s.current.author)}</div>
+      <div class="scan-result-suggest">Suggested: ${parts.join(' · ')}</div>
+      <div class="scan-result-actions">
+        <button class="scan-apply-btn" onclick="_applyScanSuggest(${idx})">Apply</button>
+        <button class="scan-skip-btn" onclick="document.getElementById('scan-item-${idx}').style.opacity='0.4';this.parentElement.querySelectorAll('button').forEach(b=>b.disabled=true)">Skip</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  window._scanSuggestions = suggestions;
+  document.getElementById('spellScanResults').style.display = 'block';
+};
+
+window._applyScanSuggest = async (idx) => {
+  const s = window._scanSuggestions?.[idx];
+  if (!s) return;
+  const itemEl = document.getElementById('scan-item-' + idx);
+  const btns = itemEl?.querySelectorAll('button');
+  if (btns) btns.forEach(b => b.disabled = true);
+  try {
+    const updates = {};
+    if (s.titleDiff)  updates.title  = s.suggest.title;
+    if (s.authorDiff) updates.author = s.suggest.author;
+    await updateBook(s.id, updates);
+    const b = books.find(x => x.id === s.id);
+    if (b) { if (updates.title) b.title = updates.title; if (updates.author) b.author = updates.author; }
+    if (itemEl) { itemEl.style.opacity = '0.4'; const applyBtn = itemEl.querySelector('.scan-apply-btn'); if (applyBtn) applyBtn.textContent = 'Applied ✓'; }
+  } catch(e) { showStatus('Error applying change.', 'error'); setTimeout(hideStatus, 3000); if (btns) btns.forEach(b => b.disabled = false); }
 };
 
 window.addBook = async () => {
@@ -3991,6 +4177,8 @@ window.openEditModal = id => {
   document.getElementById('editRating').value = rating;
   updateStarDisplay(rating);
   document.getElementById('editRatingGroup').style.display = b.read ? '' : 'none';
+  const sbe = document.getElementById('spellSuggestEdit');
+  if (sbe) sbe.style.display = 'none';
   openModal('editModal');
 };
 
@@ -6959,6 +7147,7 @@ setTimeout(() => {
   makeSwipeable('addModalHeader',     'addSheet',      () => closeModal('addModal'));
   makeSwipeable('editModalHeader',    'editSheet',     () => closeModal('editModal'));
   makeSwipeable('bookInfoModalHeader','bookInfoSheet', () => closeModal('bookInfoModal'));
+  makeSwipeable('spellScanHeader',    'spellScanSheet',() => closeModal('spellScanModal'));
 }, 0);
 
 
