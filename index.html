@@ -4009,11 +4009,20 @@ async function _queryGoogleBooks(title, author) {
   } catch { clearTimeout(tid); return null; }
 }
 
-function _spellDiffers(a, b) {
+function _titleDiffers(a, b) {
+  // Case-insensitive — only flag actual content differences, not casing
   if (!b) return false;
   const norm = s => s.trim().toLowerCase().replace(/\s+/g, ' ');
   return norm(a) !== norm(b);
 }
+function _authorDiffers(a, b) {
+  // Case-sensitive — "sarah j maas" must be flagged as different from "Sarah J. Maas"
+  if (!b) return false;
+  const norm = s => s.trim().replace(/\s+/g, ' ');
+  return norm(a) !== norm(b);
+}
+// Keep old name as alias so inline spell check still works
+function _spellDiffers(a, b) { return _authorDiffers(a, b); }
 
 let _spellSuggestData = {};
 
@@ -4027,8 +4036,8 @@ async function _triggerSpellCheck(mode) {
   if (title.length < 2 || author.length < 2) return;
   const result = await _queryGoogleBooks(title, author);
   if (!result) return;
-  const titleDiff  = _spellDiffers(title, result.title) && !result.title.toLowerCase().startsWith(title.trim().toLowerCase());
-  const authorDiff = _spellDiffers(author, result.author);
+  const titleDiff  = _titleDiffers(title, result.title) && !result.title.toLowerCase().startsWith(title.trim().toLowerCase());
+  const authorDiff = _authorDiffers(author, result.author);
   if (!titleDiff && !authorDiff) { boxEl.style.display = 'none'; return; }
   _spellSuggestData[mode] = result;
   const parts = [];
@@ -4090,8 +4099,8 @@ window.openSpellScan = async () => {
       apiHits++;
       if (apiCountEl) apiCountEl.textContent = `${apiHits} API response${apiHits !== 1 ? 's' : ''} received`;
       // Ignore title "differences" that are just the API appending a subtitle
-      const titleDiff  = _spellDiffers(b.title, result.title) && !result.title.toLowerCase().startsWith(b.title.trim().toLowerCase());
-      const authorDiff = _spellDiffers(b.author, result.author);
+      const titleDiff  = _titleDiffers(b.title, result.title) && !result.title.toLowerCase().startsWith(b.title.trim().toLowerCase());
+      const authorDiff = _authorDiffers(b.author, result.author);
       if (titleDiff || authorDiff) {
         suggestions.push({ gbRef: b._ref, gbId: b.id, current: b, suggest: result, titleDiff, authorDiff });
       }
