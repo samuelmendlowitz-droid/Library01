@@ -2190,7 +2190,7 @@ All columns other than Author, Title, Series and Genres should be left empty or 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as fbSignOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { getFirestore, initializeFirestore, persistentLocalCache, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, getDocsFromCache, query, where, limit, orderBy, startAfter, onSnapshot, serverTimestamp, increment, arrayUnion, arrayRemove, getCountFromServer } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, initializeFirestore, persistentLocalCache, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, getDocsFromCache, getDocsFromServer, query, where, limit, orderBy, startAfter, onSnapshot, serverTimestamp, increment, arrayUnion, arrayRemove, getCountFromServer } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 // ── CONFIG ───────────────────────────────────────────────────────────────────
 const firebaseConfig = {
@@ -4084,10 +4084,16 @@ window.runLibraryCleanup = async () => {
 
   let gbDocs;
   try {
-    const snap = await getDocs(collection(db, 'globalLibrary'));
+    const stillLoadingTimer = setTimeout(() => {
+      document.getElementById('spellScanStatus').textContent = 'Still loading… (large library may take a minute)';
+    }, 5000);
+    const fetchRef = collection(db, 'globalLibrary');
+    const timeoutPromise = new Promise((_, rej) => setTimeout(() => rej(new Error('Timed out loading global library (>60s)')), 60000));
+    const snap = await Promise.race([getDocsFromServer(fetchRef), timeoutPromise]);
+    clearTimeout(stillLoadingTimer);
     gbDocs = snap.docs.map(d => ({ _ref: d.ref, id: d.id, ...d.data() }));
   } catch(e) {
-    document.getElementById('spellScanStatus').textContent = 'Failed to load global library: ' + (e.message || 'unknown error');
+    document.getElementById('spellScanStatus').textContent = 'Failed to load: ' + (e.message || 'unknown error');
     return;
   }
 
