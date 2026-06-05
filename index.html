@@ -1862,13 +1862,25 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
       </div>
     </div>
     <div class="modal-body">
+      <!-- Start / Resume -->
+      <div id="cleanupReady">
+        <div id="cleanupResumeInfo" style="display:none;font-size:13px;color:var(--text2);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:16px;line-height:1.7;"></div>
+        <button class="btn-submit" id="cleanupStartBtn" onclick="startLibraryCleanup(false)">Start Cleanup</button>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <button class="btn-submit" id="cleanupResumeBtn" style="display:none;flex:1;" onclick="startLibraryCleanup(true)">Resume</button>
+          <button id="cleanupDiscardBtn" style="display:none;flex:1;padding:12px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-weight:600;color:var(--text2);cursor:pointer;font-family:'DM Sans',sans-serif;" onclick="startLibraryCleanup(false)">Start Over</button>
+        </div>
+      </div>
+      <!-- Running -->
       <div id="spellScanProgress" style="display:none;">
         <div style="font-size:13px;color:var(--text2);margin-bottom:4px;" id="spellScanStatus"></div>
         <div style="font-size:11px;color:var(--text3);margin-bottom:10px;" id="spellScanApiCount"></div>
-        <div style="height:4px;background:var(--surface3);border-radius:2px;overflow:hidden;margin-bottom:8px;">
+        <div style="height:4px;background:var(--surface3);border-radius:2px;overflow:hidden;margin-bottom:12px;">
           <div id="spellScanBar" style="height:100%;background:var(--accent);border-radius:2px;width:0%;transition:width 0.4s;"></div>
         </div>
+        <button onclick="stopLibraryCleanup()" style="width:100%;padding:10px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:13px;color:var(--text2);cursor:pointer;font-family:'DM Sans',sans-serif;">Pause &amp; Save Progress</button>
       </div>
+      <!-- Results -->
       <div id="cleanupResults" style="display:none;">
         <div id="cleanupStats" style="font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.7;"></div>
         <div id="cleanupCorrectedSection" style="display:none;margin-bottom:20px;">
@@ -1881,9 +1893,10 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
         </div>
         <button class="btn-submit" onclick="closeModal('spellScanModal')" style="margin-top:8px;">Done</button>
       </div>
+      <!-- All clean / complete -->
       <div id="cleanupAllClear" style="display:none;text-align:center;padding:40px 0;">
-        <div style="font-size:32px;margin-bottom:12px;">✓</div>
-        <div style="font-size:15px;font-weight:600;color:var(--text);">All Clean!</div>
+        <div style="font-size:32px;margin-bottom:12px;" id="cleanupAllClearIcon">✓</div>
+        <div style="font-size:15px;font-weight:600;color:var(--text);" id="cleanupAllClearTitle">All Clean!</div>
         <div style="font-size:13px;color:var(--text3);margin-top:6px;" id="cleanupAllClearNote"></div>
         <button class="btn-submit" onclick="closeModal('spellScanModal')" style="margin-top:24px;">Done</button>
       </div>
@@ -4071,105 +4084,224 @@ window._applySpellSuggest = (mode) => {
 };
 
 // ── LIBRARY CLEANUP (Admin — Global Library) ──────────────────────────────────
-window.runLibraryCleanup = async () => {
+const _CLEANUP_CHUNK = 1000;
+const _CLEANUP_KEY = 'libCleanupState';
+let _cleanupRunning = false;
+let _cleanupStop = false;
+
+function _cleanupEta(checked, total) {
+  const rem = total - checked;
+  if (rem <= 0) return '';
+  const secs = rem * 0.7;
+  if (secs < 120)  return `~${Math.ceil(secs)}s left`;
+  if (secs < 7200) return `~${Math.ceil(secs / 60)}m left`;
+  return `~${(secs / 3600).toFixed(1)}h left`;
+}
+
+window.runLibraryCleanup = () => {
   if (!currentUser || currentUser.email !== 'samuelmendlowitz@gmail.com') return;
 
-  document.getElementById('spellScanProgress').style.display = 'block';
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(_CLEANUP_KEY) || 'null'); } catch(e) {}
+
+  document.getElementById('spellScanProgress').style.display = 'none';
   document.getElementById('cleanupResults').style.display = 'none';
   document.getElementById('cleanupAllClear').style.display = 'none';
-  document.getElementById('spellScanBar').style.width = '0%';
-  document.getElementById('spellScanStatus').textContent = 'Loading global library…';
-  document.getElementById('spellScanApiCount').textContent = '';
-  openModal('spellScanModal');
+  document.getElementById('cleanupReady').style.display = 'block';
 
-  let gbDocs;
-  try {
-    const stillLoadingTimer = setTimeout(() => {
-      document.getElementById('spellScanStatus').textContent = 'Still loading… (large library may take a minute)';
-    }, 5000);
-    const fetchRef = collection(db, 'globalLibrary');
-    const timeoutPromise = new Promise((_, rej) => setTimeout(() => rej(new Error('Timed out loading global library (>60s)')), 60000));
-    const snap = await Promise.race([getDocsFromServer(fetchRef), timeoutPromise]);
-    clearTimeout(stillLoadingTimer);
-    gbDocs = snap.docs.map(d => ({ _ref: d.ref, id: d.id, ...d.data() }));
-  } catch(e) {
-    document.getElementById('spellScanStatus').textContent = 'Failed to load: ' + (e.message || 'unknown error');
+  const hasProgress = saved && saved.checked > 0;
+  document.getElementById('cleanupStartBtn').style.display = hasProgress ? 'none' : 'block';
+  document.getElementById('cleanupResumeBtn').style.display = hasProgress ? 'block' : 'none';
+  document.getElementById('cleanupDiscardBtn').style.display = hasProgress ? 'block' : 'none';
+  const ri = document.getElementById('cleanupResumeInfo');
+  if (hasProgress) {
+    const of = saved.total > 0 ? ` of ${saved.total.toLocaleString()}` : '';
+    const eta = saved.total > 0 ? ' · ' + _cleanupEta(saved.checked, saved.total) : '';
+    ri.textContent = `Progress: ${saved.checked.toLocaleString()}${of} checked · ${saved.corrected} corrected · ${saved.deleted} removed · ${saved.skipped} skipped${eta}`;
+    ri.style.display = 'block';
+  } else {
+    ri.style.display = 'none';
+  }
+  openModal('spellScanModal');
+};
+
+window.stopLibraryCleanup = () => { _cleanupStop = true; };
+
+window.startLibraryCleanup = async (resume) => {
+  if (!currentUser || currentUser.email !== 'samuelmendlowitz@gmail.com') return;
+  if (_cleanupRunning) return;
+  _cleanupRunning = true;
+  _cleanupStop = false;
+
+  let state = { checked: 0, corrected: 0, deleted: 0, skipped: 0, cursorId: null, cursorTitle: null, total: 0, complete: false };
+  if (resume) {
+    try {
+      const saved = JSON.parse(localStorage.getItem(_CLEANUP_KEY) || 'null');
+      if (saved) Object.assign(state, saved);
+    } catch(e) {}
+  } else {
+    localStorage.removeItem(_CLEANUP_KEY);
+  }
+  state.complete = false;
+
+  document.getElementById('cleanupReady').style.display = 'none';
+  document.getElementById('spellScanProgress').style.display = 'block';
+  document.getElementById('spellScanBar').style.width = (state.total > 0 ? Math.round(state.checked / state.total * 100) : 0) + '%';
+
+  // Get total count once (lightweight aggregation, not a full fetch)
+  if (!state.total) {
+    document.getElementById('spellScanStatus').textContent = 'Counting books…';
+    try {
+      const cnt = await getCountFromServer(collection(db, 'globalLibrary'));
+      state.total = cnt.data().count;
+    } catch(e) { /* proceed without total */ }
+  }
+
+  const correctedThisRun = [], deletedThisRun = [];
+
+  // Resolve cursor document for resume
+  let lastDoc = null;
+  if (state.cursorId) {
+    try {
+      const d = await getDoc(doc(db, 'globalLibrary', state.cursorId));
+      if (d.exists()) lastDoc = d;
+    } catch(e) { /* fall through to title cursor */ }
+  }
+
+  while (!_cleanupStop) {
+    // Build paginated query (1000 docs at a time, alphabetical by title)
+    const q = lastDoc
+      ? query(collection(db, 'globalLibrary'), orderBy('title'), startAfter(lastDoc),      limit(_CLEANUP_CHUNK))
+      : state.cursorTitle
+        ? query(collection(db, 'globalLibrary'), orderBy('title'), startAfter(state.cursorTitle), limit(_CLEANUP_CHUNK))
+        : query(collection(db, 'globalLibrary'), orderBy('title'), limit(_CLEANUP_CHUNK));
+
+    const ofTotal = state.total > 0 ? ` of ${state.total.toLocaleString()}` : '';
+    document.getElementById('spellScanStatus').textContent =
+      `Loading next chunk… (${state.checked.toLocaleString()}${ofTotal} checked)`;
+
+    let snap;
+    try {
+      snap = await getDocsFromServer(q);
+    } catch(e) {
+      document.getElementById('spellScanStatus').textContent = 'Error loading chunk: ' + (e.message || 'network error');
+      break;
+    }
+
+    if (snap.empty) { state.complete = true; break; }
+
+    const docs = snap.docs;
+    lastDoc = docs[docs.length - 1];
+
+    for (let i = 0; i < docs.length && !_cleanupStop; i++) {
+      const d = docs[i];
+      const b = { _ref: d.ref, id: d.id, ...d.data() };
+
+      if (!b.title || !b.author) { state.checked++; continue; }
+
+      const pct = state.total > 0 ? Math.round(state.checked / state.total * 100) : 0;
+      document.getElementById('spellScanBar').style.width = pct + '%';
+      document.getElementById('spellScanStatus').textContent = state.total > 0
+        ? `${state.checked.toLocaleString()} of ${state.total.toLocaleString()}: ${b.title}`
+        : `${state.checked.toLocaleString()} checked: ${b.title}`;
+      document.getElementById('spellScanApiCount').textContent =
+        `${state.corrected} corrected · ${state.deleted} removed · ${state.skipped} skipped`
+        + (state.total > 0 ? ' · ' + _cleanupEta(state.checked, state.total) : '');
+
+      const result = await _queryGoogleBooks(b.title, b.author);
+
+      if (result === null) {
+        state.skipped++;
+      } else if (result === _GB_NOT_FOUND) {
+        try {
+          await deleteDoc(b._ref);
+          state.deleted++;
+          deletedThisRun.push(b);
+          const ci = globalBookCache.findIndex(x => x.id === b.id);
+          if (ci >= 0) globalBookCache.splice(ci, 1);
+        } catch(e) { state.skipped++; }
+      } else {
+        const titleDiff = _titleDiffers(b.title, result.title)
+          && !result.title.toLowerCase().startsWith(b.title.trim().toLowerCase());
+        const authorDiff = _authorDiffers(b.author, result.author);
+        if (titleDiff || authorDiff) {
+          const updates = {};
+          if (titleDiff)  { updates.title = result.title; updates.normalizedTitle = normalizeBookText(result.title); }
+          if (authorDiff) { updates.author = result.author; updates.normalizedAuthor = normalizeBookText(result.author); }
+          try {
+            await updateDoc(b._ref, updates);
+            const cached = globalBookCache.find(x => x.id === b.id);
+            if (cached) Object.assign(cached, updates);
+            state.corrected++;
+            correctedThisRun.push({ oldTitle: b.title, oldAuthor: b.author,
+                                    newTitle: result.title, newAuthor: result.author,
+                                    titleDiff, authorDiff });
+          } catch(e) { state.skipped++; }
+        }
+      }
+
+      state.checked++;
+      if (!_cleanupStop && i < docs.length - 1) await new Promise(r => setTimeout(r, 700));
+    }
+
+    // Save cursor + stats after every chunk
+    state.cursorId = lastDoc.id;
+    state.cursorTitle = lastDoc.data().title;
+    try { localStorage.setItem(_CLEANUP_KEY, JSON.stringify(state)); } catch(e) {}
+  }
+
+  _cleanupRunning = false;
+  document.getElementById('spellScanProgress').style.display = 'none';
+
+  if (state.complete) {
+    localStorage.removeItem(_CLEANUP_KEY);
+  }
+
+  // Paused — show resume screen
+  if (_cleanupStop && !state.complete) {
+    document.getElementById('cleanupReady').style.display = 'block';
+    document.getElementById('cleanupStartBtn').style.display = 'none';
+    document.getElementById('cleanupResumeBtn').style.display = 'block';
+    document.getElementById('cleanupDiscardBtn').style.display = 'block';
+    const of = state.total > 0 ? ` of ${state.total.toLocaleString()}` : '';
+    const eta = state.total > 0 ? ' · ' + _cleanupEta(state.checked, state.total) : '';
+    const ri = document.getElementById('cleanupResumeInfo');
+    ri.textContent = `Paused: ${state.checked.toLocaleString()}${of} checked · ${state.corrected} corrected · ${state.deleted} removed · ${state.skipped} skipped${eta}`;
+    ri.style.display = 'block';
     return;
   }
 
-  const scannable = gbDocs.filter(b => b.title && b.author);
-  const corrected = [], deleted = [];
-  let skipped = 0;
-
-  for (let i = 0; i < scannable.length; i++) {
-    const b = scannable[i];
-    document.getElementById('spellScanStatus').textContent = `${i + 1} of ${scannable.length}: ${b.title}`;
-    document.getElementById('spellScanBar').style.width = `${Math.round((i / scannable.length) * 100)}%`;
-    document.getElementById('spellScanApiCount').textContent =
-      `${corrected.length} corrected · ${deleted.length} removed · ${skipped} skipped`;
-
-    const result = await _queryGoogleBooks(b.title, b.author);
-
-    if (result === null) {
-      skipped++;
-    } else if (result === _GB_NOT_FOUND) {
-      try {
-        await deleteDoc(b._ref);
-        deleted.push(b);
-        const ci = globalBookCache.findIndex(x => x.id === b.id);
-        if (ci >= 0) globalBookCache.splice(ci, 1);
-      } catch(e) { skipped++; }
-    } else {
-      const titleDiff = _titleDiffers(b.title, result.title)
-        && !result.title.toLowerCase().startsWith(b.title.trim().toLowerCase());
-      const authorDiff = _authorDiffers(b.author, result.author);
-      if (titleDiff || authorDiff) {
-        const updates = {};
-        if (titleDiff)  { updates.title  = result.title;  updates.normalizedTitle  = normalizeBookText(result.title); }
-        if (authorDiff) { updates.author = result.author; updates.normalizedAuthor = normalizeBookText(result.author); }
-        try {
-          await updateDoc(b._ref, updates);
-          const cached = globalBookCache.find(x => x.id === b.id);
-          if (cached) Object.assign(cached, updates);
-          corrected.push({ oldTitle: b.title, oldAuthor: b.author,
-                           newTitle: result.title, newAuthor: result.author,
-                           titleDiff, authorDiff });
-        } catch(e) { skipped++; }
-      }
-    }
-    if (i < scannable.length - 1) await new Promise(r => setTimeout(r, 700));
-  }
-
-  document.getElementById('spellScanBar').style.width = '100%';
-  document.getElementById('spellScanProgress').style.display = 'none';
-
-  if (corrected.length === 0 && deleted.length === 0) {
+  // Finished with no changes this run
+  if (correctedThisRun.length === 0 && deletedThisRun.length === 0) {
+    document.getElementById('cleanupAllClearIcon').textContent = '✓';
+    document.getElementById('cleanupAllClearTitle').textContent = 'All Clean!';
     document.getElementById('cleanupAllClearNote').textContent =
-      `Checked ${scannable.length} books · ${skipped} skipped due to network errors.`;
+      `Checked ${state.checked.toLocaleString()} books · ${state.skipped} skipped`;
     document.getElementById('cleanupAllClear').style.display = 'block';
     return;
   }
 
-  const statParts = [`Checked ${scannable.length} books`];
-  if (corrected.length) statParts.push(`${corrected.length} spelling correction${corrected.length !== 1 ? 's' : ''} applied`);
-  if (deleted.length)   statParts.push(`${deleted.length} book${deleted.length !== 1 ? 's' : ''} removed (not on Google Books)`);
-  if (skipped)          statParts.push(`${skipped} skipped (network errors)`);
+  // Show results summary
+  const statParts = [`Checked ${state.checked.toLocaleString()} books`];
+  if (state.corrected) statParts.push(`${state.corrected} corrected`);
+  if (state.deleted)   statParts.push(`${state.deleted} removed`);
+  if (state.skipped)   statParts.push(`${state.skipped} skipped`);
   document.getElementById('cleanupStats').textContent = statParts.join(' · ');
 
-  if (corrected.length) {
-    document.getElementById('cleanupCorrectedList').innerHTML = corrected.map(c => {
+  if (correctedThisRun.length) {
+    document.getElementById('cleanupCorrectedList').innerHTML = correctedThisRun.slice(0, 100).map(c => {
       const rows = [];
       if (c.titleDiff)  rows.push(`<span style="color:var(--text3)">${esc(c.oldTitle)}</span> → <strong>${esc(c.newTitle)}</strong>`);
       if (c.authorDiff) rows.push(`<span style="color:var(--text3)">${esc(c.oldAuthor)}</span> → <strong>${esc(c.newAuthor)}</strong>`);
       return `<div style="font-size:12px;padding:5px 0;border-top:1px solid var(--border);line-height:1.5;">${rows.join('<br>')}</div>`;
-    }).join('');
+    }).join('') + (correctedThisRun.length > 100 ? `<div style="font-size:11px;color:var(--text3);padding-top:6px;">…and ${correctedThisRun.length - 100} more</div>` : '');
     document.getElementById('cleanupCorrectedSection').style.display = 'block';
   }
 
-  if (deleted.length) {
-    document.getElementById('cleanupDeletedList').innerHTML = deleted.map(d =>
+  if (deletedThisRun.length) {
+    document.getElementById('cleanupDeletedList').innerHTML = deletedThisRun.slice(0, 100).map(d =>
       `<div style="font-size:12px;padding:5px 0;border-top:1px solid var(--border);color:var(--text3);">${esc(d.title)} — ${esc(d.author)}</div>`
-    ).join('');
+    ).join('') + (deletedThisRun.length > 100 ? `<div style="font-size:11px;color:var(--text3);padding-top:6px;">…and ${deletedThisRun.length - 100} more</div>` : '');
     document.getElementById('cleanupDeletedSection').style.display = 'block';
   }
 
