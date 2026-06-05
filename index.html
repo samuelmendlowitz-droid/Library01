@@ -1863,7 +1863,8 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
     </div>
     <div class="modal-body">
       <div id="spellScanProgress" style="display:none;">
-        <div style="font-size:13px;color:var(--text2);margin-bottom:10px;" id="spellScanStatus">Scanning your library…</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:6px;" id="spellScanStatus">Scanning your library…</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:10px;" id="spellScanApiCount"></div>
         <div style="height:4px;background:var(--surface3);border-radius:2px;overflow:hidden;margin-bottom:20px;">
           <div id="spellScanBar" style="height:100%;background:var(--accent);border-radius:2px;width:0%;transition:width 0.3s;"></div>
         </div>
@@ -3984,13 +3985,13 @@ window.openAddModal = () => {
 
 // ── GOOGLE BOOKS SPELL CHECK ──────────────────────────────────────────────────
 async function _queryGoogleBooks(title, author) {
-  // AbortSignal.timeout() isn't available on older Safari — use AbortController + setTimeout
   const controller = new AbortController();
-  const tid = setTimeout(() => controller.abort(), 9000);
+  const tid = setTimeout(() => controller.abort(), 10000);
   try {
     const q = encodeURIComponent(title + ' ' + author);
+    // No `fields` filter — some environments return malformed responses with it
     const resp = await fetch(
-      `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=5&fields=items(volumeInfo(title,authors))`,
+      `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=5`,
       { signal: controller.signal }
     );
     clearTimeout(tid);
@@ -4000,10 +4001,9 @@ async function _queryGoogleBooks(title, author) {
     const normInput = title.trim().toLowerCase();
     const best = data.items.find(item => {
       const t = (item.volumeInfo?.title || '').trim().toLowerCase();
-      // match if title equals ours, or API title starts with ours (subtitle appended), or ours starts with API title
       return t === normInput || t.startsWith(normInput) || normInput.startsWith(t.split(':')[0].trim());
     }) || data.items[0];
-    const info = best.volumeInfo;
+    const info = best?.volumeInfo;
     if (!info?.title) return null;
     return { title: info.title.trim(), author: ((info.authors||[])[0] || '').trim() };
   } catch { clearTimeout(tid); return null; }
@@ -4078,12 +4078,17 @@ window.openSpellScan = async () => {
 
   const scannable = gbDocs.filter(b => b.title && b.author);
   const suggestions = [];
+  let apiHits = 0;
+  const apiCountEl = document.getElementById('spellScanApiCount');
+
   for (let i = 0; i < scannable.length; i++) {
     const b = scannable[i];
     document.getElementById('spellScanStatus').textContent = `Checking ${i + 1} of ${scannable.length}: ${b.title}`;
     document.getElementById('spellScanBar').style.width = `${Math.round((i / scannable.length) * 100)}%`;
     const result = await _queryGoogleBooks(b.title, b.author);
     if (result) {
+      apiHits++;
+      if (apiCountEl) apiCountEl.textContent = `${apiHits} API response${apiHits !== 1 ? 's' : ''} received`;
       // Ignore title "differences" that are just the API appending a subtitle
       const titleDiff  = _spellDiffers(b.title, result.title) && !result.title.toLowerCase().startsWith(b.title.trim().toLowerCase());
       const authorDiff = _spellDiffers(b.author, result.author);
@@ -4091,26 +4096,29 @@ window.openSpellScan = async () => {
         suggestions.push({ gbRef: b._ref, gbId: b.id, current: b, suggest: result, titleDiff, authorDiff });
       }
     }
-    if (i < scannable.length - 1) await new Promise(r => setTimeout(r, 350));
+    if (i < scannable.length - 1) await new Promise(r => setTimeout(r, 400));
   }
 
   document.getElementById('spellScanBar').style.width = '100%';
   document.getElementById('spellScanProgress').style.display = 'none';
 
+  const checkedMsg = `Checked ${scannable.length} book${scannable.length !== 1 ? 's' : ''}, ${apiHits} API response${apiHits !== 1 ? 's' : ''} received.`;
+
   if (suggestions.length === 0) {
     const emptyEl = document.getElementById('spellScanEmpty');
     emptyEl.style.display = 'block';
-    // Show count so user knows the scan actually ran
     const countNote = emptyEl.querySelector('.scan-checked-note') || document.createElement('div');
     countNote.className = 'scan-checked-note';
     countNote.style.cssText = 'font-size:12px;color:var(--text3);margin-top:8px;';
-    countNote.textContent = `Checked ${scannable.length} book${scannable.length !== 1 ? 's' : ''}.`;
+    countNote.textContent = apiHits === 0
+      ? `Checked ${scannable.length} books — Google Books API returned no responses. Check network connection.`
+      : checkedMsg + ' No differences found.';
     if (!emptyEl.contains(countNote)) emptyEl.appendChild(countNote);
     return;
   }
 
   document.getElementById('spellScanSummary').textContent =
-    `Found ${suggestions.length} issue${suggestions.length !== 1 ? 's' : ''} in ${scannable.length} books. Review each suggestion below:`;
+    `Found ${suggestions.length} issue${suggestions.length !== 1 ? 's' : ''}. ${checkedMsg}`;
 
   const listEl = document.getElementById('spellScanList');
   listEl.innerHTML = suggestions.map((s, idx) => {
