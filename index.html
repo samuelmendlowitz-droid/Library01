@@ -3260,7 +3260,7 @@ function _miniBookCardHtml(b) {
   const genreLabels = genres.length ? `<div class="mbc-genre-labels">${genres.slice(0,3).map(g => esc(g)).join(' · ')}</div>` : '';
   const locDisplay = b.location === 'GlobalRead' ? 'Not Owned' : (b.location && b.location !== 'Wishlist' ? b.location : '');
   const locationHtml = locDisplay ? `<div class="mbc-location">${esc(locDisplay)}</div>` : '';
-  return `<div class="mini-book-card ${frame}" style="background:${pal.bg};${pat ? pat+';' : ''}color:${pal.fg};" onclick="openBookInfo('${safeId}')">
+  return `<div class="mini-book-card ${frame}" id="card-${safeId}" style="background:${pal.bg};${pat ? pat+';' : ''}color:${pal.fg};" onclick="openBookInfo('${safeId}')">
   <div class="rec-frame"></div>
   <div class="rec-corners" style="color:${pal.ac}">
     <span class="rc tl">${cornerSvg}</span><span class="rc tr">${cornerSvg}</span>
@@ -3953,7 +3953,15 @@ window.deleteFromEdit = async () => {
 window.toggleRead = async (id, currentRead) => {
   const newVal = !currentRead;
   const card = document.getElementById('card-' + id);
-  if (card) card.classList.toggle('is-read', newVal);
+  if (card) {
+    card.classList.toggle('is-read', newVal);
+    const statusEl = card.querySelector('.mbc-status');
+    if (statusEl) {
+      statusEl.classList.toggle('mbc-read', newVal);
+      statusEl.classList.toggle('mbc-unread', !newVal);
+      statusEl.textContent = newVal ? '✓' : '';
+    }
+  }
   const b = books.find(x => x.id === id);
   if (b) b.read = newVal;
   updateStats();
