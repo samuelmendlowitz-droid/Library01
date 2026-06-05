@@ -1789,6 +1789,28 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
   </div>
 </div>
 
+<!-- RATE & REVIEW PROMPT MODAL -->
+<div class="modal-overlay" id="rateReviewModal" onclick="closeOnOverlay(event,'rateReviewModal')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <button class="modal-close" onclick="closeModal('rateReviewModal')"><i data-lucide="x"></i></button>
+    <div class="modal-title"><i data-lucide="star"></i> Rate &amp; Review</div>
+    <div style="font-size:14px;color:var(--text2);margin-bottom:20px;" id="rrBookTitle"></div>
+    <div style="margin-bottom:18px;">
+      <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;">Your Rating</div>
+      <div id="rrStars" style="display:flex;gap:2px;"></div>
+    </div>
+    <div style="margin-bottom:20px;">
+      <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;">Review <span style="color:var(--text3);font-weight:400;">(optional)</span></div>
+      <textarea class="review-textarea" id="rrTextarea" placeholder="Share your thoughts about this book…"></textarea>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn-submit" id="rrSaveBtn" onclick="submitRateReview()" style="flex:1;">Save</button>
+      <button class="btn-submit" onclick="closeModal('rateReviewModal')" style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text1);">Skip</button>
+    </div>
+  </div>
+</div>
+
 <!-- CSV MODAL -->
 <div class="modal-overlay" id="csvModal" onclick="closeOnOverlay(event,'csvModal')">
   <div class="modal">
@@ -2143,6 +2165,7 @@ let _reviewSort = 'newest';
 let _reviewFilter = null;
 let _reviewsData = [];
 let _reviewBookGlobalId = null;
+let _rrBookId = null, _rrGbId = null, _rrStars = 0;
 let _myHighlights = { books: [], authors: [], genres: [], series: [] };
 let _clubAboutEditing = false;
 let _hlActiveInput = null;
@@ -3934,7 +3957,12 @@ window.toggleRead = async (id, currentRead) => {
   const b = books.find(x => x.id === id);
   if (b) b.read = newVal;
   updateStats();
-  try { await updateBook(id, { read: newVal }); }
+  try {
+    await updateBook(id, { read: newVal });
+    if (newVal && currentUser && b) {
+      _openRateReviewPrompt(id, createGlobalBookId(b.title||'', b.author||''));
+    }
+  }
   catch(e) { if (b) b.read = currentRead; applyFilters(); }
 };
 
@@ -4138,7 +4166,12 @@ window.toggleInfoRead = async (id, currentRead) => {
   if (b) b.read = !currentRead;
   _refreshBookInfoIfOpen();
   updateStats();
-  try { await updateBook(id, { read: !currentRead }); }
+  try {
+    await updateBook(id, { read: !currentRead });
+    if (!currentRead && currentUser && b) {
+      _openRateReviewPrompt(id, createGlobalBookId(b.title||'', b.author||''));
+    }
+  }
   catch(e) { if (b) b.read = currentRead; _refreshBookInfoIfOpen(); }
 };
 
@@ -4272,6 +4305,7 @@ window.markGlobalRead = async (globalId) => {
       await updateDoc(doc(db, 'globalLibrary', globalId), { popularity: increment(2) });
       if (gb) gb.popularity = (gb.popularity || 0) + 2;
       await loadBooks(); applyGlobalFilters();
+      _openRateReviewPrompt(personal.id, globalId);
     }
   } else {
     await saveBook({
@@ -4281,8 +4315,90 @@ window.markGlobalRead = async (globalId) => {
     await updateDoc(doc(db, 'globalLibrary', globalId), { popularity: increment(3) });
     if (gb) gb.popularity = (gb.popularity || 0) + 3;
     await loadBooks(); applyGlobalFilters();
+    const newPersonal = books.find(x => createGlobalBookId(x.title||'', x.author||'') === globalId);
+    if (newPersonal) _openRateReviewPrompt(newPersonal.id, globalId);
+    else { showStatus('Marked as read!', 'success'); setTimeout(hideStatus, 2000); }
   }
-  showStatus('Marked as read!', 'success'); setTimeout(hideStatus, 2000);
+};
+
+// ── RATE & REVIEW PROMPT ──────────────────────────────────────────────────────
+function _renderRRStars(selected) {
+  const el = document.getElementById('rrStars');
+  if (!el) return;
+  el.innerHTML = Array.from({length:5}, (_,i) =>
+    `<button class="info-star-btn" onclick="setRRStar(${i+1})" style="color:${i < selected ? '#f5a623' : 'var(--surface3)'}">★</button>`
+  ).join('');
+}
+
+async function _openRateReviewPrompt(personalBookId, gbId) {
+  _rrBookId = personalBookId;
+  _rrGbId = gbId;
+  const b = books.find(x => x.id === personalBookId);
+  _rrStars = b?.rating || 0;
+  const titleEl = document.getElementById('rrBookTitle');
+  if (titleEl) titleEl.textContent = b?.title || '';
+  const ta = document.getElementById('rrTextarea');
+  if (ta) {
+    ta.value = '';
+    if (gbId && currentUser) {
+      try {
+        const gbSnap = await getDoc(doc(db, 'globalLibrary', gbId));
+        const myReview = gbSnap.exists() ? (gbSnap.data()?.reviews?.[currentUser.uid]) : null;
+        if (myReview) ta.value = myReview.text || '';
+      } catch(e) { /* prefill optional */ }
+    }
+  }
+  _renderRRStars(_rrStars);
+  openModal('rateReviewModal');
+}
+
+window.setRRStar = (val) => {
+  _rrStars = _rrStars === val ? 0 : val;
+  _renderRRStars(_rrStars);
+};
+
+window.submitRateReview = async () => {
+  if (!currentUser || !_rrBookId) return;
+  const btn = document.getElementById('rrSaveBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  try {
+    const b = books.find(x => x.id === _rrBookId);
+    const oldRating = b?.rating || 0;
+    if (_rrStars !== oldRating) {
+      await updateBook(_rrBookId, { rating: _rrStars });
+      if (b) b.rating = _rrStars;
+      await updateGlobalRating(b?.title || '', b?.author || '', oldRating, _rrStars);
+    }
+    const ta = document.getElementById('rrTextarea');
+    const text = (ta?.value || '').trim();
+    if (text && _rrGbId && _rrStars > 0) {
+      const uid = currentUser.uid;
+      const displayName = userUsername || currentUser.displayName || currentUser.email || 'Anonymous';
+      const reviewData = {
+        userId: uid, username: displayName, rating: _rrStars, text,
+        timestamp: serverTimestamp(), avatarColor: userIconColor || ''
+      };
+      const gbRef = doc(db, 'globalLibrary', _rrGbId);
+      try {
+        await updateDoc(gbRef, { [`reviews.${uid}`]: reviewData });
+      } catch(e2) {
+        if (e2?.code !== 'not-found') throw e2;
+        await setDoc(gbRef, {
+          title: b?.title || '', author: b?.author || '',
+          normalizedTitle: normalizeBookText(b?.title || ''),
+          normalizedAuthor: normalizeBookText(b?.author || ''),
+          reviews: { [uid]: reviewData }
+        });
+      }
+      _reviewCache.delete(_rrGbId);
+    }
+    closeModal('rateReviewModal');
+    showStatus('Saved!', 'success'); setTimeout(hideStatus, 2000);
+  } catch(e) {
+    console.error('submitRateReview:', e);
+    showStatus('Error saving.', 'error'); setTimeout(hideStatus, 3000);
+  }
+  if (btn) { btn.disabled = false; btn.textContent = 'Save'; }
 };
 
 window.addGlobalToWishlist = async (globalId) => {
