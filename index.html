@@ -2060,12 +2060,12 @@ All columns other than Author, Title, Series and Genres should be left empty or 
           <div class="smi-text"><div class="smi-title">Export Library</div><div class="smi-sub">Download your personal library as a CSV</div></div>
           <span class="smi-arrow"><i data-lucide="chevron-right"></i></span>
         </button>
-        <button class="settings-menu-item" onclick="closeSettings();openSpellScan()">
-          <span class="smi-icon"><i data-lucide="spell-check"></i></span>
-          <div class="smi-text"><div class="smi-title">Spell Check Library</div><div class="smi-sub">Verify titles &amp; authors against Google Books</div></div>
-          <span class="smi-arrow"><i data-lucide="chevron-right"></i></span>
-        </button>
         <div id="ownerWipeSection" style="display:none;">
+          <button class="settings-menu-item" onclick="closeSettings();openSpellScan()">
+            <span class="smi-icon"><i data-lucide="spell-check"></i></span>
+            <div class="smi-text"><div class="smi-title">Spell Check Global Library</div><div class="smi-sub">Verify titles &amp; authors against Google Books</div></div>
+            <span class="smi-arrow"><i data-lucide="chevron-right"></i></span>
+          </button>
           <button class="settings-menu-item" id="dedupRunBtn" onclick="manualRunDedup()">
             <span class="smi-icon"><i data-lucide="git-merge"></i></span>
             <div class="smi-text"><div class="smi-title">Deduplicate Library</div><div class="smi-sub" id="dedupSubText">Merge duplicate authors, books &amp; series</div></div>
@@ -4041,31 +4041,40 @@ window._applySpellSuggest = (mode) => {
   if (boxEl) boxEl.style.display = 'none';
 };
 
-// ── SPELL SCAN (Settings) ──────────────────────────────────────────────────────
+// ── SPELL SCAN (Admin — Global Library) ───────────────────────────────────────
 window.openSpellScan = async () => {
+  if (!currentUser || currentUser.email !== 'samuelmendlowitz@gmail.com') return;
   document.getElementById('spellScanProgress').style.display = 'block';
   document.getElementById('spellScanResults').style.display = 'none';
   document.getElementById('spellScanEmpty').style.display = 'none';
   document.getElementById('spellScanBar').style.width = '0%';
-  document.getElementById('spellScanStatus').textContent = 'Scanning your library…';
+  document.getElementById('spellScanStatus').textContent = 'Loading global library…';
   openModal('spellScanModal');
 
-  const scannable = books.filter(b => b.title && b.author && b.location !== 'GlobalRead');
+  let gbDocs;
+  try {
+    const snap = await getDocs(collection(db, 'globalLibrary'));
+    gbDocs = snap.docs.map(d => ({ _ref: d.ref, id: d.id, ...d.data() }));
+  } catch(e) {
+    showStatus('Failed to load global library.', 'error'); setTimeout(hideStatus, 3000);
+    closeModal('spellScanModal'); return;
+  }
+
+  const scannable = gbDocs.filter(b => b.title && b.author);
   const suggestions = [];
   for (let i = 0; i < scannable.length; i++) {
     const b = scannable[i];
-    document.getElementById('spellScanStatus').textContent = `Checking ${i + 1} of ${scannable.length}…`;
+    document.getElementById('spellScanStatus').textContent = `Checking ${i + 1} of ${scannable.length}: ${b.title}`;
     document.getElementById('spellScanBar').style.width = `${Math.round((i / scannable.length) * 100)}%`;
     const result = await _queryGoogleBooks(b.title, b.author);
     if (result) {
       const titleDiff  = _spellDiffers(b.title,  result.title);
       const authorDiff = _spellDiffers(b.author, result.author);
       if (titleDiff || authorDiff) {
-        suggestions.push({ id: b.id, current: b, suggest: result, titleDiff, authorDiff });
+        suggestions.push({ gbRef: b._ref, gbId: b.id, current: b, suggest: result, titleDiff, authorDiff });
       }
     }
-    // throttle: 200ms between requests to avoid rate limiting
-    if (i < scannable.length - 1) await new Promise(r => setTimeout(r, 200));
+    if (i < scannable.length - 1) await new Promise(r => setTimeout(r, 250));
   }
 
   document.getElementById('spellScanBar').style.width = '100%';
@@ -4077,7 +4086,7 @@ window.openSpellScan = async () => {
   }
 
   document.getElementById('spellScanSummary').textContent =
-    `Found ${suggestions.length} possible spelling issue${suggestions.length !== 1 ? 's' : ''}. Review each suggestion below:`;
+    `Found ${suggestions.length} possible spelling issue${suggestions.length !== 1 ? 's' : ''} in the global library. Review each suggestion below:`;
 
   const listEl = document.getElementById('spellScanList');
   listEl.innerHTML = suggestions.map((s, idx) => {
@@ -4089,7 +4098,7 @@ window.openSpellScan = async () => {
       <div class="scan-result-suggest">Suggested: ${parts.join(' · ')}</div>
       <div class="scan-result-actions">
         <button class="scan-apply-btn" onclick="_applyScanSuggest(${idx})">Apply</button>
-        <button class="scan-skip-btn" onclick="document.getElementById('scan-item-${idx}').style.opacity='0.4';this.parentElement.querySelectorAll('button').forEach(b=>b.disabled=true)">Skip</button>
+        <button class="scan-skip-btn" onclick="document.getElementById('scan-item-${idx}').style.opacity='0.4';this.parentElement.querySelectorAll('button').forEach(btn=>btn.disabled=true)">Skip</button>
       </div>
     </div>`;
   }).join('');
@@ -4106,11 +4115,12 @@ window._applyScanSuggest = async (idx) => {
   if (btns) btns.forEach(b => b.disabled = true);
   try {
     const updates = {};
-    if (s.titleDiff)  updates.title  = s.suggest.title;
-    if (s.authorDiff) updates.author = s.suggest.author;
-    await updateBook(s.id, updates);
-    const b = books.find(x => x.id === s.id);
-    if (b) { if (updates.title) b.title = updates.title; if (updates.author) b.author = updates.author; }
+    if (s.titleDiff)  { updates.title  = s.suggest.title;  updates.normalizedTitle  = normalizeBookText(s.suggest.title); }
+    if (s.authorDiff) { updates.author = s.suggest.author; updates.normalizedAuthor = normalizeBookText(s.suggest.author); }
+    await updateDoc(s.gbRef, updates);
+    // update local cache too
+    const cached = globalBookCache.find(x => x.id === s.gbId);
+    if (cached) Object.assign(cached, updates);
     if (itemEl) { itemEl.style.opacity = '0.4'; const applyBtn = itemEl.querySelector('.scan-apply-btn'); if (applyBtn) applyBtn.textContent = 'Applied ✓'; }
   } catch(e) { showStatus('Error applying change.', 'error'); setTimeout(hideStatus, 3000); if (btns) btns.forEach(b => b.disabled = false); }
 };
