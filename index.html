@@ -1863,30 +1863,28 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
     </div>
     <div class="modal-body">
       <div id="spellScanProgress" style="display:none;">
-        <div style="font-size:13px;color:var(--text2);margin-bottom:6px;" id="spellScanStatus">Scanning your library…</div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:4px;" id="spellScanStatus"></div>
         <div style="font-size:11px;color:var(--text3);margin-bottom:10px;" id="spellScanApiCount"></div>
-        <div style="height:4px;background:var(--surface3);border-radius:2px;overflow:hidden;margin-bottom:20px;">
-          <div id="spellScanBar" style="height:100%;background:var(--accent);border-radius:2px;width:0%;transition:width 0.3s;"></div>
+        <div style="height:4px;background:var(--surface3);border-radius:2px;overflow:hidden;margin-bottom:8px;">
+          <div id="spellScanBar" style="height:100%;background:var(--accent);border-radius:2px;width:0%;transition:width 0.4s;"></div>
         </div>
       </div>
-      <div id="spellScanResults" style="display:none;">
-        <div id="spellScanSummary" style="font-size:13px;color:var(--text2);margin-bottom:16px;"></div>
-        <div id="spellScanList"></div>
-        <div id="spellScanBulkActions" style="display:none;margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="scan-apply-btn" id="applyAllBtn" style="padding:10px 16px;font-size:13px;" onclick="_applyAllCorrections()">Apply All Corrections</button>
+      <div id="cleanupResults" style="display:none;">
+        <div id="cleanupStats" style="font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.7;"></div>
+        <div id="cleanupCorrectedSection" style="display:none;margin-bottom:20px;">
+          <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Corrected</div>
+          <div id="cleanupCorrectedList"></div>
         </div>
-        <div id="spellScanNotFoundSection" style="display:none;margin-top:24px;border-top:1px solid var(--border);padding-top:16px;">
-          <div style="font-size:13px;font-weight:600;color:var(--danger);margin-bottom:6px;" id="spellScanNotFoundTitle"></div>
-          <div style="font-size:12px;color:var(--text3);margin-bottom:12px;">These books returned no results from Google Books. They may be obscure, self-published, or have titles too corrupted to find.</div>
-          <div id="spellScanNotFoundList"></div>
-          <button id="deleteAllNotFoundBtn" style="width:100%;margin-top:12px;padding:12px;background:transparent;border:1px solid var(--danger);border-radius:var(--radius-sm);color:var(--danger);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;" onclick="_deleteAllNotFound()">Delete All Not Found from Global Library</button>
+        <div id="cleanupDeletedSection" style="display:none;margin-bottom:20px;">
+          <div style="font-size:11px;font-weight:700;color:var(--danger);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Removed — not found on Google Books</div>
+          <div id="cleanupDeletedList"></div>
         </div>
-        <button class="btn-submit" onclick="closeModal('spellScanModal')" style="margin-top:20px;background:var(--surface2);border:1px solid var(--border);color:var(--text1);">Done</button>
+        <button class="btn-submit" onclick="closeModal('spellScanModal')" style="margin-top:8px;">Done</button>
       </div>
-      <div id="spellScanEmpty" style="display:none;text-align:center;padding:40px 0;">
+      <div id="cleanupAllClear" style="display:none;text-align:center;padding:40px 0;">
         <div style="font-size:32px;margin-bottom:12px;">✓</div>
-        <div style="font-size:15px;font-weight:600;color:var(--text);">All Clear!</div>
-        <div style="font-size:13px;color:var(--text3);margin-top:6px;">No spelling issues found in your library.</div>
+        <div style="font-size:15px;font-weight:600;color:var(--text);">All Clean!</div>
+        <div style="font-size:13px;color:var(--text3);margin-top:6px;" id="cleanupAllClearNote"></div>
         <button class="btn-submit" onclick="closeModal('spellScanModal')" style="margin-top:24px;">Done</button>
       </div>
     </div>
@@ -2071,14 +2069,9 @@ All columns other than Author, Title, Series and Genres should be left empty or 
           <span class="smi-arrow"><i data-lucide="chevron-right"></i></span>
         </button>
         <div id="ownerWipeSection" style="display:none;">
-          <button class="settings-menu-item" onclick="closeSettings();runDevClean()">
-            <span class="smi-icon"><i data-lucide="shield-check"></i></span>
-            <div class="smi-text"><div class="smi-title">Dev Clean <span style="font-size:9px;background:var(--danger);color:#fff;border-radius:3px;padding:1px 5px;vertical-align:middle;margin-left:4px;">DEV</span></div><div class="smi-sub">Spell-check all books, wipe unverified, fix misspellings</div></div>
-            <span class="smi-arrow"><i data-lucide="chevron-right"></i></span>
-          </button>
-          <button class="settings-menu-item" onclick="closeSettings();openSpellScan()">
-            <span class="smi-icon"><i data-lucide="spell-check"></i></span>
-            <div class="smi-text"><div class="smi-title">Spell Check Global Library</div><div class="smi-sub">Review and apply individual corrections</div></div>
+          <button class="settings-menu-item" onclick="closeSettings();runLibraryCleanup()">
+            <span class="smi-icon"><i data-lucide="sparkles"></i></span>
+            <div class="smi-text"><div class="smi-title">Library Cleanup</div><div class="smi-sub">Spell-check &amp; remove unverified books via Google Books</div></div>
             <span class="smi-arrow"><i data-lucide="chevron-right"></i></span>
           </button>
           <button class="settings-menu-item" id="dedupRunBtn" onclick="manualRunDedup()">
@@ -3998,12 +3991,13 @@ window.openAddModal = () => {
 };
 
 // ── GOOGLE BOOKS SPELL CHECK ──────────────────────────────────────────────────
+const _GB_NOT_FOUND = 'NOT_FOUND';
+
 async function _queryGoogleBooks(title, author) {
   const controller = new AbortController();
   const tid = setTimeout(() => controller.abort(), 10000);
   try {
     const q = encodeURIComponent(title + ' ' + author);
-    // No `fields` filter — some environments return malformed responses with it
     const resp = await fetch(
       `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=5`,
       { signal: controller.signal }
@@ -4011,32 +4005,28 @@ async function _queryGoogleBooks(title, author) {
     clearTimeout(tid);
     if (!resp.ok) return null;
     const data = await resp.json();
-    if (!data.items?.length) return null;
+    if (!data.items?.length) return _GB_NOT_FOUND;
     const normInput = title.trim().toLowerCase();
     const best = data.items.find(item => {
       const t = (item.volumeInfo?.title || '').trim().toLowerCase();
       return t === normInput || t.startsWith(normInput) || normInput.startsWith(t.split(':')[0].trim());
     }) || data.items[0];
     const info = best?.volumeInfo;
-    if (!info?.title) return null;
+    if (!info?.title) return _GB_NOT_FOUND;
     return { title: info.title.trim(), author: ((info.authors||[])[0] || '').trim() };
   } catch { clearTimeout(tid); return null; }
 }
 
 function _titleDiffers(a, b) {
-  // Case-insensitive — only flag actual content differences, not casing
   if (!b) return false;
   const norm = s => s.trim().toLowerCase().replace(/\s+/g, ' ');
   return norm(a) !== norm(b);
 }
 function _authorDiffers(a, b) {
-  // Case-sensitive — "sarah j maas" must be flagged as different from "Sarah J. Maas"
   if (!b) return false;
   const norm = s => s.trim().replace(/\s+/g, ' ');
   return norm(a) !== norm(b);
 }
-// Keep old name as alias so inline spell check still works
-function _spellDiffers(a, b) { return _authorDiffers(a, b); }
 
 let _spellSuggestData = {};
 
@@ -4049,7 +4039,7 @@ async function _triggerSpellCheck(mode) {
   const author = authorEl.value.trim();
   if (title.length < 2 || author.length < 2) return;
   const result = await _queryGoogleBooks(title, author);
-  if (!result) return;
+  if (!result || result === _GB_NOT_FOUND) return;
   const titleDiff  = _titleDiffers(title, result.title) && !result.title.toLowerCase().startsWith(title.trim().toLowerCase());
   const authorDiff = _authorDiffers(author, result.author);
   if (!titleDiff && !authorDiff) { boxEl.style.display = 'none'; return; }
@@ -4080,195 +4070,104 @@ window._applySpellSuggest = (mode) => {
   if (boxEl) boxEl.style.display = 'none';
 };
 
-// ── SPELL SCAN / DEV CLEAN (Admin) ────────────────────────────────────────────
-
-function _scanResetModal(title) {
-  document.getElementById('spellScanProgress').style.display = 'block';
-  document.getElementById('spellScanResults').style.display = 'none';
-  document.getElementById('spellScanEmpty').style.display = 'none';
-  document.getElementById('spellScanBulkActions').style.display = 'none';
-  document.getElementById('spellScanNotFoundSection').style.display = 'none';
-  document.getElementById('spellScanBar').style.width = '0%';
-  document.getElementById('spellScanApiCount').textContent = '';
-  document.getElementById('spellScanStatus').textContent = title;
-}
-
-async function _fetchAllGlobalDocs() {
-  const snap = await getDocs(collection(db, 'globalLibrary'));
-  return snap.docs.map(d => ({ _ref: d.ref, id: d.id, ...d.data() }));
-}
-
-// Run in batches of 3 to go ~3× faster while respecting rate limits
-async function _scanBatch(scannable, onProgress) {
-  const BATCH = 3, DELAY = 600;
-  const corrections = [], notFound = [];
-  let apiHits = 0;
-  for (let i = 0; i < scannable.length; i += BATCH) {
-    const slice = scannable.slice(i, i + BATCH);
-    const results = await Promise.all(slice.map(b => _queryGoogleBooks(b.title, b.author)));
-    for (let j = 0; j < slice.length; j++) {
-      const b = slice[j], result = results[j];
-      if (result === null) {
-        notFound.push({ gbRef: b._ref, gbId: b.id, current: b });
-      } else {
-        apiHits++;
-        const titleDiff = _titleDiffers(b.title, result.title) && !result.title.toLowerCase().startsWith(b.title.trim().toLowerCase());
-        const authorDiff = _authorDiffers(b.author, result.author);
-        if (titleDiff || authorDiff) corrections.push({ gbRef: b._ref, gbId: b.id, current: b, suggest: result, titleDiff, authorDiff });
-      }
-    }
-    onProgress(Math.min(i + BATCH, scannable.length), scannable.length, apiHits, corrections.length, notFound.length);
-    if (i + BATCH < scannable.length) await new Promise(r => setTimeout(r, DELAY));
-  }
-  return { corrections, notFound, apiHits };
-}
-
-function _renderScanCorrections(corrections) {
-  const listEl = document.getElementById('spellScanList');
-  window._scanSuggestions = corrections;
-  listEl.innerHTML = corrections.map((s, idx) => {
-    const parts = [];
-    if (s.titleDiff)  parts.push(`Title: <em>${esc(s.suggest.title)}</em>`);
-    if (s.authorDiff) parts.push(`Author: <em>${esc(s.suggest.author)}</em>`);
-    return `<div class="scan-result-item" id="scan-item-${idx}">
-      <div class="scan-result-current">Current: ${esc(s.current.title)} — ${esc(s.current.author)}</div>
-      <div class="scan-result-suggest">Suggested: ${parts.join(' · ')}</div>
-      <div class="scan-result-actions">
-        <button class="scan-apply-btn" onclick="_applyScanSuggest(${idx})">Apply</button>
-        <button class="scan-skip-btn" onclick="document.getElementById('scan-item-${idx}').style.opacity='0.4';this.parentElement.querySelectorAll('button').forEach(btn=>btn.disabled=true)">Skip</button>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-window.openSpellScan = async () => {
+// ── LIBRARY CLEANUP (Admin — Global Library) ──────────────────────────────────
+window.runLibraryCleanup = async () => {
   if (!currentUser || currentUser.email !== 'samuelmendlowitz@gmail.com') return;
-  _scanResetModal('Loading global library…');
+
+  document.getElementById('spellScanProgress').style.display = 'block';
+  document.getElementById('cleanupResults').style.display = 'none';
+  document.getElementById('cleanupAllClear').style.display = 'none';
+  document.getElementById('spellScanBar').style.width = '0%';
+  document.getElementById('spellScanStatus').textContent = 'Loading global library…';
+  document.getElementById('spellScanApiCount').textContent = '';
   openModal('spellScanModal');
 
   let gbDocs;
-  try { gbDocs = await _fetchAllGlobalDocs(); }
-  catch(e) { showStatus('Failed to load global library.', 'error'); setTimeout(hideStatus, 3000); closeModal('spellScanModal'); return; }
-
-  const scannable = gbDocs.filter(b => b.title && b.author);
-  const { corrections, apiHits } = await _scanBatch(scannable, (done, total, hits) => {
-    document.getElementById('spellScanStatus').textContent = `Checking ${done} of ${total}…`;
-    document.getElementById('spellScanBar').style.width = `${Math.round((done / total) * 100)}%`;
-    document.getElementById('spellScanApiCount').textContent = `${hits} API response${hits !== 1 ? 's' : ''} received`;
-  });
-
-  document.getElementById('spellScanBar').style.width = '100%';
-  document.getElementById('spellScanProgress').style.display = 'none';
-
-  const checkedMsg = `Checked ${scannable.length} book${scannable.length !== 1 ? 's' : ''}, ${apiHits} API response${apiHits !== 1 ? 's' : ''} received.`;
-  if (corrections.length === 0) {
-    const emptyEl = document.getElementById('spellScanEmpty');
-    emptyEl.style.display = 'block';
-    const note = emptyEl.querySelector('.scan-checked-note') || Object.assign(document.createElement('div'), { className: 'scan-checked-note', style: 'font-size:12px;color:var(--text3);margin-top:8px;' });
-    note.textContent = apiHits === 0 ? `Checked ${scannable.length} books — Google Books API returned no responses. Check network.` : checkedMsg + ' No differences found.';
-    if (!emptyEl.contains(note)) emptyEl.appendChild(note);
+  try {
+    const snap = await getDocs(collection(db, 'globalLibrary'));
+    gbDocs = snap.docs.map(d => ({ _ref: d.ref, id: d.id, ...d.data() }));
+  } catch(e) {
+    document.getElementById('spellScanStatus').textContent = 'Failed to load global library: ' + (e.message || 'unknown error');
     return;
   }
-  document.getElementById('spellScanSummary').textContent = `Found ${corrections.length} issue${corrections.length !== 1 ? 's' : ''}. ${checkedMsg}`;
-  _renderScanCorrections(corrections);
-  document.getElementById('spellScanResults').style.display = 'block';
-};
-
-// ── DEV CLEAN: scan all books, fix misspellings, surface unverified for deletion ──
-window.runDevClean = async () => {
-  if (!currentUser || currentUser.email !== 'samuelmendlowitz@gmail.com') return;
-  _scanResetModal('Loading global library…');
-  openModal('spellScanModal');
-
-  let gbDocs;
-  try { gbDocs = await _fetchAllGlobalDocs(); }
-  catch(e) { showStatus('Failed to load global library.', 'error'); setTimeout(hideStatus, 3000); closeModal('spellScanModal'); return; }
 
   const scannable = gbDocs.filter(b => b.title && b.author);
-  const { corrections, notFound, apiHits } = await _scanBatch(scannable, (done, total, hits, corrCount, nfCount) => {
-    document.getElementById('spellScanStatus').textContent = `Checking ${done} of ${total}…`;
-    document.getElementById('spellScanBar').style.width = `${Math.round((done / total) * 100)}%`;
-    document.getElementById('spellScanApiCount').textContent = `${hits} matched · ${corrCount} corrections · ${nfCount} not found`;
-  });
+  const corrected = [], deleted = [];
+  let skipped = 0;
+
+  for (let i = 0; i < scannable.length; i++) {
+    const b = scannable[i];
+    document.getElementById('spellScanStatus').textContent = `${i + 1} of ${scannable.length}: ${b.title}`;
+    document.getElementById('spellScanBar').style.width = `${Math.round((i / scannable.length) * 100)}%`;
+    document.getElementById('spellScanApiCount').textContent =
+      `${corrected.length} corrected · ${deleted.length} removed · ${skipped} skipped`;
+
+    const result = await _queryGoogleBooks(b.title, b.author);
+
+    if (result === null) {
+      skipped++;
+    } else if (result === _GB_NOT_FOUND) {
+      try {
+        await deleteDoc(b._ref);
+        deleted.push(b);
+        const ci = globalBookCache.findIndex(x => x.id === b.id);
+        if (ci >= 0) globalBookCache.splice(ci, 1);
+      } catch(e) { skipped++; }
+    } else {
+      const titleDiff = _titleDiffers(b.title, result.title)
+        && !result.title.toLowerCase().startsWith(b.title.trim().toLowerCase());
+      const authorDiff = _authorDiffers(b.author, result.author);
+      if (titleDiff || authorDiff) {
+        const updates = {};
+        if (titleDiff)  { updates.title  = result.title;  updates.normalizedTitle  = normalizeBookText(result.title); }
+        if (authorDiff) { updates.author = result.author; updates.normalizedAuthor = normalizeBookText(result.author); }
+        try {
+          await updateDoc(b._ref, updates);
+          const cached = globalBookCache.find(x => x.id === b.id);
+          if (cached) Object.assign(cached, updates);
+          corrected.push({ oldTitle: b.title, oldAuthor: b.author,
+                           newTitle: result.title, newAuthor: result.author,
+                           titleDiff, authorDiff });
+        } catch(e) { skipped++; }
+      }
+    }
+    if (i < scannable.length - 1) await new Promise(r => setTimeout(r, 700));
+  }
 
   document.getElementById('spellScanBar').style.width = '100%';
   document.getElementById('spellScanProgress').style.display = 'none';
 
-  const checkedMsg = `Checked ${scannable.length} books · ${apiHits} found on Google Books · ${corrections.length} corrections · ${notFound.length} not found`;
-  document.getElementById('spellScanSummary').textContent = checkedMsg;
-
-  _renderScanCorrections(corrections);
-
-  if (corrections.length > 0) {
-    document.getElementById('spellScanBulkActions').style.display = 'flex';
+  if (corrected.length === 0 && deleted.length === 0) {
+    document.getElementById('cleanupAllClearNote').textContent =
+      `Checked ${scannable.length} books · ${skipped} skipped due to network errors.`;
+    document.getElementById('cleanupAllClear').style.display = 'block';
+    return;
   }
 
-  if (notFound.length > 0) {
-    window._scanNotFound = notFound;
-    document.getElementById('spellScanNotFoundTitle').textContent = `${notFound.length} book${notFound.length !== 1 ? 's' : ''} not found on Google Books`;
-    document.getElementById('spellScanNotFoundList').innerHTML = notFound.map((s, idx) =>
-      `<div class="scan-result-item" id="nf-item-${idx}" style="display:flex;justify-content:space-between;align-items:center;gap:8px;">
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(s.current.title)}</div>
-          <div style="font-size:11px;color:var(--text3);">${esc(s.current.author)}</div>
-        </div>
-        <button class="scan-skip-btn" onclick="_deleteOneScanEntry(${idx})">Delete</button>
-      </div>`
+  const statParts = [`Checked ${scannable.length} books`];
+  if (corrected.length) statParts.push(`${corrected.length} spelling correction${corrected.length !== 1 ? 's' : ''} applied`);
+  if (deleted.length)   statParts.push(`${deleted.length} book${deleted.length !== 1 ? 's' : ''} removed (not on Google Books)`);
+  if (skipped)          statParts.push(`${skipped} skipped (network errors)`);
+  document.getElementById('cleanupStats').textContent = statParts.join(' · ');
+
+  if (corrected.length) {
+    document.getElementById('cleanupCorrectedList').innerHTML = corrected.map(c => {
+      const rows = [];
+      if (c.titleDiff)  rows.push(`<span style="color:var(--text3)">${esc(c.oldTitle)}</span> → <strong>${esc(c.newTitle)}</strong>`);
+      if (c.authorDiff) rows.push(`<span style="color:var(--text3)">${esc(c.oldAuthor)}</span> → <strong>${esc(c.newAuthor)}</strong>`);
+      return `<div style="font-size:12px;padding:5px 0;border-top:1px solid var(--border);line-height:1.5;">${rows.join('<br>')}</div>`;
+    }).join('');
+    document.getElementById('cleanupCorrectedSection').style.display = 'block';
+  }
+
+  if (deleted.length) {
+    document.getElementById('cleanupDeletedList').innerHTML = deleted.map(d =>
+      `<div style="font-size:12px;padding:5px 0;border-top:1px solid var(--border);color:var(--text3);">${esc(d.title)} — ${esc(d.author)}</div>`
     ).join('');
-    document.getElementById('spellScanNotFoundSection').style.display = 'block';
+    document.getElementById('cleanupDeletedSection').style.display = 'block';
   }
 
-  document.getElementById('spellScanResults').style.display = 'block';
-};
-
-window._applyScanSuggest = async (idx) => {
-  const s = window._scanSuggestions?.[idx];
-  if (!s) return;
-  const itemEl = document.getElementById('scan-item-' + idx);
-  const btns = itemEl?.querySelectorAll('button');
-  if (btns) btns.forEach(b => b.disabled = true);
-  try {
-    const updates = {};
-    if (s.titleDiff)  { updates.title  = s.suggest.title;  updates.normalizedTitle  = normalizeBookText(s.suggest.title); }
-    if (s.authorDiff) { updates.author = s.suggest.author; updates.normalizedAuthor = normalizeBookText(s.suggest.author); }
-    await updateDoc(s.gbRef, updates);
-    const cached = globalBookCache.find(x => x.id === s.gbId);
-    if (cached) Object.assign(cached, updates);
-    if (itemEl) { itemEl.style.opacity = '0.4'; const btn = itemEl.querySelector('.scan-apply-btn'); if (btn) btn.textContent = 'Applied ✓'; }
-  } catch(e) { showStatus('Error applying.', 'error'); setTimeout(hideStatus, 3000); if (btns) btns.forEach(b => b.disabled = false); }
-};
-
-window._applyAllCorrections = async () => {
-  const btn = document.getElementById('applyAllBtn');
-  if (btn) { btn.disabled = true; btn.textContent = 'Applying…'; }
-  const list = window._scanSuggestions || [];
-  for (let idx = 0; idx < list.length; idx++) await _applyScanSuggest(idx);
-  if (btn) { btn.textContent = 'All Applied ✓'; }
-  showStatus('All corrections applied.', 'success'); setTimeout(hideStatus, 2500);
-};
-
-window._deleteOneScanEntry = async (idx) => {
-  const s = window._scanNotFound?.[idx];
-  if (!s) return;
-  const itemEl = document.getElementById('nf-item-' + idx);
-  const btn = itemEl?.querySelector('button');
-  if (btn) btn.disabled = true;
-  try {
-    await deleteDoc(s.gbRef);
-    const ci = globalBookCache.findIndex(x => x.id === s.gbId);
-    if (ci >= 0) globalBookCache.splice(ci, 1);
-    if (itemEl) { itemEl.style.opacity = '0.4'; if (btn) btn.textContent = 'Deleted ✓'; }
-  } catch(e) { showStatus('Error deleting.', 'error'); setTimeout(hideStatus, 3000); if (btn) btn.disabled = false; }
-};
-
-window._deleteAllNotFound = async () => {
-  const delBtn = document.getElementById('deleteAllNotFoundBtn');
-  if (!confirm(`Delete ${(window._scanNotFound||[]).length} books from global library? This cannot be undone.`)) return;
-  if (delBtn) { delBtn.disabled = true; delBtn.textContent = 'Deleting…'; }
-  const list = window._scanNotFound || [];
-  for (let idx = 0; idx < list.length; idx++) await _deleteOneScanEntry(idx);
-  if (delBtn) delBtn.textContent = 'All Deleted ✓';
-  showStatus('Not-found books deleted.', 'success'); setTimeout(hideStatus, 2500);
+  document.getElementById('cleanupResults').style.display = 'block';
 };
 
 window.addBook = async () => {
