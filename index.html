@@ -3260,7 +3260,7 @@ function _miniBookCardHtml(b) {
   const genreLabels = genres.length ? `<div class="mbc-genre-labels">${genres.slice(0,3).map(g => esc(g)).join(' · ')}</div>` : '';
   const locDisplay = b.location === 'GlobalRead' ? 'Not Owned' : (b.location && b.location !== 'Wishlist' ? b.location : '');
   const locationHtml = locDisplay ? `<div class="mbc-location">${esc(locDisplay)}</div>` : '';
-  return `<div class="mini-book-card ${frame}" id="card-${safeId}" style="background:${pal.bg};${pat ? pat+';' : ''}color:${pal.fg};" onclick="openBookInfo('${safeId}')">
+  return `<div class="mini-book-card ${frame}" id="card-${safeId}" style="background:${pal.bg};${pat ? pat+';' : ''}color:${pal.fg};">
   <div class="rec-frame"></div>
   <div class="rec-corners" style="color:${pal.ac}">
     <span class="rc tl">${cornerSvg}</span><span class="rc tr">${cornerSvg}</span>
@@ -3279,10 +3279,12 @@ function _miniBookCardHtml(b) {
     ${dividerHtml}
   </div>
   <div class="mbc-footer">
-    <div class="mbc-status ${statusCls}" style="cursor:pointer;" onclick="event.stopPropagation();toggleRead('${safeId}',${b.read})">${statusIcon}</div>
+    <div class="mbc-status ${statusCls}">${statusIcon}</div>
     ${ratingHtml}
-    <button class="mbc-details-btn" onclick="event.stopPropagation();openBookInfo('${safeId}')"><i data-lucide="chevron-right"></i></button>
+    <div class="mbc-details-btn"><i data-lucide="chevron-right"></i></div>
   </div>
+  <button style="position:absolute;bottom:0;left:0;width:40px;height:40px;background:none;border:none;cursor:pointer;z-index:10;padding:0;" onclick="toggleRead('${safeId}',${b.read})" aria-label="Toggle read"></button>
+  <button style="position:absolute;bottom:0;right:0;width:40px;height:40px;background:none;border:none;cursor:pointer;z-index:10;padding:0;" onclick="openBookInfo('${safeId}')" aria-label="Open details"></button>
 </div>`;
 }
 
