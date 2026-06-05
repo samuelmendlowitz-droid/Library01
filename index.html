@@ -3250,15 +3250,18 @@ function _seriesBoxSetHtml(books, isGlobal) {
   if (!books.length) return '';
   const first = books[0];
   const seriesSeed = _bookSeed(first.series || first.id, 7);
-  const boxPal = _REC_PALETTES[seriesSeed % _REC_PALETTES.length];
+  const boxPalIdx = seriesSeed % _REC_PALETTES.length;
+  const boxPal = _REC_PALETTES[boxPalIdx];
   const boxPat = _REC_PATTERNS[(seriesSeed >>> 3) % _REC_PATTERNS.length];
   const genres = (first.genres||[]).filter(g => g !== 'Non-Fiction');
   const genreTagsHtml = genres.slice(0, 3).map(g =>
     `<span class="tag genre" style="font-size:9px;padding:2px 6px;">${_genreIconHtml(g,'tag-icon')}${esc(g)}</span>`
   ).join('');
-  const spinesHtml = books.map(b => {
+  const seriesTitleFont = _GENRE_FONT[genres[0]] || "'Playfair Display', serif";
+  const spinesHtml = books.map((b, i) => {
+    const spinePalIdx = (boxPalIdx + 1 + i) % _REC_PALETTES.length;
+    const bPal = _REC_PALETTES[spinePalIdx];
     const bSeed = _bookSeed(b.id);
-    const bPal = _REC_PALETTES[bSeed % _REC_PALETTES.length];
     const bPat = _REC_PATTERNS[(bSeed >>> 3) % _REC_PATTERNS.length];
     const safeId = (b.id||'').replace(/'/g, "\\'");
     const numLabel = (b.seriesNumber != null && b.seriesNumber !== '') ? `#${b.seriesNumber}` : (b.seriesTag || '');
@@ -3274,11 +3277,10 @@ function _seriesBoxSetHtml(books, isGlobal) {
     const ratingHtml = avg > 0
       ? `<div class="sbs-spine-rating" style="color:${bPal.ac}">${'★'.repeat(Math.round(avg))}${'☆'.repeat(5 - Math.round(avg))}</div>`
       : '<div class="sbs-spine-rating"></div>';
-    const titleFont = _GENRE_FONT[(b.genres||[])[0]] || "'Playfair Display', serif";
     return `<div class="sbs-spine" style="background:${bPal.bg};${bPat ? bPat+';' : ''}color:${bPal.fg};" onclick="${openFn}">
   <div class="sbs-spine-num" style="color:${bPal.ac}">${esc(numLabel)}</div>
   <div class="sbs-spine-title-wrap">
-    <div class="sbs-spine-title" style="font-family:${titleFont};">${esc(b.title||'')}</div>
+    <div class="sbs-spine-title" style="font-family:${seriesTitleFont};">${esc(b.title||'')}</div>
   </div>
   ${ratingHtml}
 </div>`;
