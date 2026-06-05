@@ -1200,6 +1200,8 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 }
 
 </style>
+<meta name="google-adsense-account" content="ca-pub-6686010470640539">
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6686010470640539" crossorigin="anonymous"></script>
 </head>
 <body>
 
@@ -1299,6 +1301,15 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 
   <div class="status-bar" id="statusBar"></div>
   <div class="list-header" id="listHeader"></div>
+  <div id="library-ad" style="display:none;padding:8px 12px;">
+    <ins class="adsbygoogle"
+         style="display:block;border-radius:10px;overflow:hidden;"
+         data-ad-client="ca-pub-6686010470640539"
+         data-ad-slot="YOUR_AD_SLOT_ID"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+  </div>
   <div class="book-list" id="bookList"></div>
   <div id="globalLoadSentinel" style="display:none;padding:20px;text-align:center;color:var(--text2);font-size:13px;"></div>
 
@@ -6611,6 +6622,7 @@ window.setPage = (page) => {
   const showMain = ['mylibrary','wishlist'].includes(page);
   document.getElementById('bookList').style.display = showMain ? '' : 'none';
   document.getElementById('listHeader').style.display = showMain ? '' : 'none';
+  document.getElementById('library-ad').style.display = page === 'mylibrary' ? '' : 'none';
   document.getElementById('statusBar').style.display = showMain ? '' : 'none';
   document.getElementById('globalLoadSentinel').style.display = 'none';
   // Load page content
