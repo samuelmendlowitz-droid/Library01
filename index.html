@@ -518,6 +518,31 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .sbs-spine-title { font-size: 9px; font-weight: 700; writing-mode: vertical-rl; transform: rotate(180deg); text-align: center; overflow: hidden; line-height: 1.3; max-height: 100%; }
 .sbs-spine-rating { font-size: 8px; opacity: 0.8; text-align: center; flex-shrink: 0; margin-top: 4px; letter-spacing: -0.5px; }
 
+/* ── Shelf View ──────────────────────────────────────────────────────────────── */
+.shelf-view-root { height: calc(100dvh - var(--total-header-h, 0px)); overflow-y: scroll; scroll-snap-type: y mandatory; background: #1a1208; overscroll-behavior: contain; }
+.shelf-shelf { height: 50%; scroll-snap-align: start; display: flex; flex-direction: column; min-height: 0; }
+.shelf-location-label { font-family: 'DM Sans', sans-serif; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: rgba(255,255,255,0.35); padding: 5px 14px 2px; flex-shrink: 0; }
+.shelf-books-row { flex: 1; min-height: 0; overflow-x: auto; overflow-y: hidden; display: flex; flex-direction: row; align-items: flex-end; padding: 6px 12px 0; gap: 3px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.shelf-books-row::-webkit-scrollbar { display: none; }
+.shelf-board { height: 20px; flex-shrink: 0; background: linear-gradient(to bottom, #A87840 0%, #7A5228 45%, #5C3D1E 100%); border-top: 3px solid #C8974E; box-shadow: 0 6px 14px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.12); }
+.shelf-spine { width: 48px; flex-shrink: 0; align-self: stretch; display: flex; flex-direction: column; align-items: center; padding: 6px 3px 4px; border-radius: 3px 4px 0 0; cursor: pointer; overflow: hidden; box-shadow: 2px 0 8px rgba(0,0,0,0.55), -1px 0 3px rgba(0,0,0,0.3); transition: transform 0.12s; scroll-snap-align: start; }
+.shelf-spine:active { transform: scale(0.96) translateY(2px); }
+.shelf-spine-author { font-family: 'DM Sans', sans-serif; font-size: 6.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; opacity: 0.72; text-align: center; width: 100%; line-height: 1.35; flex-shrink: 0; }
+.shelf-divider { width: 68%; flex-shrink: 0; margin: 3px auto; height: 1px; background: currentColor; opacity: 0.2; }
+.shelf-divider.dashed { height: 0; border: none; border-top: 1px dashed currentColor; background: none; }
+.shelf-divider.dots { height: auto; background: none; font-size: 5px; letter-spacing: 1px; opacity: 0.25; text-align: center; line-height: 1; }
+.shelf-spine-title-wrap { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; width: 100%; }
+.shelf-spine-title { font-size: 10px; font-weight: 700; writing-mode: vertical-rl; transform: rotate(180deg); text-align: center; overflow: hidden; line-height: 1.25; max-height: 100%; word-break: break-word; }
+.shelf-spine-genre-icon { flex-shrink: 0; opacity: 0.75; display: flex; align-items: center; justify-content: center; width: 13px; height: 13px; }
+.shelf-spine-genre-icon .lucide { width: 11px; height: 11px; stroke-width: 2.5px; }
+.shelf-spine-genre-icon svg { width: 11px; height: 11px; }
+.shelf-spine-genre-names { font-family: 'DM Sans', sans-serif; font-size: 5.5px; opacity: 0.55; text-align: center; line-height: 1.4; flex-shrink: 0; width: 100%; }
+.shelf-spine-rating { font-size: 7px; opacity: 0.82; text-align: center; flex-shrink: 0; letter-spacing: -1px; }
+.shelf-spine-series-num { font-size: 6px; opacity: 0.65; text-align: center; flex-shrink: 0; font-family: 'DM Sans', sans-serif; font-weight: 700; }
+.shelf-series-group { display: flex; flex-direction: row; align-items: flex-end; gap: 2px; align-self: stretch; flex-shrink: 0; border-radius: 4px 4px 0 0; padding: 0 3px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-bottom: none; }
+.shelf-series-group .shelf-spine { border-radius: 2px 2px 0 0; scroll-snap-align: none; }
+.shelf-empty { display: flex; align-items: center; justify-content: center; height: 100%; color: rgba(255,255,255,0.25); font-size: 13px; font-family: 'DM Sans', sans-serif; }
+
 /* List view — spreadsheet rows */
 .series-group { border: 1px solid rgba(201,169,110,0.32); border-radius: var(--radius); overflow: hidden; }
 .series-group .book-card { border: none; border-radius: 0; border-bottom: 1px solid var(--border); }
@@ -1338,6 +1363,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
     <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
   </div>
   <div class="book-list" id="bookList"></div>
+  <div class="shelf-view-root" id="shelfView" style="display:none;"></div>
   <div id="globalLoadSentinel" style="display:none;padding:20px;text-align:center;color:var(--text2);font-size:13px;"></div>
 
   <button class="fab" id="fabAdd" onclick="openAddModal()" style="display:none"><i data-lucide="plus"></i></button>
@@ -2251,7 +2277,7 @@ let _discoverGenresListSort   = 'count-desc';
 let currentSort = 'popularity-desc';
 let _personalSort = 'title-asc';
 let _globalSort   = 'popularity-desc';
-let currentBookView = localStorage.getItem('bookView') || 'book'; // 'card' | 'book'
+let currentBookView = localStorage.getItem('bookView') || 'book'; // 'card' | 'book' | 'shelf'
 let filterPanelOpen = false;
 let sortPanelOpen = false;
 let addSelectedGenres = [], editSelectedGenres = [];
@@ -2528,7 +2554,7 @@ onAuthStateChanged(auth, async user => {
     document.getElementById('settingsUserName').textContent = user.displayName || '';
     document.getElementById('settingsUserEmail').textContent = user.email || '';
     const _vbi = document.getElementById('viewBtnIcon');
-    if (_vbi) _vbi.dataset.lucide = currentBookView === 'book' ? 'layout-grid' : 'layout-list';
+    if (_vbi) _vbi.dataset.lucide = currentBookView === 'shelf' ? 'library' : currentBookView === 'book' ? 'layout-grid' : 'layout-list';
     // measure header height after it's visible
     requestAnimationFrame(updateHeaderSpacer);
     await loadSettings(); // also loads borrowLog
@@ -3279,7 +3305,13 @@ function applyFilters() {
 }
 
 function renderBooks(list) {
+  const shelfEl = document.getElementById('shelfView');
   const wrap = document.getElementById('bookList');
+  const isShelf = currentBookView === 'shelf';
+  shelfEl.style.display = isShelf ? 'block' : 'none';
+  wrap.style.display = isShelf ? 'none' : '';
+  document.getElementById('globalLoadSentinel').style.display = 'none';
+  if (isShelf) { renderShelfView(list, false); return; }
   wrap.classList.toggle('book-view', currentBookView === 'book');
   if (currentBookView === 'book') { renderBooksGrid(list); return; }
   document.getElementById('listHeader').textContent = list.length + ' book' + (list.length !== 1 ? 's' : '');
@@ -3381,6 +3413,112 @@ function renderBooksGrid(list) {
     if (item.type === 'group') return _seriesBoxSetHtml(item.books, false);
     return _miniBookCardHtml(item.book);
   }).join('');
+  refreshIcons();
+}
+
+// ── SHELF VIEW ────────────────────────────────────────────────────────────────
+
+function _shelfDividerHtml(variant) {
+  if (variant === 2) return `<div class="shelf-divider dots">· · ·</div>`;
+  if (variant === 1) return `<div class="shelf-divider dashed"></div>`;
+  return `<div class="shelf-divider"></div>`;
+}
+
+function _shelfSpineHtml(b, isGlobal, inSeries) {
+  const seed = _bookSeed(b.id);
+  const pal = _REC_PALETTES[seed % _REC_PALETTES.length];
+  const pat = _REC_PATTERNS[(seed >>> 3) % _REC_PATTERNS.length];
+  const divVar = seed % 3;
+  const safeId = (b.id||'').replace(/'/g, "\\'");
+  const genres = (b.genres||[]).filter(g => g !== 'Non-Fiction');
+  const openFn = isGlobal ? `openGlobalBookInfo('${safeId}')` : `openBookInfo('${safeId}')`;
+
+  // Author: each co-author on its own line
+  const authorNames = (b.author || '').split(/\s+(?:and|&)\s+/i).map(n => n.trim()).filter(Boolean);
+  const authorHtml = authorNames.map(n => `<div>${esc(n)}</div>`).join('');
+
+  // Rating
+  let avg = 0;
+  if (isGlobal) {
+    avg = (b.ratingCount > 0) ? b.ratingTotal / b.ratingCount : 0;
+  } else {
+    const gbId = createGlobalBookId(b.title||'', b.author||'');
+    const gb = globalBookCache.find(x => x.id === gbId);
+    avg = (gb && gb.ratingCount > 0) ? gb.ratingTotal / gb.ratingCount : (b.rating || 0);
+  }
+  const stars = avg > 0 ? '★'.repeat(Math.round(avg)) + '☆'.repeat(5 - Math.round(avg)) : '';
+
+  const genreIconHtml = genres.length
+    ? `<div class="shelf-spine-genre-icon">${_genreIconHtml(genres[0], 'shelf-icon')}</div>`
+    : '';
+  const genreNamesHtml = genres.length
+    ? `<div class="shelf-spine-genre-names">${genres.slice(0, 2).map(g => esc(g)).join('<br>')}</div>`
+    : '';
+  const seriesNumHtml = inSeries && (b.seriesNumber != null && b.seriesNumber !== '')
+    ? `<div class="shelf-spine-series-num" style="color:${pal.ac}">#${b.seriesNumber}</div>` : '';
+
+  const titleFont = genres.filter(g => !_FONT_SKIP_GENRES.has(g)).reduce((f, g) => f || _GENRE_FONT[g], null) || "'Playfair Display', serif";
+  const div1 = _shelfDividerHtml(divVar);
+  const div2 = _shelfDividerHtml((divVar + 1) % 3);
+  const div3 = _shelfDividerHtml((divVar + 2) % 3);
+
+  return `<div class="shelf-spine" style="background:${pal.bg};${pat ? pat+';' : ''}color:${pal.fg};" onclick="${openFn}">
+  ${seriesNumHtml}
+  <div class="shelf-spine-author">${authorHtml}</div>
+  ${div1}
+  <div class="shelf-spine-title-wrap">
+    <div class="shelf-spine-title" style="font-family:${titleFont};">${esc(b.title||'')}</div>
+  </div>
+  ${genres.length ? div2 : ''}
+  ${genreIconHtml}
+  ${genreNamesHtml}
+  ${stars ? div3 : ''}
+  ${stars ? `<div class="shelf-spine-rating" style="color:${pal.ac}">${stars}</div>` : ''}
+</div>`;
+}
+
+function renderShelfView(list, isGlobal) {
+  const root = document.getElementById('shelfView');
+  document.getElementById('listHeader').textContent = list.length + ' book' + (list.length !== 1 ? 's' : '');
+
+  if (!list.length) {
+    root.innerHTML = '<div class="shelf-empty">No books found</div>';
+    return;
+  }
+
+  let shelves; // array of { label, books[] }
+  if (isGlobal || currentPage === 'wishlist') {
+    shelves = [{ label: isGlobal ? 'Global Library' : 'Wishlist', books: list }];
+  } else {
+    const byLoc = {};
+    list.forEach(b => { const loc = b.location || 'Other'; if (!byLoc[loc]) byLoc[loc] = []; byLoc[loc].push(b); });
+    const locOrder = [...orderedLocations, 'Borrowed', 'GlobalRead'];
+    const seen = new Set();
+    shelves = [];
+    locOrder.forEach(loc => {
+      if (byLoc[loc]?.length) { shelves.push({ label: loc === 'GlobalRead' ? 'Not Owned' : loc, books: byLoc[loc] }); seen.add(loc); }
+    });
+    Object.keys(byLoc).forEach(loc => { if (!seen.has(loc) && byLoc[loc].length) shelves.push({ label: loc, books: byLoc[loc] }); });
+  }
+
+  root.innerHTML = shelves.map(({ label, books: shelfBooks }) => {
+    const grouped = groupBySeries(shelfBooks);
+    const spinesHtml = grouped.map(item => {
+      if (item.type === 'group') {
+        const seed = _bookSeed(item.books[0].series || item.books[0].id, 7);
+        const boxPal = _REC_PALETTES[seed % _REC_PALETTES.length];
+        return `<div class="shelf-series-group" style="border-color:${boxPal.ac}33;">` +
+          item.books.map(b => _shelfSpineHtml(b, isGlobal, true)).join('') + '</div>';
+      }
+      return _shelfSpineHtml(item.book, isGlobal, false);
+    }).join('');
+    return `<div class="shelf-shelf">
+  <div class="shelf-location-label">${esc(label)}</div>
+  <div class="shelf-books-row">${spinesHtml}</div>
+  <div class="shelf-board"></div>
+</div>`;
+  }).join('');
+
   refreshIcons();
 }
 
@@ -3525,9 +3663,9 @@ function refreshIcons() {
 // ── GLOBAL LIBRARY VIEW ───────────────────────────────────────────────────────
 window.setBookView = (view) => {
   currentBookView = view;
-  const icons = { card: 'layout-list', book: 'layout-grid' };
+  const icons = { card: 'layout-list', book: 'layout-grid', shelf: 'library' };
   const iconEl = document.getElementById('viewBtnIcon');
-  if (iconEl) { iconEl.dataset.lucide = icons[view]; refreshIcons(); }
+  if (iconEl) { iconEl.dataset.lucide = icons[view] || 'layout-list'; refreshIcons(); }
   if (currentPage === 'global') applyGlobalFilters();
   else applyFilters();
 };
@@ -3633,7 +3771,7 @@ function applyGlobalFilters() {
 }
 
 function _renderNextGlobalPage(append) {
-  if (currentBookView === 'book') {
+  if (currentBookView === 'book' || currentBookView === 'shelf') {
     if (!append) {
       renderGlobalBooks(_globalFullList, false, _globalFullList.length);
       const sentinel = document.getElementById('globalLoadSentinel');
@@ -3650,9 +3788,17 @@ function _renderNextGlobalPage(append) {
 }
 
 function renderGlobalBooks(list, append, totalCount) {
+  const shelfEl = document.getElementById('shelfView');
   const wrap = document.getElementById('bookList');
+  const isShelf = currentBookView === 'shelf';
   if (!append) {
+    shelfEl.style.display = isShelf ? 'block' : 'none';
+    wrap.style.display = isShelf ? 'none' : '';
     wrap.classList.toggle('book-view', currentBookView === 'book');
+  }
+  if (isShelf) {
+    if (!append) renderShelfView(list, true);
+    return;
   }
   if (currentBookView === 'book') {
     if (!append) {
@@ -6890,6 +7036,7 @@ function updateHeaderSpacer() {
   if (sub) sub.style.top = hh + 'px';
   const sh = sub ? sub.offsetHeight : 0;
   spacer.style.height = (hh + sh) + 'px';
+  document.documentElement.style.setProperty('--total-header-h', (hh + sh) + 'px');
   if (currentDiscoverTab === 'find') _setFindPanelHeight();
 }
 
@@ -7169,9 +7316,9 @@ window.setSort = (sort) => {
 };
 
 window.cycleBookView = () => {
-  currentBookView = currentBookView === 'card' ? 'book' : 'card';
+  currentBookView = currentBookView === 'card' ? 'book' : currentBookView === 'book' ? 'shelf' : 'card';
   localStorage.setItem('bookView', currentBookView);
-  const icons = { card: 'layout-list', book: 'layout-grid' };
+  const icons = { card: 'layout-list', book: 'layout-grid', shelf: 'library' };
   const iconEl = document.getElementById('viewBtnIcon');
   if (iconEl) { iconEl.dataset.lucide = icons[currentBookView]; refreshIcons(); }
   if (currentPage === 'global') applyGlobalFilters();
