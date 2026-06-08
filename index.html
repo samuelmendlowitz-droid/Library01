@@ -1714,6 +1714,10 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
       </div>
       <div class="form-group" id="addLocationGroup"><label class="form-label">Location</label>
         <select class="form-select" id="newLocation"></select>
+        <div style="display:flex;gap:8px;margin-top:6px;">
+          <input class="form-input" id="newLocInput" placeholder="Add new location…" style="flex:1;padding:9px 12px;font-size:13px;" onkeydown="if(event.key==='Enter')_addLocFromModal('add')">
+          <button onclick="_addLocFromModal('add')" style="padding:9px 14px;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--accent);font-size:13px;cursor:pointer;white-space:nowrap;font-family:'DM Sans',sans-serif;">+ Add</button>
+        </div>
       </div>
       <div class="form-group">
         <div class="toggle-pill-row">
@@ -1781,6 +1785,10 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
       </div>
       <div class="form-group" id="editLocationGroup"><label class="form-label">Location</label>
         <select class="form-select" id="editLocation"></select>
+        <div style="display:flex;gap:8px;margin-top:6px;">
+          <input class="form-input" id="editLocInput" placeholder="Add new location…" style="flex:1;padding:9px 12px;font-size:13px;" onkeydown="if(event.key==='Enter')_addLocFromModal('edit')">
+          <button onclick="_addLocFromModal('edit')" style="padding:9px 14px;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--accent);font-size:13px;cursor:pointer;white-space:nowrap;font-family:'DM Sans',sans-serif;">+ Add</button>
+        </div>
       </div>
       <div class="form-group">
         <div class="toggle-pill-row">
@@ -1805,7 +1813,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
         </div>
         <input type="hidden" id="editRating" value="0">
       </div>
-      <button class="btn-submit" onclick="saveEdit()">Save Changes</button>
+      <button class="btn-submit" id="saveEditBtn" onclick="saveEdit()">Save Changes</button>
       <button class="btn-danger" onclick="deleteFromEdit()"><i data-lucide="trash-2"></i> Remove Book</button>
     </div>
   </div>
@@ -3131,7 +3139,7 @@ async function loadBooks() {
   }
 }
 
-async function saveBook(data, { skipGlobalSync = false } = {}) {
+async function saveBook(data, { skipGlobalSync = false, backgroundSync = false } = {}) {
   await addDoc(userBooksCol(), { ...data, addedAt: serverTimestamp() });
 
   // Always update local autocomplete cache immediately
@@ -3155,20 +3163,20 @@ async function saveBook(data, { skipGlobalSync = false } = {}) {
   if (!skipGlobalSync) {
     const title = (data.title || '').trim();
     const author = (data.author || '').trim();
-    if (!isLikelyTestBook(title, author) && await validateWithGoogleBooks(title, author)) {
-      await syncBookToGlobalLibrary(data);
-    }
+    const _doSync = async () => {
+      if (!isLikelyTestBook(title, author) && await validateWithGoogleBooks(title, author)) {
+        await syncBookToGlobalLibrary(data);
+      }
+    };
+    if (backgroundSync) _doSync().catch(() => {}); // fire and forget – don't block UI
+    else await _doSync();
   }
 }
 
 async function updateBook(id, data) {
   await updateDoc(doc(db, 'users', currentUser.uid, 'books', id), data);
-
   const existingBook = books.find(b => b.id === id) || {};
-  await syncBookToGlobalLibrary({
-    ...existingBook,
-    ...data
-  });
+  syncBookToGlobalLibrary({ ...existingBook, ...data }); // background – don't block UI
 }
 
 async function removeBook(id) {
@@ -3183,6 +3191,23 @@ function buildLocationSelect(selectId, currentValue) {
     .map(l => `<option value="${esc(l)}"${l === currentValue ? ' selected' : ''}>${esc(l)}</option>`)
     .join('');
 }
+
+window._addLocFromModal = (ctx) => {
+  const inputId  = ctx === 'add' ? 'newLocInput' : 'editLocInput';
+  const selectId = ctx === 'add' ? 'newLocation'  : 'editLocation';
+  const inp = document.getElementById(inputId);
+  const name = (inp?.value || '').trim();
+  if (!name) return;
+  inp.value = '';
+  if (orderedLocations.includes(name)) {
+    const sel = document.getElementById(selectId);
+    if (sel) sel.value = name;
+    return;
+  }
+  orderedLocations.push(name);
+  saveSettings();
+  buildLocationSelect(selectId, name);
+};
 
 // ── RENDER ───────────────────────────────────────────────────────────────────
 function buildGenreFilters() {
@@ -3487,8 +3512,29 @@ function renderShelfView(list, isGlobal) {
   }
 
   let shelves; // array of { label, books[] }
-  if (isGlobal || currentPage === 'wishlist') {
-    shelves = [{ label: isGlobal ? 'Global Library' : 'Wishlist', books: list }];
+  if (isGlobal) {
+    // One shelf per author, most popular authors first
+    const byAuthor = {};
+    list.forEach(b => {
+      const key = (b.author || 'Unknown').trim();
+      if (!byAuthor[key]) byAuthor[key] = { score: 0, books: [] };
+      byAuthor[key].books.push(b);
+      byAuthor[key].score += (b.popularity || 0) + (b.ratingCount || 0) * 2;
+    });
+    shelves = Object.entries(byAuthor)
+      .sort(([, a], [, b]) => b.score - a.score)
+      .map(([author, { books: ab }]) => ({ label: author, books: ab }));
+  } else if (currentPage === 'wishlist') {
+    // One shelf per author, alphabetical
+    const byAuthor = {};
+    list.forEach(b => {
+      const key = (b.author || 'Unknown').trim();
+      if (!byAuthor[key]) byAuthor[key] = [];
+      byAuthor[key].push(b);
+    });
+    shelves = Object.entries(byAuthor)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([author, ab]) => ({ label: author, books: ab }));
   } else {
     const byLoc = {};
     list.forEach(b => { const loc = b.location || 'Other'; if (!byLoc[loc]) byLoc[loc] = []; byLoc[loc].push(b); });
@@ -4130,7 +4176,7 @@ window.addCustomGenre = ctx => {
 // ── ADD BOOK ──────────────────────────────────────────────────────────────────
 window.openAddModal = () => {
   addSelectedGenres = [];
-  ['newTitle','newAuthor','newSeries','customGenreInput'].forEach(id => document.getElementById(id).value = '');
+  ['newTitle','newAuthor','newSeries','customGenreInput','newLocInput'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   buildLocationSelect('newLocation', orderedLocations[0] || 'Bookshelf');
   document.getElementById('newRead').checked       = false;
   document.getElementById('newWishlist').checked   = false;
@@ -4479,11 +4525,11 @@ window.addBook = async () => {
   btn.disabled = true; btn.textContent = 'Adding…';
   try {
     const saveLoc = globalOnly ? 'GlobalRead' : (wishlist ? 'Wishlist' : loc);
-    await saveBook({ title, author, series, seriesNumber, seriesTag, genres: addSelectedGenres, location: saveLoc, read, checkoutDate: '', borrowedBy: '' });
+    await saveBook({ title, author, series, seriesNumber, seriesTag, genres: addSelectedGenres, location: saveLoc, read, checkoutDate: '', borrowedBy: '' }, { backgroundSync: true });
     closeModal('addModal');
-    await loadBooks();
     showStatus('Book added!', 'success');
     setTimeout(hideStatus, 2000);
+    await loadBooks();
   } catch(e) { showStatus('Error adding book.', 'error'); }
   finally { btn.disabled = false; btn.textContent = 'Add to Library'; }
 };
@@ -4533,16 +4579,21 @@ window.saveEdit = async () => {
   const wishlist = document.getElementById('editWishlist').checked;
   const rating = parseInt(document.getElementById('editRating').value) || 0;
   if (!title || !author) { showStatus('Please enter title and author.', 'error'); return; }
+  const btn = document.getElementById('saveEditBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
   try {
     const b = books.find(x => x.id === editingId);
-    const oldRating = b.rating || 0;
-    await updateBook(editingId, { title, author, series, seriesNumber, seriesTag, genres: editSelectedGenres, location: wishlist ? 'Wishlist' : loc, read, rating, checkoutDate: b.checkoutDate||'', borrowedBy: b.borrowedBy||'' });
-    if (oldRating !== rating) {
-      updateGlobalRating(title, author, oldRating, rating);
-    }
+    const oldRating = b?.rating || 0;
+    await updateBook(editingId, { title, author, series, seriesNumber, seriesTag, genres: editSelectedGenres, location: wishlist ? 'Wishlist' : loc, read, rating, checkoutDate: b?.checkoutDate||'', borrowedBy: b?.borrowedBy||'' });
+    if (oldRating !== rating) updateGlobalRating(title, author, oldRating, rating);
     closeModal('editModal');
+    showStatus('Saved!', 'success');
+    setTimeout(hideStatus, 1500);
     await loadBooks();
-  } catch(e) { showStatus('Error saving.', 'error'); }
+  } catch(e) {
+    showStatus('Error saving.', 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Save Changes'; }
+  }
 };
 
 window.deleteFromEdit = async () => {
