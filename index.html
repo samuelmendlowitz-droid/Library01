@@ -539,8 +539,15 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .shelf-spine-genre-names { font-family: 'DM Sans', sans-serif; font-size: 5.5px; opacity: 0.55; text-align: center; line-height: 1.4; flex-shrink: 0; width: 100%; }
 .shelf-spine-rating { font-size: 7px; opacity: 0.82; text-align: center; flex-shrink: 0; letter-spacing: -1px; }
 .shelf-spine-series-num { font-size: 6px; opacity: 0.65; text-align: center; flex-shrink: 0; font-family: 'DM Sans', sans-serif; font-weight: 700; }
-.shelf-series-group { display: flex; flex-direction: row; align-items: flex-end; gap: 2px; align-self: stretch; flex-shrink: 0; border-radius: 4px 4px 0 0; padding: 0 3px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-bottom: none; }
-.shelf-series-group .shelf-spine { border-radius: 2px 2px 0 0; scroll-snap-align: none; }
+.shelf-series-box { display: flex; flex-direction: column; align-self: stretch; flex-shrink: 0; border-radius: 6px 6px 0 0; overflow: hidden; scroll-snap-align: start; box-shadow: 0 4px 16px rgba(0,0,0,0.6); }
+.shelf-series-box-header { padding: 6px 8px 5px; display: flex; flex-direction: row; align-items: flex-start; justify-content: space-between; gap: 6px; border-bottom: 1px solid rgba(255,255,255,0.12); flex-shrink: 0; }
+.shelf-series-box-header-left { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
+.shelf-series-box-title { font-family: 'Playfair Display', serif; font-size: 10px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
+.shelf-series-box-author { font-family: 'DM Sans', sans-serif; font-size: 7px; opacity: 0.65; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.shelf-series-box-genres { display: flex; flex-wrap: wrap; gap: 2px; justify-content: flex-end; flex-shrink: 0; max-width: 50%; }
+.shelf-series-box-spines { display: flex; flex-direction: row; flex: 1; min-height: 0; gap: 2px; padding: 3px 3px 0; align-items: flex-end; }
+.shelf-series-spine { width: 44px; flex-shrink: 0; align-self: stretch; display: flex; flex-direction: column; align-items: center; padding: 4px 2px 4px; border-radius: 2px 2px 0 0; cursor: pointer; overflow: hidden; box-shadow: 1px 0 6px rgba(0,0,0,0.5); transition: transform 0.12s; }
+.shelf-series-spine:active { transform: scale(0.95) translateY(2px); }
 .shelf-empty { display: flex; align-items: center; justify-content: center; height: 100%; color: rgba(255,255,255,0.25); font-size: 13px; font-family: 'DM Sans', sans-serif; }
 
 /* List view — spreadsheet rows */
@@ -3502,6 +3509,47 @@ function _shelfSpineHtml(b, isGlobal, inSeries) {
 </div>`;
 }
 
+function _shelfSeriesBoxHtml(books, isGlobal) {
+  const first = books[0];
+  const seriesSeed = _bookSeed(first.series || first.id, 7);
+  const boxPalIdx = seriesSeed % _REC_PALETTES.length;
+  const boxPal = _REC_PALETTES[boxPalIdx];
+  const boxPat = _REC_PATTERNS[(seriesSeed >>> 3) % _REC_PATTERNS.length];
+  const genres = (first.genres||[]).filter(g => g !== 'Non-Fiction');
+  const genreTagsHtml = genres.slice(0, 3).map(g =>
+    `<span class="tag genre" style="font-size:7px;padding:1px 4px;">${_genreIconHtml(g,'tag-icon')}${esc(g)}</span>`
+  ).join('');
+  const seriesTitleFont = genres.filter(g => !_FONT_SKIP_GENRES.has(g)).reduce((f, g) => f || _GENRE_FONT[g], null) || "'Playfair Display', serif";
+  const spinesHtml = books.map((b, i) => {
+    const spinePalIdx = (boxPalIdx + 1 + i) % _REC_PALETTES.length;
+    const bPal = _REC_PALETTES[spinePalIdx];
+    const bSeed = _bookSeed(b.id);
+    const bPat = _REC_PATTERNS[(bSeed >>> 3) % _REC_PATTERNS.length];
+    const safeId = (b.id||'').replace(/'/g, "\\'");
+    const numLabel = (b.seriesNumber != null && b.seriesNumber !== '') ? `#${b.seriesNumber}` : (b.seriesTag || '');
+    const openFn = isGlobal ? `openGlobalBookInfo('${safeId}')` : `openBookInfo('${safeId}')`;
+    let avg = 0;
+    if (isGlobal) { avg = (b.ratingCount > 0) ? b.ratingTotal / b.ratingCount : 0; }
+    else { const gbId = createGlobalBookId(b.title||'', b.author||''); const gb = globalBookCache.find(x => x.id === gbId); avg = (gb && gb.ratingCount > 0) ? gb.ratingTotal / gb.ratingCount : (b.rating || 0); }
+    const stars = avg > 0 ? '★'.repeat(Math.round(avg)) + '☆'.repeat(5 - Math.round(avg)) : '';
+    return `<div class="shelf-series-spine" style="background:${bPal.bg};${bPat?bPat+';':''}color:${bPal.fg};" onclick="${openFn}">
+  <div class="sbs-spine-num" style="color:${bPal.ac}">${esc(numLabel)}</div>
+  <div class="shelf-spine-title-wrap"><div class="shelf-spine-title" style="font-family:${seriesTitleFont};">${esc(b.title||'')}</div></div>
+  ${stars ? `<div class="sbs-spine-rating" style="color:${bPal.ac}">${stars}</div>` : ''}
+</div>`;
+  }).join('');
+  return `<div class="shelf-series-box" style="background:${boxPal.bg};${boxPat?boxPat+';':''}color:${boxPal.fg};">
+  <div class="shelf-series-box-header">
+    <div class="shelf-series-box-header-left">
+      <div class="shelf-series-box-title">${esc(first.series||'')}</div>
+      <div class="shelf-series-box-author">${esc(first.author||'')}</div>
+    </div>
+    ${genreTagsHtml ? `<div class="shelf-series-box-genres">${genreTagsHtml}</div>` : ''}
+  </div>
+  <div class="shelf-series-box-spines">${spinesHtml}</div>
+</div>`;
+}
+
 function renderShelfView(list, isGlobal) {
   const root = document.getElementById('shelfView');
   document.getElementById('listHeader').textContent = list.length + ' book' + (list.length !== 1 ? 's' : '');
@@ -3550,12 +3598,7 @@ function renderShelfView(list, isGlobal) {
   root.innerHTML = shelves.map(({ label, books: shelfBooks }) => {
     const grouped = groupBySeries(shelfBooks);
     const spinesHtml = grouped.map(item => {
-      if (item.type === 'group') {
-        const seed = _bookSeed(item.books[0].series || item.books[0].id, 7);
-        const boxPal = _REC_PALETTES[seed % _REC_PALETTES.length];
-        return `<div class="shelf-series-group" style="border-color:${boxPal.ac}33;">` +
-          item.books.map(b => _shelfSpineHtml(b, isGlobal, true)).join('') + '</div>';
-      }
+      if (item.type === 'group') return _shelfSeriesBoxHtml(item.books, isGlobal);
       return _shelfSpineHtml(item.book, isGlobal, false);
     }).join('');
     return `<div class="shelf-shelf">
