@@ -2217,11 +2217,6 @@ All columns other than Author, Title, Series and Genres should be left empty or 
           <div class="smi-text"><div class="smi-title">Account</div><div class="smi-sub">View account info or sign out</div></div>
           <span class="smi-arrow"><i data-lucide="chevron-right"></i></span>
         </button>
-        <button class="settings-menu-item" onclick="openSettingsSection('appearance')">
-          <span class="smi-icon"><i data-lucide="palette"></i></span>
-          <div class="smi-text"><div class="smi-title">Appearance</div><div class="smi-sub">Dark / light mode and color theme</div></div>
-          <span class="smi-arrow"><i data-lucide="chevron-right"></i></span>
-        </button>
       </div>
 
       <!-- Genres & Locations -->
@@ -7932,65 +7927,6 @@ window.openSettings = () => {
   refreshIcons();
 };
 
-// ── APP THEME ─────────────────────────────────────────────────────────────────
-function _applyAppTheme(t) {
-  _appTheme = t;
-  document.documentElement.setAttribute('data-theme', t);
-  localStorage.setItem('appTheme', t);
-  try { applyFilters(); } catch(e) {}
-  try { applyGlobalFilters(); } catch(e) {}
-}
-window.setAppThemeMode = (mode) => {
-  const color = (_appTheme.split('-')[1]) || 'blue';
-  _applyAppTheme(`${mode}-${color}`);
-  _renderAppearancePanel();
-};
-window.setAppThemeColor = (color) => {
-  const mode = _appTheme.startsWith('light') ? 'light' : 'dark';
-  _applyAppTheme(`${mode}-${color}`);
-  _renderAppearancePanel();
-};
-function _renderAppearancePanel() {
-  const el = document.getElementById('spanel-appearance');
-  if (!el) return;
-  const isDark = !_appTheme.startsWith('light');
-  const currentColor = (_appTheme.split('-')[1]) || 'blue';
-  const colors = [
-    { id:'blue',   label:'Blue',   swatch:'#172540' },
-    { id:'green',  label:'Green',  swatch:'#103424' },
-    { id:'red',    label:'Red',    swatch:'#3c1616' },
-    { id:'purple', label:'Purple', swatch:'#280e40' },
-    { id:'orange', label:'Orange', swatch:'#3a2400' },
-  ];
-  const lightColors = [
-    { id:'blue',   swatch:'#dceef8' },
-    { id:'green',  swatch:'#dcf4e4' },
-    { id:'red',    swatch:'#f8dcdc' },
-    { id:'purple', swatch:'#ecdcf8' },
-    { id:'orange', swatch:'#fff0d8' },
-  ];
-  el.innerHTML = `
-    <div style="margin-bottom:20px;">
-      <div style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">Mode</div>
-      <div style="display:flex;gap:10px;">
-        <button onclick="setAppThemeMode('dark')" style="flex:1;padding:10px;background:${isDark?'var(--accent)':'var(--surface2)'};color:${isDark?'#1a1612':'var(--text2)'};border:1px solid ${isDark?'var(--accent)':'var(--border)'};border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">🌙 Dark</button>
-        <button onclick="setAppThemeMode('light')" style="flex:1;padding:10px;background:${!isDark?'var(--accent)':'var(--surface2)'};color:${!isDark?'#1a1612':'var(--text2)'};border:1px solid ${!isDark?'var(--accent)':'var(--border)'};border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">☀️ Light</button>
-      </div>
-    </div>
-    <div>
-      <div style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">Color</div>
-      <div style="display:flex;gap:10px;flex-wrap:wrap;">
-        ${colors.map((c,i) => {
-          const sw = isDark ? c.swatch : lightColors[i].swatch;
-          const isActive = c.id === currentColor;
-          return `<button onclick="setAppThemeColor('${c.id}')" style="display:flex;flex-direction:column;align-items:center;gap:6px;background:none;border:none;cursor:pointer;padding:4px;">
-            <div style="width:40px;height:40px;border-radius:50%;background:${sw};border:3px solid ${isActive?'var(--accent)':'var(--border)'};box-shadow:${isActive?'0 0 0 2px var(--accent)':'none'};transition:all 0.15s;"></div>
-            <span style="font-size:11px;color:${isActive?'var(--accent)':'var(--text3)'};font-weight:${isActive?'600':'400'};">${c.label}</span>
-          </button>`;
-        }).join('')}
-      </div>
-    </div>`;
-}
 
 window.openSettingsSection = (section) => {
   document.querySelectorAll('.settings-panel').forEach(p => p.classList.remove('active'));
@@ -8006,7 +7942,6 @@ window.openSettingsSection = (section) => {
   }
   if (section === 'appearance') { _renderAppearancePanel(); }
   if (section === 'account') { renderUserAvatarSection(); loadMyHighlights(); }
-  if (section === 'appearance') { _renderAppearancePanel(); }
   if (section === 'importexport') {
     const ownerSection = document.getElementById('ownerWipeSection');
     if (ownerSection) ownerSection.style.display = currentUser && currentUser.email === 'samuelmendlowitz@gmail.com' ? '' : 'none';
