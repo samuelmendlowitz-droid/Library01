@@ -2364,6 +2364,7 @@ let _discoverGenresListSort   = 'count-desc';
 let currentSort = 'popularity-desc';
 let _personalSort = 'title-asc';
 let _globalSort   = 'popularity-desc';
+const AMAZON_AFFILIATE_TAG = 'YOUR-TAG-20'; // ← replace with your Amazon affiliate tag
 let currentBookView = localStorage.getItem('bookView') || 'shelf'; // 'card' | 'book' | 'shelf'
 let filterPanelOpen = false;
 let sortPanelOpen = false;
@@ -4945,6 +4946,14 @@ function _renderBookInfoBody(b) {
     </div>`;
   }
 
+  const amazonQuery = encodeURIComponent([b.title, b.author].filter(Boolean).join(' '));
+  const amazonUrl = `https://www.amazon.com/s?k=${amazonQuery}&tag=${AMAZON_AFFILIATE_TAG}`;
+  const amazonBtn = `<div class="info-section">
+    <a href="${amazonUrl}" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:11px;background:#FF9900;border:none;border-radius:var(--radius-sm);color:#111;font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif;text-decoration:none;box-sizing:border-box;">
+      <i data-lucide="shopping-cart" style="width:15px;height:15px;flex-shrink:0;"></i> Buy on Amazon
+    </a>
+  </div>`;
+
   const bodyEl = document.getElementById('bookInfoBody');
   bodyEl.innerHTML =
     `<div style="padding-bottom:16px;border-bottom:1px solid var(--border);">
@@ -4952,7 +4961,7 @@ function _renderBookInfoBody(b) {
       <div class="info-author">by ${esc(b.author||'')}</div>
       ${communityRating}
     </div>`
-    + seriesSection + genresSection + locSection + statusSection + myRatingSection + checkoutSection;
+    + seriesSection + genresSection + locSection + statusSection + myRatingSection + checkoutSection + amazonBtn;
   const infoRating = b.rating || 0;
   bodyEl.innerHTML += _buildReviewsSection(!!(infoRating > 0), infoRating);
   refreshIcons();
@@ -5249,6 +5258,13 @@ function _renderGlobalBookInfoBody(b) {
       <span style="font-size:13px;color:var(--text3);margin-left:6px;">${globalInfoRating ? globalInfoRating+'/5' : 'tap to rate'}</span>
     </div>
   </div>` : '';
+  const amazonQuery2 = encodeURIComponent([b.title, b.author].filter(Boolean).join(' '));
+  const amazonUrl2 = `https://www.amazon.com/s?k=${amazonQuery2}&tag=${AMAZON_AFFILIATE_TAG}`;
+  const amazonBtn2 = `<div class="info-section">
+    <a href="${amazonUrl2}" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:11px;background:#FF9900;border:none;border-radius:var(--radius-sm);color:#111;font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif;text-decoration:none;box-sizing:border-box;">
+      <i data-lucide="shopping-cart" style="width:15px;height:15px;flex-shrink:0;"></i> Buy on Amazon
+    </a>
+  </div>`;
 
   const bodyEl = document.getElementById('bookInfoBody');
   bodyEl.innerHTML =
@@ -5257,7 +5273,7 @@ function _renderGlobalBookInfoBody(b) {
       <div class="info-author">by ${esc(b.author||'')}</div>
       ${communityRating}
     </div>`
-    + seriesSection + genresSection + popularitySection + statusSection + myRatingSection + actions;
+    + seriesSection + genresSection + popularitySection + statusSection + myRatingSection + actions + amazonBtn2;
   bodyEl.innerHTML += _buildReviewsSection(!!(personal && globalInfoRating > 0), globalInfoRating);
   refreshIcons();
   if (_reviewBookGlobalId !== b.id) {
