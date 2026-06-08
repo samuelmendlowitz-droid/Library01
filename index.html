@@ -550,6 +550,35 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .shelf-series-spine:active { transform: scale(0.95) translateY(2px); }
 .shelf-empty { display: flex; align-items: center; justify-content: center; height: 100%; color: rgba(255,255,255,0.25); font-size: 13px; font-family: 'DM Sans', sans-serif; }
 
+/* ── Book Design Customizer ──────────────────────────────────────────────────── */
+.design-section { border-top: 1px solid var(--border); margin-top: 24px; padding-top: 4px; }
+.design-sect-hdr { display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 14px 0 12px; user-select: none; -webkit-user-select: none; }
+.design-sect-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; color: var(--text2); display: flex; align-items: center; gap: 7px; }
+.design-preview-row { display: flex; gap: 24px; align-items: flex-end; justify-content: center; margin-bottom: 24px; }
+.design-prev-label { font-size: 9px; color: var(--text3); text-align: center; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
+.design-prev-front { width: 112px; height: 150px; border-radius: 8px; overflow: hidden; flex-shrink: 0; box-shadow: 0 6px 20px rgba(0,0,0,0.65); position: relative; pointer-events: none; }
+.design-prev-front .mini-book-card { position: absolute !important; inset: 0 !important; width: 100% !important; height: 100% !important; aspect-ratio: unset !important; border-radius: 0 !important; box-shadow: none !important; transform: none !important; margin: 0 !important; }
+.design-prev-spine { width: 52px; height: 140px; overflow: hidden; flex-shrink: 0; position: relative; pointer-events: none; border-radius: 4px 4px 0 0; box-shadow: 2px 0 10px rgba(0,0,0,0.6); }
+.design-prev-spine .shelf-spine { width: 100% !important; height: 100% !important; align-self: auto !important; border-radius: 0 !important; box-shadow: none !important; scroll-snap-align: unset !important; cursor: default !important; }
+.design-ctrl-row { margin-bottom: 18px; }
+.design-ctrl-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text3); margin-bottom: 9px; display: block; }
+.design-swatch-row { display: flex; gap: 7px; flex-wrap: wrap; }
+.pal-swatch { width: 30px; height: 30px; border-radius: 8px; cursor: pointer; border: 2.5px solid transparent; transition: transform 0.12s, border-color 0.12s; flex-shrink: 0; }
+.pal-swatch.active { border-color: white; transform: scale(1.18); }
+.pat-swatch { width: 46px; height: 32px; border-radius: 6px; cursor: pointer; border: 2px solid transparent; flex-shrink: 0; transition: border-color 0.12s; }
+.pat-swatch.active { border-color: var(--accent); }
+.corner-swatch { width: 38px; height: 38px; border: 2px solid var(--border); border-radius: 7px; cursor: pointer; background: var(--surface2); padding: 4px; transition: border-color 0.12s, background 0.12s; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: var(--text3); }
+.corner-swatch svg { width: 22px; height: 22px; }
+.corner-swatch.active { border-color: var(--accent); color: var(--accent); background: var(--surface3); }
+.corner-none-label { font-size: 16px; color: var(--text3); line-height: 1; }
+.design-pill { padding: 7px 14px; border: 1px solid var(--border); border-radius: 20px; cursor: pointer; font-size: 12px; color: var(--text2); background: var(--surface2); transition: all 0.12s; white-space: nowrap; font-family: 'DM Sans', sans-serif; }
+.design-pill.active { border-color: var(--accent); background: rgba(201,169,110,0.12); color: var(--accent); }
+.font-opt { padding: 9px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; color: var(--text); background: var(--surface2); transition: all 0.12s; font-size: 14px; line-height: 1.3; }
+.font-opt.active { border-color: var(--accent); background: rgba(201,169,110,0.12); color: var(--accent); }
+.design-reset-btn { background: none; border: 1px solid var(--border); color: var(--text3); padding: 7px 16px; border-radius: var(--radius-sm); font-size: 12px; cursor: pointer; font-family: 'DM Sans', sans-serif; display: block; margin-bottom: 12px; }
+.copy-series-btn { width: 100%; padding: 11px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--accent); font-size: 13px; cursor: pointer; font-family: 'DM Sans', sans-serif; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 7px; }
+.copy-series-btn .lucide { width: 13px; height: 13px; }
+
 /* List view — spreadsheet rows */
 .series-group { border: 1px solid rgba(201,169,110,0.32); border-radius: var(--radius); overflow: hidden; }
 .series-group .book-card { border: none; border-radius: 0; border-bottom: 1px solid var(--border); }
@@ -1820,6 +1849,50 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
         </div>
         <input type="hidden" id="editRating" value="0">
       </div>
+      <div class="design-section" id="editDesignSection">
+        <div class="design-sect-hdr" onclick="toggleDesignSection()">
+          <span class="design-sect-title"><i data-lucide="palette"></i> Book Design</span>
+          <i data-lucide="chevron-down" id="designChevron" style="width:16px;height:16px;transition:transform 0.2s;flex-shrink:0;"></i>
+        </div>
+        <div id="editDesignBody" style="display:none;">
+          <div class="design-preview-row">
+            <div><div class="design-prev-label">Front</div><div id="designPreviewFront" class="design-prev-front"></div></div>
+            <div><div class="design-prev-label">Spine</div><div id="designPreviewSpine" class="design-prev-spine"></div></div>
+          </div>
+          <div class="design-ctrl-row">
+            <span class="design-ctrl-label">Color Palette</span>
+            <div class="design-swatch-row" id="designPaletteRow"></div>
+          </div>
+          <div class="design-ctrl-row">
+            <span class="design-ctrl-label">Background Pattern</span>
+            <div class="design-swatch-row" id="designPatternRow"></div>
+          </div>
+          <div class="design-ctrl-row">
+            <span class="design-ctrl-label">Border Frame</span>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;" id="designFrameRow"></div>
+          </div>
+          <div class="design-ctrl-row">
+            <span class="design-ctrl-label">Corner Embellishments</span>
+            <div class="design-swatch-row" id="designCornerRow"></div>
+          </div>
+          <div class="design-ctrl-row">
+            <span class="design-ctrl-label">Divider Style</span>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;" id="designDividerRow"></div>
+          </div>
+          <div class="design-ctrl-row">
+            <span class="design-ctrl-label">Title Font</span>
+            <div id="designTitleFontRow" style="display:flex;flex-direction:column;gap:5px;"></div>
+          </div>
+          <div class="design-ctrl-row">
+            <span class="design-ctrl-label">Author / Secondary Font</span>
+            <div id="designSecFontRow" style="display:flex;flex-direction:column;gap:5px;"></div>
+          </div>
+          <button class="design-reset-btn" onclick="resetBookDesign()">↺ Reset to default</button>
+          <div id="designCopySeriesRow" style="display:none;">
+            <button class="copy-series-btn" onclick="copyDesignToSeries()"><i data-lucide="copy"></i> Copy Design to Full Series</button>
+          </div>
+        </div>
+      </div>
       <button class="btn-submit" id="saveEditBtn" onclick="saveEdit()">Save Changes</button>
       <button class="btn-danger" onclick="deleteFromEdit()"><i data-lucide="trash-2"></i> Remove Book</button>
     </div>
@@ -2298,6 +2371,7 @@ let sortPanelOpen = false;
 let addSelectedGenres = [], editSelectedGenres = [];
 const _seriesNumCleared = { new: false, edit: false };
 let editingId = null;
+let _editDesign = {};
 let _bookInfoId = null;
 let _bookInfoIsGlobal = false;
 let _reviewSort = 'newest';
@@ -3395,10 +3469,10 @@ function _seriesBoxSetHtml(books, isGlobal) {
   ).join('');
   const seriesTitleFont = genres.filter(g => !_FONT_SKIP_GENRES.has(g)).reduce((f, g) => f || _GENRE_FONT[g], null) || "'Playfair Display', serif";
   const spinesHtml = books.map((b, i) => {
-    const spinePalIdx = (boxPalIdx + 1 + i) % _REC_PALETTES.length;
-    const bPal = _REC_PALETTES[spinePalIdx];
-    const bSeed = _bookSeed(b.id);
-    const bPat = _REC_PATTERNS[(bSeed >>> 3) % _REC_PATTERNS.length];
+    const bd = _bookDesign(b);
+    const bPal = bd.pal;
+    const bPat = bd.pat;
+    const spineFont = bd.titleFont || seriesTitleFont;
     const safeId = (b.id||'').replace(/'/g, "\\'");
     const numLabel = (b.seriesNumber != null && b.seriesNumber !== '') ? `#${b.seriesNumber}` : (b.seriesTag || '');
     const openFn = isGlobal ? `openGlobalBookInfo('${safeId}')` : `openBookInfo('${safeId}')`;
@@ -3416,7 +3490,7 @@ function _seriesBoxSetHtml(books, isGlobal) {
     return `<div class="sbs-spine" style="background:${bPal.bg};${bPat ? bPat+';' : ''}color:${bPal.fg};" onclick="${openFn}">
   <div class="sbs-spine-num" style="color:${bPal.ac}">${esc(numLabel)}</div>
   <div class="sbs-spine-title-wrap">
-    <div class="sbs-spine-title" style="font-family:${seriesTitleFont};">${esc(b.title||'')}</div>
+    <div class="sbs-spine-title" style="font-family:${spineFont};">${esc(b.title||'')}</div>
   </div>
   ${ratingHtml}
 </div>`;
@@ -3457,19 +3531,17 @@ function _shelfDividerHtml(variant) {
 }
 
 function _shelfSpineHtml(b, isGlobal, inSeries) {
-  const seed = _bookSeed(b.id);
-  const pal = _REC_PALETTES[seed % _REC_PALETTES.length];
-  const pat = _REC_PATTERNS[(seed >>> 3) % _REC_PATTERNS.length];
-  const divVar = seed % 3;
+  const d = _bookDesign(b);
+  const { pal, pat, divStyle } = d;
+  const divVar = d.divider;
   const safeId = (b.id||'').replace(/'/g, "\\'");
   const genres = (b.genres||[]).filter(g => g !== 'Non-Fiction');
   const openFn = isGlobal ? `openGlobalBookInfo('${safeId}')` : `openBookInfo('${safeId}')`;
 
-  // Author: each co-author on its own line
   const authorNames = (b.author || '').split(/\s+(?:and|&)\s+/i).map(n => n.trim()).filter(Boolean);
+  const authorStyle = d.secFont ? ` style="font-family:${d.secFont};"` : '';
   const authorHtml = authorNames.map(n => `<div>${esc(n)}</div>`).join('');
 
-  // Rating
   let avg = 0;
   if (isGlobal) {
     avg = (b.ratingCount > 0) ? b.ratingTotal / b.ratingCount : 0;
@@ -3489,14 +3561,14 @@ function _shelfSpineHtml(b, isGlobal, inSeries) {
   const seriesNumHtml = inSeries && (b.seriesNumber != null && b.seriesNumber !== '')
     ? `<div class="shelf-spine-series-num" style="color:${pal.ac}">#${b.seriesNumber}</div>` : '';
 
-  const titleFont = genres.filter(g => !_FONT_SKIP_GENRES.has(g)).reduce((f, g) => f || _GENRE_FONT[g], null) || "'Playfair Display', serif";
+  const titleFont = d.titleFont || (genres.filter(g => !_FONT_SKIP_GENRES.has(g)).reduce((f, g) => f || _GENRE_FONT[g], null) || "'Playfair Display', serif");
   const div1 = _shelfDividerHtml(divVar);
   const div2 = _shelfDividerHtml((divVar + 1) % 3);
   const div3 = _shelfDividerHtml((divVar + 2) % 3);
 
   return `<div class="shelf-spine" style="background:${pal.bg};${pat ? pat+';' : ''}color:${pal.fg};" onclick="${openFn}">
   ${seriesNumHtml}
-  <div class="shelf-spine-author">${authorHtml}</div>
+  <div class="shelf-spine-author"${authorStyle}>${authorHtml}</div>
   ${div1}
   <div class="shelf-spine-title-wrap">
     <div class="shelf-spine-title" style="font-family:${titleFont};">${esc(b.title||'')}</div>
@@ -3521,10 +3593,10 @@ function _shelfSeriesBoxHtml(books, isGlobal) {
   ).join('');
   const seriesTitleFont = genres.filter(g => !_FONT_SKIP_GENRES.has(g)).reduce((f, g) => f || _GENRE_FONT[g], null) || "'Playfair Display', serif";
   const spinesHtml = books.map((b, i) => {
-    const spinePalIdx = (boxPalIdx + 1 + i) % _REC_PALETTES.length;
-    const bPal = _REC_PALETTES[spinePalIdx];
-    const bSeed = _bookSeed(b.id);
-    const bPat = _REC_PATTERNS[(bSeed >>> 3) % _REC_PATTERNS.length];
+    const bd = _bookDesign(b);
+    const bPal = bd.pal;
+    const bPat = bd.pat;
+    const spineFont = bd.titleFont || seriesTitleFont;
     const safeId = (b.id||'').replace(/'/g, "\\'");
     const numLabel = (b.seriesNumber != null && b.seriesNumber !== '') ? `#${b.seriesNumber}` : (b.seriesTag || '');
     const openFn = isGlobal ? `openGlobalBookInfo('${safeId}')` : `openBookInfo('${safeId}')`;
@@ -3534,7 +3606,7 @@ function _shelfSeriesBoxHtml(books, isGlobal) {
     const stars = avg > 0 ? '★'.repeat(Math.round(avg)) + '☆'.repeat(5 - Math.round(avg)) : '';
     return `<div class="shelf-series-spine" style="background:${bPal.bg};${bPat?bPat+';':''}color:${bPal.fg};" onclick="${openFn}">
   <div class="sbs-spine-num" style="color:${bPal.ac}">${esc(numLabel)}</div>
-  <div class="shelf-spine-title-wrap"><div class="shelf-spine-title" style="font-family:${seriesTitleFont};">${esc(b.title||'')}</div></div>
+  <div class="shelf-spine-title-wrap"><div class="shelf-spine-title" style="font-family:${spineFont};">${esc(b.title||'')}</div></div>
   ${stars ? `<div class="sbs-spine-rating" style="color:${bPal.ac}">${stars}</div>` : ''}
 </div>`;
   }).join('');
@@ -3612,12 +3684,8 @@ function renderShelfView(list, isGlobal) {
 }
 
 function _miniBookCardHtml(b) {
-  const seed = _bookSeed(b.id);
-  const pal = _REC_PALETTES[seed % _REC_PALETTES.length];
-  const pat = _REC_PATTERNS[(seed >>> 3) % _REC_PATTERNS.length];
-  const frame = _REC_FRAME_STYLES[(seed >>> 5) % _REC_FRAME_STYLES.length];
-  const cornerSvg = _REC_CORNER_SVGS[(seed >>> 7) % _REC_CORNER_SVGS.length] || '';
-  const divStyle = _REC_DIVIDER_STYLES[(seed >>> 9) % _REC_DIVIDER_STYLES.length];
+  const d = _bookDesign(b);
+  const { pal, pat, frame, cornerSvg, divStyle } = d;
   const safeId = b.id.replace(/'/g, "\\'");
   const genres = (b.genres||[]).filter(g => g !== 'Non-Fiction');
   const clusterHtml = genres.length ? _miniGenreClusterHtml(genres, pal.ac) : '';
@@ -3636,6 +3704,7 @@ function _miniBookCardHtml(b) {
   const genreLabels = genres.length ? `<div class="mbc-genre-labels">${genres.slice(0,3).map(g => esc(g)).join(' · ')}</div>` : '';
   const locDisplay = b.location === 'GlobalRead' ? 'Not Owned' : (b.location && b.location !== 'Wishlist' ? b.location : '');
   const locationHtml = locDisplay ? `<div class="mbc-location">${esc(locDisplay)}</div>` : '';
+  const authorStyle = d.secFont ? ` style="font-family:${d.secFont};"` : '';
   return `<div class="mini-book-card ${frame}" id="card-${safeId}" style="background:${pal.bg};${pat ? pat+';' : ''}color:${pal.fg};">
   <div class="rec-frame"></div>
   <div class="rec-corners" style="color:${pal.ac}">
@@ -3643,8 +3712,8 @@ function _miniBookCardHtml(b) {
     <span class="rc bl">${cornerSvg}</span><span class="rc br">${cornerSvg}</span>
   </div>
   <div class="mbc-title-block">
-    <div class="mbc-author">${esc(b.author||'')}</div>
-    ${_miniTitleHtml(b.title||'', b.genres)}
+    <div class="mbc-author"${authorStyle}>${esc(b.author||'')}</div>
+    ${_miniTitleHtml(b.title||'', b.genres, d.titleFont)}
     ${seriesHtml}
   </div>
   <div class="mbc-genre-area">
@@ -4607,6 +4676,19 @@ window.openEditModal = id => {
   document.getElementById('editRatingGroup').style.display = b.read ? '' : 'none';
   const sbe = document.getElementById('spellSuggestEdit');
   if (sbe) sbe.style.display = 'none';
+  _editDesign = {
+    designPalIdx:   b.designPalIdx   ?? null,
+    designPatIdx:   b.designPatIdx   ?? null,
+    designFrame:    b.designFrame    ?? null,
+    designCorner:   b.designCorner   ?? null,
+    designDivider:  b.designDivider  ?? null,
+    designTitleFont: b.designTitleFont || null,
+    designSecFont:   b.designSecFont  || null,
+  };
+  const designBody = document.getElementById('editDesignBody');
+  const designChevron = document.getElementById('designChevron');
+  if (designBody) designBody.style.display = 'none';
+  if (designChevron) designChevron.style.transform = '';
   openModal('editModal');
 };
 
@@ -4627,7 +4709,7 @@ window.saveEdit = async () => {
   try {
     const b = books.find(x => x.id === editingId);
     const oldRating = b?.rating || 0;
-    await updateBook(editingId, { title, author, series, seriesNumber, seriesTag, genres: editSelectedGenres, location: wishlist ? 'Wishlist' : loc, read, rating, checkoutDate: b?.checkoutDate||'', borrowedBy: b?.borrowedBy||'' });
+    await updateBook(editingId, { title, author, series, seriesNumber, seriesTag, genres: editSelectedGenres, location: wishlist ? 'Wishlist' : loc, read, rating, checkoutDate: b?.checkoutDate||'', borrowedBy: b?.borrowedBy||'', ..._editDesign });
     if (oldRating !== rating) updateGlobalRating(title, author, oldRating, rating);
     closeModal('editModal');
     showStatus('Saved!', 'success');
@@ -4934,6 +5016,135 @@ window.openEditFromInfo = () => {
   const id = _bookInfoId;
   closeModal('bookInfoModal');
   setTimeout(() => openEditModal(id), 220);
+};
+
+// ── BOOK DESIGN CUSTOMIZER ────────────────────────────────────────────────────
+window.toggleDesignSection = () => {
+  const body = document.getElementById('editDesignBody');
+  const chevron = document.getElementById('designChevron');
+  if (!body) return;
+  const opening = body.style.display === 'none';
+  body.style.display = opening ? '' : 'none';
+  if (chevron) chevron.style.transform = opening ? 'rotate(180deg)' : '';
+  if (opening) _renderDesignCustomizer();
+};
+
+function _resolvedDesign() {
+  const b = books.find(x => x.id === editingId) || { id: editingId || '_preview' };
+  return _bookDesign({ ...b, ..._editDesign });
+}
+
+function _renderDesignCustomizer() {
+  const b = books.find(x => x.id === editingId) || {};
+  const d = _resolvedDesign();
+  const previewBook = {
+    ...b,
+    title:  document.getElementById('editTitle')?.value  || b.title  || 'Book Title',
+    author: document.getElementById('editAuthor')?.value || b.author || 'Author',
+    genres: [...(editSelectedGenres || b.genres || [])],
+    ..._editDesign,
+  };
+
+  // Front preview
+  const frontEl = document.getElementById('designPreviewFront');
+  if (frontEl) { frontEl.innerHTML = _miniBookCardHtml(previewBook); refreshIcons(); }
+
+  // Spine preview
+  const spineEl = document.getElementById('designPreviewSpine');
+  if (spineEl) { spineEl.innerHTML = _shelfSpineHtml(previewBook, false, false); refreshIcons(); }
+
+  // Palette swatches
+  const palRow = document.getElementById('designPaletteRow');
+  if (palRow) palRow.innerHTML = _REC_PALETTES.map((p, i) =>
+    `<div class="pal-swatch${d.palIdx === i ? ' active' : ''}" style="background:${p.bg}" onclick="setDesignPal(${i})"></div>`
+  ).join('');
+
+  // Pattern swatches (show pattern on the current palette bg)
+  const patRow = document.getElementById('designPatternRow');
+  if (patRow) patRow.innerHTML = _REC_PATTERNS.map((p, i) => {
+    const label = i === 0 ? '<span style="font-size:9px;color:rgba(255,255,255,0.4);line-height:1;">None</span>' : '';
+    return `<div class="pat-swatch${d.patIdx === i ? ' active' : ''}" style="background:${d.pal.bg};${p ? p+';' : ''}display:flex;align-items:center;justify-content:center;" onclick="setDesignPat(${i})">${label}</div>`;
+  }).join('');
+
+  // Frame buttons
+  const frmRow = document.getElementById('designFrameRow');
+  const frameLabels = ['Single', 'Double', 'Ornate', 'Lines'];
+  if (frmRow) frmRow.innerHTML = _REC_FRAME_STYLES.map((f, i) =>
+    `<button class="design-pill${d.frameIdx === i ? ' active' : ''}" onclick="setDesignFrame(${i})">${frameLabels[i]}</button>`
+  ).join('');
+
+  // Corner swatches
+  const cornerRow = document.getElementById('designCornerRow');
+  if (cornerRow) {
+    const noneSwatch = `<div class="corner-swatch${d.cornerIdx === -1 ? ' active' : ''}" onclick="setDesignCorner(-1)"><span class="corner-none-label">—</span></div>`;
+    cornerRow.innerHTML = noneSwatch + _REC_CORNER_SVGS.map((svg, i) =>
+      `<div class="corner-swatch${d.cornerIdx === i ? ' active' : ''}" style="color:${d.pal.ac}" onclick="setDesignCorner(${i})">${svg.replace(/viewBox="0 0 36 36"/, 'viewBox="0 0 36 36" style="width:22px;height:22px;"')}</div>`
+    ).join('');
+  }
+
+  // Divider options
+  const divRow = document.getElementById('designDividerRow');
+  const divLabels = ['— Plain', '-- Dashed', '· · Dots'];
+  if (divRow) divRow.innerHTML = _REC_DIVIDER_STYLES.map((s, i) =>
+    `<button class="design-pill${d.divider === i ? ' active' : ''}" onclick="setDesignDiv(${i})">${divLabels[i]}</button>`
+  ).join('');
+
+  // Title font list
+  const titleFontRow = document.getElementById('designTitleFontRow');
+  if (titleFontRow) titleFontRow.innerHTML = _DESIGN_TITLE_FONTS.map(f =>
+    `<div class="font-opt${_editDesign.designTitleFont === f.value ? ' active' : ''}" style="${f.value ? 'font-family:'+f.value+';' : ''}" onclick="setDesignTitleFont(${JSON.stringify(f.value)})">${f.name}</div>`
+  ).join('');
+
+  // Secondary font list
+  const secFontRow = document.getElementById('designSecFontRow');
+  if (secFontRow) secFontRow.innerHTML = _DESIGN_SEC_FONTS.map(f =>
+    `<div class="font-opt${_editDesign.designSecFont === f.value ? ' active' : ''}" style="${f.value ? 'font-family:'+f.value+';' : ''}" onclick="setDesignSecFont(${JSON.stringify(f.value)})">${f.name}</div>`
+  ).join('');
+
+  // Copy to series visibility
+  const seriesRow = document.getElementById('designCopySeriesRow');
+  if (seriesRow) {
+    const hasSeries = !!(b.series && books.filter(x => x.series === b.series).length > 1);
+    seriesRow.style.display = hasSeries ? '' : 'none';
+  }
+}
+
+function _applyDesignChange(key, value) {
+  _editDesign[key] = value;
+  _renderDesignCustomizer();
+}
+
+window.setDesignPal   = i  => _applyDesignChange('designPalIdx',    i);
+window.setDesignPat   = i  => _applyDesignChange('designPatIdx',    i);
+window.setDesignFrame = i  => _applyDesignChange('designFrame',     i);
+window.setDesignCorner= i  => _applyDesignChange('designCorner',    i);
+window.setDesignDiv   = i  => _applyDesignChange('designDivider',   i);
+window.setDesignTitleFont = v => _applyDesignChange('designTitleFont', v);
+window.setDesignSecFont   = v => _applyDesignChange('designSecFont',   v);
+
+window.resetBookDesign = () => {
+  _editDesign = {
+    designPalIdx: null, designPatIdx: null, designFrame: null,
+    designCorner: null, designDivider: null, designTitleFont: null, designSecFont: null,
+  };
+  _renderDesignCustomizer();
+};
+
+window.copyDesignToSeries = async () => {
+  const b = books.find(x => x.id === editingId);
+  if (!b || !b.series) return;
+  const btn = document.querySelector('.copy-series-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Copying…'; }
+  try {
+    const seriesBooks = books.filter(x => x.series === b.series && x.id !== editingId);
+    await Promise.all(seriesBooks.map(sb => updateBook(sb.id, { ..._editDesign })));
+    seriesBooks.forEach(sb => Object.assign(sb, _editDesign));
+    showStatus(`Design copied to ${seriesBooks.length} book${seriesBooks.length !== 1 ? 's' : ''} in the series!`, 'success');
+    setTimeout(hideStatus, 2500);
+  } catch(e) {
+    showStatus('Error copying design.', 'error'); setTimeout(hideStatus, 3000);
+  }
+  if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="copy"></i> Copy Design to Full Series'; refreshIcons(); }
 };
 
 window.openGlobalBookInfo = (globalId) => {
@@ -5846,6 +6057,51 @@ function _bookSeed(id, offset) {
   return h;
 }
 
+function _bookDesign(b) {
+  const seed = _bookSeed(b.id);
+  const palIdx    = (b.designPalIdx   != null) ? b.designPalIdx   : (seed % _REC_PALETTES.length);
+  const patIdx    = (b.designPatIdx   != null) ? b.designPatIdx   : ((seed >>> 3) % _REC_PATTERNS.length);
+  const frameIdx  = (b.designFrame    != null) ? b.designFrame    : ((seed >>> 5) % _REC_FRAME_STYLES.length);
+  const cornerIdx = (b.designCorner   != null) ? b.designCorner   : ((seed >>> 7) % _REC_CORNER_SVGS.length);
+  const divider   = (b.designDivider  != null) ? b.designDivider  : ((seed >>> 9) % _REC_DIVIDER_STYLES.length);
+  return {
+    pal:       _REC_PALETTES[palIdx]  || _REC_PALETTES[0],
+    pat:       _REC_PATTERNS[patIdx]  || '',
+    frame:     _REC_FRAME_STYLES[frameIdx] || _REC_FRAME_STYLES[0],
+    cornerSvg: cornerIdx === -1 ? '' : (_REC_CORNER_SVGS[cornerIdx] || ''),
+    divStyle:  _REC_DIVIDER_STYLES[divider] || 'plain',
+    titleFont: b.designTitleFont || null,
+    secFont:   b.designSecFont   || null,
+    palIdx, patIdx, frameIdx, cornerIdx, divider,
+  };
+}
+
+const _DESIGN_TITLE_FONTS = [
+  { name: 'Auto (by genre)', value: null },
+  { name: 'Playfair Display', value: "'Playfair Display', serif" },
+  { name: 'Cinzel Decorative', value: "'Cinzel Decorative', serif" },
+  { name: 'Cinzel', value: "'Cinzel', serif" },
+  { name: 'Cormorant Garamond', value: "'Cormorant Garamond', serif" },
+  { name: 'IM Fell English', value: "'IM Fell English', serif" },
+  { name: 'Orbitron', value: "'Orbitron', sans-serif" },
+  { name: 'Special Elite', value: "'Special Elite', cursive" },
+  { name: 'Rye', value: "'Rye', cursive" },
+  { name: 'Pacifico', value: "'Pacifico', cursive" },
+  { name: 'Nunito', value: "'Nunito', sans-serif" },
+  { name: 'Creepster', value: "'Creepster', cursive" },
+  { name: 'DM Sans', value: "'DM Sans', sans-serif" },
+];
+
+const _DESIGN_SEC_FONTS = [
+  { name: 'DM Sans (default)', value: null },
+  { name: 'Playfair Display', value: "'Playfair Display', serif" },
+  { name: 'Cinzel', value: "'Cinzel', serif" },
+  { name: 'Cormorant Garamond', value: "'Cormorant Garamond', serif" },
+  { name: 'IM Fell English', value: "'IM Fell English', serif" },
+  { name: 'Orbitron', value: "'Orbitron', sans-serif" },
+  { name: 'Nunito', value: "'Nunito', sans-serif" },
+];
+
 function _ordinal(n) {
   const s = ['th','st','nd','rd'], v = n % 100;
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
@@ -5933,8 +6189,8 @@ const _GENRE_FONT = {
 };
 const _FONT_SKIP_GENRES = new Set(['Young Adult', 'Adult', 'New Adult']);
 
-function _miniTitleHtml(title, genres) {
-  const fontFamily = (genres||[]).filter(g => !_FONT_SKIP_GENRES.has(g)).reduce((f, g) => f || _GENRE_FONT[g], null);
+function _miniTitleHtml(title, genres, fontOverride) {
+  const fontFamily = fontOverride || (genres||[]).filter(g => !_FONT_SKIP_GENRES.has(g)).reduce((f, g) => f || _GENRE_FONT[g], null);
   const fStyle = fontFamily ? `font-family:${fontFamily};` : '';
   const len = (title||'').length;
   const fs = len <= 8 ? 17 : len <= 14 ? 15 : len <= 22 ? 13 : len <= 32 ? 11 : 10;
