@@ -1440,8 +1440,6 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
     <div class="discover-tabs" id="discoverTabBar" style="display:none">
       <button class="dtab active" id="dtab-find" onclick="setDiscoverTab('find')">Find My Next Book</button>
       <button class="dtab" id="dtab-global" onclick="setDiscoverTab('global')">Global Library</button>
-      <button class="dtab" id="dtab-authors" onclick="setDiscoverTab('authors')">Authors</button>
-      <button class="dtab" id="dtab-genres" onclick="setDiscoverTab('genres')">Genres</button>
     </div>
     <div class="subheader-stats" id="subheaderStats">
       <div class="stat stat-clickable active" id="statCardAll" onclick="setTopFilter('all')"><div class="stat-num" id="statTotal">0</div><div class="stat-label">Books</div></div>
@@ -1480,8 +1478,6 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
   <!-- Discover page: non-global tab panels (tab bar lives in subheader above) -->
   <div id="page-discover" style="display:none">
     <div id="dtab-panel-find"></div>
-    <div id="dtab-panel-authors" style="display:none"></div>
-    <div id="dtab-panel-genres" style="display:none"></div>
   </div>
 
   <div class="status-bar" id="statusBar"></div>
@@ -5060,7 +5056,7 @@ function _renderBookInfoBody(b) {
 
   const amazonQuery = encodeURIComponent([b.title, b.author].filter(Boolean).join(' '));
   const amazonUrl = `https://www.amazon.com/s?k=${amazonQuery}&tag=${AMAZON_AFFILIATE_TAG}`;
-  const amazonBtn = `<div class="info-section"><a href="${amazonUrl}" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:11px;background:#FF9900;border:none;border-radius:var(--radius-sm);color:#111;font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif;text-decoration:none;box-sizing:border-box;"><i data-lucide="shopping-cart" style="width:15px;height:15px;flex-shrink:0;"></i> Buy on Amazon</a></div>`;
+  const amazonBtn = `<div class="info-section"><a href="${amazonUrl}" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:11px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:var(--bg);font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif;text-decoration:none;box-sizing:border-box;"><i data-lucide="shopping-cart" style="width:15px;height:15px;flex-shrink:0;"></i> Buy on Amazon</a></div>`;
 
   const bodyEl = document.getElementById('bookInfoBody');
   bodyEl.innerHTML =
@@ -5383,7 +5379,7 @@ function _renderGlobalBookInfoBody(b) {
   const amazonQuery2 = encodeURIComponent([b.title, b.author].filter(Boolean).join(' '));
   const amazonUrl2 = `https://www.amazon.com/s?k=${amazonQuery2}&tag=${AMAZON_AFFILIATE_TAG}`;
   const amazonBtn2 = `<div class="info-section">
-    <a href="${amazonUrl2}" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:11px;background:#FF9900;border:none;border-radius:var(--radius-sm);color:#111;font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif;text-decoration:none;box-sizing:border-box;">
+    <a href="${amazonUrl2}" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:11px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:var(--bg);font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif;text-decoration:none;box-sizing:border-box;">
       <i data-lucide="shopping-cart" style="width:15px;height:15px;flex-shrink:0;"></i> Buy on Amazon
     </a>
   </div>`;
@@ -6543,6 +6539,13 @@ function _recInsideHtml(b) {
     actionsHtml += `</div>`;
   }
 
+  const recAmazonUrl = `https://www.amazon.com/s?k=${encodeURIComponent((b.title||'')+' '+(b.author||''))}&tag=${AMAZON_AFFILIATE_TAG}`;
+  const recAmazonBtn = `<div class="rec-page-section">
+    <a href="${recAmazonUrl}" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:10px;background:transparent;border:1.5px solid #6a4010;border-radius:8px;color:#6a4010;font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif;text-decoration:none;box-sizing:border-box;">
+      <i data-lucide="shopping-cart" style="width:14px;height:14px;flex-shrink:0;"></i> Buy on Amazon
+    </a>
+  </div>`;
+
   return `<div class="rec-inside" data-bookid="${bid}">
   <div class="rec-page-crease"></div>
   <div class="rec-right-page">
@@ -6556,6 +6559,7 @@ function _recInsideHtml(b) {
     ${globalRatingHtml}
     ${statusHtml}
     ${actionsHtml}
+    ${recAmazonBtn}
     <div class="rec-page-section">
       <div class="rec-page-section-label">Friends who've read this</div>
       <div id="rfriends-${bid}" class="rec-page-section-body rec-page-loading">Loading…</div>
@@ -7728,15 +7732,13 @@ function updateStatCardLabels(page) {
 window.setDiscoverTab = (tab) => {
   currentDiscoverTab = tab;
   // Update discover tab button active states
-  ['find','global','authors','genres'].forEach(t => {
+  ['find','global'].forEach(t => {
     document.getElementById('dtab-' + t)?.classList.toggle('active', t === tab);
   });
   const isGlobal = tab === 'global';
   // Show/hide non-global discover panels
-  ['find','authors','genres'].forEach(t => {
-    const el = document.getElementById('dtab-panel-' + t);
-    if (el) el.style.display = (!isGlobal && t === tab) ? '' : 'none';
-  });
+  const findPanel = document.getElementById('dtab-panel-find');
+  if (findPanel) findPanel.style.display = (!isGlobal && tab === 'find') ? '' : 'none';
   // Stats row: only visible on global tab (tab bar itself stays in subheader always)
   const stats = document.getElementById('subheaderStats');
   if (stats) stats.style.display = isGlobal ? '' : 'none';
@@ -7784,8 +7786,6 @@ window.setDiscoverTab = (tab) => {
   } else {
     currentPage = 'discover';
     if (tab === 'find') _renderDiscoverFindTab();
-    else if (tab === 'authors') _renderDiscoverAuthorsTab();
-    else if (tab === 'genres') _renderDiscoverGenresTab();
   }
   updateHeaderSpacer();
 };
