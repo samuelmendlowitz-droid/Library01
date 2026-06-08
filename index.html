@@ -4832,13 +4832,13 @@ function _renderBookInfoBody(b) {
   </div>`;
 
   const myRating = b.rating || 0;
-  const myRatingSection = b.read ? `<div class="info-section">
+  const myRatingSection = `<div class="info-section">
     <span class="info-section-label">My Rating</span>
     <div style="display:flex;align-items:center;gap:2px;margin-top:2px;">
       ${Array.from({length:5}, (_,i) => `<button class="info-star-btn" onclick="setInfoStarRating(${i+1})" style="color:${i < myRating ? '#f5a623' : 'var(--surface3)'}">★</button>`).join('')}
       <span style="font-size:13px;color:var(--text3);margin-left:6px;">${myRating ? myRating+'/5' : 'tap to rate'}</span>
     </div>
-  </div>` : '';
+  </div>`;
 
   let checkoutSection = '';
   if (isWishlist) {
@@ -4873,13 +4873,18 @@ function _renderBookInfoBody(b) {
     </div>`
     + seriesSection + genresSection + locSection + statusSection + myRatingSection + checkoutSection;
   const infoRating = b.rating || 0;
-  bodyEl.innerHTML += _buildReviewsSection(!!(b.read && infoRating > 0), infoRating);
+  bodyEl.innerHTML += _buildReviewsSection(!!(infoRating > 0), infoRating);
   refreshIcons();
   if (_reviewBookGlobalId !== gbId) {
     _reviewSort = 'newest'; _reviewFilter = null; _reviewsData = [];
     _loadAndRenderReviews(gbId);
   } else {
     _renderReviewList();
+    if (currentUser) {
+      const myReview = _reviewsData.find(r => r.userId === currentUser.uid);
+      const ta = document.getElementById('review-textarea');
+      if (ta && myReview) ta.value = myReview.text || '';
+    }
   }
 }
 
@@ -4908,6 +4913,21 @@ window.setInfoStarRating = async (val) => {
     await updateBook(_bookInfoId, { rating: newVal });
     if (oldRating !== newVal) updateGlobalRating(b.title, b.author, oldRating, newVal);
   } catch(e) { b.rating = oldRating; _renderBookInfoBody(b); }
+};
+
+window.setGlobalInfoStarRating = async (val) => {
+  const b = globalBookCache.find(x => x.id === _bookInfoId);
+  if (!b) return;
+  const personal = books.find(x => createGlobalBookId(x.title||'', x.author||'') === _bookInfoId);
+  if (!personal) return;
+  const oldRating = personal.rating || 0;
+  const newVal = oldRating === val ? 0 : val;
+  personal.rating = newVal;
+  _renderGlobalBookInfoBody(b);
+  try {
+    await updateBook(personal.id, { rating: newVal });
+    if (oldRating !== newVal) updateGlobalRating(b.title, b.author, oldRating, newVal);
+  } catch(e) { personal.rating = oldRating; _renderGlobalBookInfoBody(b); }
 };
 
 window.openEditFromInfo = () => {
@@ -4997,6 +5017,15 @@ function _renderGlobalBookInfoBody(b) {
     actions += `</div>`;
   }
 
+  const globalInfoRating = personal ? (personal.rating || 0) : 0;
+  const myRatingSection = personal ? `<div class="info-section">
+    <span class="info-section-label">My Rating</span>
+    <div style="display:flex;align-items:center;gap:2px;margin-top:2px;">
+      ${Array.from({length:5}, (_,i) => `<button class="info-star-btn" onclick="setGlobalInfoStarRating(${i+1})" style="color:${i < globalInfoRating ? '#f5a623' : 'var(--surface3)'}">★</button>`).join('')}
+      <span style="font-size:13px;color:var(--text3);margin-left:6px;">${globalInfoRating ? globalInfoRating+'/5' : 'tap to rate'}</span>
+    </div>
+  </div>` : '';
+
   const bodyEl = document.getElementById('bookInfoBody');
   bodyEl.innerHTML =
     `<div style="padding-bottom:16px;border-bottom:1px solid var(--border);">
@@ -5004,15 +5033,19 @@ function _renderGlobalBookInfoBody(b) {
       <div class="info-author">by ${esc(b.author||'')}</div>
       ${communityRating}
     </div>`
-    + seriesSection + genresSection + popularitySection + statusSection + actions;
-  const globalInfoRating = personal ? (personal.rating || 0) : 0;
-  bodyEl.innerHTML += _buildReviewsSection(globalInfoRating > 0, globalInfoRating);
+    + seriesSection + genresSection + popularitySection + statusSection + myRatingSection + actions;
+  bodyEl.innerHTML += _buildReviewsSection(!!(personal && globalInfoRating > 0), globalInfoRating);
   refreshIcons();
   if (_reviewBookGlobalId !== b.id) {
     _reviewSort = 'newest'; _reviewFilter = null; _reviewsData = [];
     _loadAndRenderReviews(b.id);
   } else {
     _renderReviewList();
+    if (currentUser) {
+      const myReview = _reviewsData.find(r => r.userId === currentUser.uid);
+      const ta = document.getElementById('review-textarea');
+      if (ta && myReview) ta.value = myReview.text || '';
+    }
   }
 }
 
