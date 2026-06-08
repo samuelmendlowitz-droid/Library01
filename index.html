@@ -6882,9 +6882,30 @@ const _GENRE_LUCIDE = {
   'Spirituality':          'sun',
   'Medical':               'stethoscope',
   'Academic':              'graduation-cap',
+  'Holocaust':             'star',
+  'Devastating':           'columns-3',
+  'Dark Romance':          'heart-crack',
+  'New Adult':             'graduation-cap',
+  'Billionaire':           'dollar-sign',
+  'Sad':                   'droplets',
+  'Warmhearted':           'heart-pulse',
+  'Supernatural':          'bat',
+  'Apocalyptic':           'cloud-lightning',
+  'Mafia':                 'user-round',
 };
 const _GENRE_SVG = {
   'Mythology':    `<svg class="genre-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 11V7L6 5L7 3L8 5L7 7M12 11V6L11 4L12 2L13 4L12 6M17 11V7L16 5L17 3L18 5L17 7M7 11h10M12 11v11"/></svg>`,
+  'Holocaust':    `<svg class="genre-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><polygon points="12,2 22,19 2,19"/><polygon points="12,22 2,5 22,5"/></svg>`,
+  'Devastating':  `<svg class="genre-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h10M9 3v15M15 3v15M7 18h10M5 21h14"/><path d="M12 3l-1.5 4.5 3 3.5-3 3.5 1.5 4.5"/></svg>`,
+  'Dark Romance': `<svg class="genre-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/><path d="M12 6l1.5 4-2.5 2.5 2.5 2-1.5 6.5"/></svg>`,
+  'New Adult':    `<svg class="genre-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10L12 3 2 10l10 7 10-7z"/><path d="M6 12.5v4.5c0 2.76 2.69 5 6 5s6-2.24 6-5v-4.5"/><line x1="22" y1="10" x2="22" y2="16"/><circle cx="22" cy="16.5" r="1.5" fill="currentColor" stroke="none"/></svg>`,
+  'Finance':      `<svg class="genre-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`,
+  'Billionaire':  `<svg class="genre-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`,
+  'Sad':          `<svg class="genre-svg genre-filled" viewBox="0 0 24 24"><path d="M12 3C9.5 6.5 7 10 7 14a5 5 0 0 0 10 0C17 10 14.5 6.5 12 3z"/></svg>`,
+  'Warmhearted':  `<svg class="genre-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/><polyline points="4,13 6.5,13 8,10 10,15.5 12,11.5 14,15.5 16,10 17.5,13 20,13"/></svg>`,
+  'Supernatural': `<svg class="genre-svg genre-filled" viewBox="0 0 24 24"><path d="M12 8.5c-1.2 0-2 1.1-2 2.5-1.7-1.1-4.5-1.4-6.2-.2 1.5.9 2 2.7 3.6 2.7-1 1-1.5 2.1-1 3.3 2.1-1.4 4.2-1.7 5.6-.9 1.4-.8 3.5-.5 5.6.9.5-1.2 0-2.3-1-3.3 1.6 0 2.1-1.8 3.6-2.7-1.7-1.2-4.5-.9-6.2.2 0-1.4-.8-2.5-2-2.5z"/><path d="M10.5 8.5V6.5M13.5 8.5V6.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>`,
+  'Apocalyptic':  `<svg class="genre-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="22" x2="12" y2="16"/><path d="M9 16h6"/><path d="M4 12.5C4 8.36 7.58 5 12 5s8 3.36 8 7.5"/><path d="M4 12.5C5 15.5 8.2 17 12 17s7-1.5 8-4.5"/></svg>`,
+  'Mafia':        `<svg class="genre-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 13V10a5 5 0 0 1 10 0v3"/><path d="M9.5 6a2.5 2.5 0 0 1 5 0"/><path d="M7 13h10"/><ellipse cx="12" cy="15.5" rx="10" ry="2.5"/></svg>`,
 };
 function _genreIconHtml(genre, cls) {
   if (_GENRE_SVG[genre]) {
