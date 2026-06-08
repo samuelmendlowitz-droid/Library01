@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>document.documentElement.setAttribute('data-theme',localStorage.getItem('appTheme')||'dark-blue');</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -30,23 +31,80 @@
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <style>
 :root {
-  --bg: #060608;
-  --surface: #0c0d1c;
-  --surface2: #111326;
-  --surface3: #181a30;
-  --border: #22253e;
-  --accent: #c9a96e;
-  --accent2: #dfc07e;
-  --text: #e8d4a0;
-  --text2: #a89060;
-  --text3: #5a6a88;
-  --read: #4caf82;
-  --danger: #e07060;
-  --borrowed: #c97040;
-  --radius: 14px;
-  --radius-sm: 8px;
+  --bg: #060608; --surface: #0c0d1c; --surface2: #111326; --surface3: #181a30;
+  --border: #22253e; --accent: #c9a96e; --accent2: #dfc07e;
+  --text: #e8d4a0; --text2: #a89060; --text3: #5a6a88;
+  --read: #4caf82; --danger: #e07060; --borrowed: #c97040;
+  --radius: 14px; --radius-sm: 8px;
+  --header-bg: #06070c;
+  --login-bg: radial-gradient(ellipse at 50% 30%, #12142a 0%, #060608 70%);
   --grain: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='lf'><feTurbulence type='fractalNoise' baseFrequency='0.9 0.4' numOctaves='4' seed='7' stitchTiles='stitch'/><feColorMatrix type='matrix' values='0 0 0 0 0.04 0 0 0 0 0.08 0 0 0 0 0.18 0 0 0 0.28 0'/></filter><rect width='200' height='200' filter='url(%23lf)'/></svg>");
 }
+[data-theme="dark-green"] {
+  --bg: #050806; --surface: #0c1a0f; --surface2: #112216; --surface3: #162b1c;
+  --border: #1e3828; --text: #d0ecd5; --text2: #7aac84; --text3: #3c6848;
+  --header-bg: #040705; --login-bg: radial-gradient(ellipse at 50% 30%, #162b1c 0%, #050806 70%);
+}
+[data-theme="dark-red"] {
+  --bg: #080505; --surface: #1c0c0c; --surface2: #241012; --surface3: #2c1516;
+  --border: #3e2020; --text: #f0d5d5; --text2: #a87878; --text3: #685050;
+  --header-bg: #060404; --login-bg: radial-gradient(ellipse at 50% 30%, #2c1516 0%, #080505 70%);
+}
+[data-theme="dark-purple"] {
+  --bg: #07060a; --surface: #120a20; --surface2: #180e2a; --surface3: #1e1234;
+  --border: #2c1e48; --text: #ddd0f8; --text2: #9068c8; --text3: #564880;
+  --header-bg: #060409; --login-bg: radial-gradient(ellipse at 50% 30%, #1e1234 0%, #07060a 70%);
+}
+[data-theme="dark-orange"] {
+  --bg: #080706; --surface: #1e1408; --surface2: #26190c; --surface3: #2e1f10;
+  --border: #422e18; --text: #f8e5c5; --text2: #c09058; --text3: #685030;
+  --header-bg: #060506; --login-bg: radial-gradient(ellipse at 50% 30%, #2e1f10 0%, #080706 70%);
+}
+[data-theme="light-blue"] {
+  --bg: #f2f6fa; --surface: #e3edf6; --surface2: #d6e5f2; --surface3: #c8dcee;
+  --border: #a4c2d8; --accent: #9a7230; --accent2: #b08840;
+  --text: #1a2d40; --text2: #30567a; --text3: #5c84a8;
+  --read: #2a8050; --danger: #b84040; --borrowed: #a04020;
+  --header-bg: #e3edf6; --login-bg: radial-gradient(ellipse at 50% 30%, #d6e5f2 0%, #f2f6fa 70%);
+  --grain: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='lf'><feTurbulence type='fractalNoise' baseFrequency='0.9 0.4' numOctaves='4' seed='7' stitchTiles='stitch'/><feColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.05 0'/></filter><rect width='200' height='200' filter='url(%23lf)'/></svg>");
+}
+[data-theme="light-green"] {
+  --bg: #f2f8f3; --surface: #e0f0e4; --surface2: #d2e8d6; --surface3: #c2e0c8;
+  --border: #8ac8a4; --accent: #9a7230; --accent2: #b08840;
+  --text: #142e1c; --text2: #2a5c3a; --text3: #508868;
+  --read: #2a8050; --danger: #b84040; --borrowed: #a04020;
+  --header-bg: #e0f0e4; --login-bg: radial-gradient(ellipse at 50% 30%, #d2e8d6 0%, #f2f8f3 70%);
+  --grain: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='lf'><feTurbulence type='fractalNoise' baseFrequency='0.9 0.4' numOctaves='4' seed='7' stitchTiles='stitch'/><feColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.05 0'/></filter><rect width='200' height='200' filter='url(%23lf)'/></svg>");
+}
+[data-theme="light-red"] {
+  --bg: #faf2f2; --surface: #f4e0e0; --surface2: #ecd6d5; --surface3: #e4caca;
+  --border: #d0a0a0; --accent: #9a7230; --accent2: #b08840;
+  --text: #2e1414; --text2: #6a2a2a; --text3: #9a6060;
+  --read: #2a8050; --danger: #a83030; --borrowed: #a04020;
+  --header-bg: #f4e0e0; --login-bg: radial-gradient(ellipse at 50% 30%, #ecd6d5 0%, #faf2f2 70%);
+  --grain: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='lf'><feTurbulence type='fractalNoise' baseFrequency='0.9 0.4' numOctaves='4' seed='7' stitchTiles='stitch'/><feColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.05 0'/></filter><rect width='200' height='200' filter='url(%23lf)'/></svg>");
+}
+[data-theme="light-purple"] {
+  --bg: #f6f2fa; --surface: #ede6f6; --surface2: #e2d8f0; --surface3: #d8ccec;
+  --border: #bca8d8; --accent: #9a7230; --accent2: #b08840;
+  --text: #201430; --text2: #482c78; --text3: #7860a8;
+  --read: #2a8050; --danger: #b84040; --borrowed: #a04020;
+  --header-bg: #ede6f6; --login-bg: radial-gradient(ellipse at 50% 30%, #e2d8f0 0%, #f6f2fa 70%);
+  --grain: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='lf'><feTurbulence type='fractalNoise' baseFrequency='0.9 0.4' numOctaves='4' seed='7' stitchTiles='stitch'/><feColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.05 0'/></filter><rect width='200' height='200' filter='url(%23lf)'/></svg>");
+}
+[data-theme="light-orange"] {
+  --bg: #faf6f0; --surface: #f6ecde; --surface2: #f0e2cc; --surface3: #ead6ba;
+  --border: #d4a868; --accent: #9a7230; --accent2: #b08840;
+  --text: #2e1c08; --text2: #6a3c10; --text3: #9a6838;
+  --read: #2a8050; --danger: #b84040; --borrowed: #a04020;
+  --header-bg: #f6ecde; --login-bg: radial-gradient(ellipse at 50% 30%, #f0e2cc 0%, #faf6f0 70%);
+  --grain: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='lf'><feTurbulence type='fractalNoise' baseFrequency='0.9 0.4' numOctaves='4' seed='7' stitchTiles='stitch'/><feColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.05 0'/></filter><rect width='200' height='200' filter='url(%23lf)'/></svg>");
+}
+[data-theme^="light-"] { color-scheme: light; }
+[data-theme^="light-"] .header { border-bottom: 1px solid var(--border) !important; }
+[data-theme^="light-"] .modal-overlay,
+[data-theme^="light-"] .settings-overlay { background: rgba(0,0,0,0.35) !important; }
+[data-theme^="light-"] .login-logo { filter: drop-shadow(0 2px 6px rgba(0,0,0,0.15)) !important; }
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); background-image: var(--grain); color: var(--text); min-height: 100vh; overflow-x: hidden; }
 
@@ -58,7 +116,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
   align-items: center;
   justify-content: center;
   padding: 40px 24px;
-  background: var(--grain), radial-gradient(ellipse at 50% 30%, #12142a 0%, #060608 70%);
+  background: var(--grain), var(--login-bg);
 }
 .login-logo { width: 100px; margin-bottom: 28px; display: block; margin-left: auto; margin-right: auto; color: var(--accent); filter: drop-shadow(0 2px 5px rgba(0,0,20,0.97)) drop-shadow(0 -1px 0 rgba(220,185,80,0.16)); }
 .header-logo { height: 34px; width: auto; color: var(--accent); filter: drop-shadow(0 1px 3px rgba(0,0,20,0.9)); vertical-align: -8px; }
@@ -80,7 +138,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 
 /* HEADER */
 .header {
-  background: var(--grain), linear-gradient(180deg, #06070c 0%, #050507 100%);
+  background: var(--grain), var(--header-bg);
   padding: 52px 20px 20px;
   border-bottom: 1px solid rgba(20, 35, 60, 0.4);
   position: fixed; top: 0; left: 0; right: 0; z-index: 100;
@@ -2124,6 +2182,11 @@ All columns other than Author, Title, Series and Genres should be left empty or 
 
       <!-- HOME menu -->
       <div class="settings-panel active" id="spanel-home">
+        <button class="settings-menu-item" onclick="openSettingsSection('appearance')">
+          <span class="smi-icon"><i data-lucide="sun-moon"></i></span>
+          <div class="smi-text"><div class="smi-title">Appearance</div><div class="smi-sub">Theme color and dark / light mode</div></div>
+          <span class="smi-arrow"><i data-lucide="chevron-right"></i></span>
+        </button>
         <button class="settings-menu-item" onclick="openSettingsSection('manage')">
           <span class="smi-icon"><i data-lucide="tag"></i></span>
           <div class="smi-text"><div class="smi-title">Genres &amp; Locations</div><div class="smi-sub">Manage genre list and bookshelf locations</div></div>
@@ -2280,6 +2343,10 @@ All columns other than Author, Title, Series and Genres should be left empty or 
         <button class="btn-signout-settings" onclick="signOut()"><i data-lucide="log-out"></i> Sign Out</button>
       </div>
 
+      <!-- Appearance -->
+      <div class="settings-panel" id="spanel-appearance"></div>
+
+
     </div>
   </div>
 </div>
@@ -2365,6 +2432,7 @@ let currentSort = 'popularity-desc';
 let _personalSort = 'title-asc';
 let _globalSort   = 'popularity-desc';
 const AMAZON_AFFILIATE_TAG = 'samuelmendlow-20';
+let _appTheme = localStorage.getItem('appTheme') || 'dark-blue';
 let currentBookView = localStorage.getItem('bookView') || 'shelf'; // 'card' | 'book' | 'shelf'
 let filterPanelOpen = false;
 let sortPanelOpen = false;
@@ -3460,8 +3528,8 @@ function _seriesBoxSetHtml(books, isGlobal) {
   if (!books.length) return '';
   const first = books[0];
   const seriesSeed = _bookSeed(first.series || first.id, 7);
-  const boxPalIdx = seriesSeed % _REC_PALETTES.length;
-  const boxPal = _REC_PALETTES[boxPalIdx];
+  const boxPalIdx = seriesSeed % _activePalettes().length;
+  const boxPal = _activePalettes()[boxPalIdx];
   const boxPat = _REC_PATTERNS[(seriesSeed >>> 3) % _REC_PATTERNS.length];
   const genres = (first.genres||[]).filter(g => g !== 'Non-Fiction');
   const genreTagsHtml = genres.slice(0, 3).map(g =>
@@ -3735,7 +3803,7 @@ function _miniBookCardHtml(b) {
 
 function _miniGlobalBookCardHtml(b) {
   const seed = _bookSeed(b.id);
-  const pal = _REC_PALETTES[seed % _REC_PALETTES.length];
+  const pal = _activePalettes()[seed % _activePalettes().length];
   const pat = _REC_PATTERNS[(seed >>> 3) % _REC_PATTERNS.length];
   const frame = _REC_FRAME_STYLES[(seed >>> 5) % _REC_FRAME_STYLES.length];
   const cornerSvg = _REC_CORNER_SVGS[(seed >>> 7) % _REC_CORNER_SVGS.length] || '';
@@ -4948,11 +5016,7 @@ function _renderBookInfoBody(b) {
 
   const amazonQuery = encodeURIComponent([b.title, b.author].filter(Boolean).join(' '));
   const amazonUrl = `https://www.amazon.com/s?k=${amazonQuery}&tag=${AMAZON_AFFILIATE_TAG}`;
-  const amazonBtn = `<div class="info-section">
-    <a href="${amazonUrl}" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:11px;background:#FF9900;border:none;border-radius:var(--radius-sm);color:#111;font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif;text-decoration:none;box-sizing:border-box;">
-      <i data-lucide="shopping-cart" style="width:15px;height:15px;flex-shrink:0;"></i> Buy on Amazon
-    </a>
-  </div>`;
+  const amazonBtn = `<div class="info-section"><a href="${amazonUrl}" target="_blank" rel="noopener" style="display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:11px;background:#FF9900;border:none;border-radius:var(--radius-sm);color:#111;font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif;text-decoration:none;box-sizing:border-box;"><i data-lucide="shopping-cart" style="width:15px;height:15px;flex-shrink:0;"></i> Buy on Amazon</a></div>`;
 
   const bodyEl = document.getElementById('bookInfoBody');
   bodyEl.innerHTML =
@@ -6043,7 +6107,7 @@ async function _runRecommendationAlgorithm() {
 
 // ── BOOK STACK VISUALS ────────────────────────────────────────────────────────
 
-const _REC_PALETTES = [
+const _REC_PALETTES_DARK = [
   { bg:'#172540', fg:'#d8eaf8', ac:'#60a8e0' },   // deep navy
   { bg:'#3c1616', fg:'#f8ddd5', ac:'#d87060' },   // dark burgundy
   { bg:'#103424', fg:'#c8f0d8', ac:'#48b870' },   // forest green
@@ -6055,6 +6119,21 @@ const _REC_PALETTES = [
   { bg:'#1a0a3c', fg:'#d8ccf8', ac:'#7050d8' },   // indigo
   { bg:'#3c2800', fg:'#f8e4b0', ac:'#c88000' },   // dark ochre
 ];
+const _REC_PALETTES_LIGHT = [
+  { bg:'#dceef8', fg:'#142040', ac:'#2a7ab8' },   // pale blue
+  { bg:'#f8dcdc', fg:'#401414', ac:'#c03838' },   // pale rose
+  { bg:'#dcf4e4', fg:'#143020', ac:'#2a8848' },   // pale mint
+  { bg:'#ecdcf8', fg:'#281440', ac:'#7838c8' },   // pale lavender
+  { bg:'#faf0d8', fg:'#402800', ac:'#c08018' },   // pale amber
+  { bg:'#dcf0f4', fg:'#0e2e38', ac:'#1890b0' },   // pale teal
+  { bg:'#f8ece0', fg:'#401408', ac:'#c05820' },   // pale peach
+  { bg:'#dcf4ec', fg:'#0a3020', ac:'#209868' },   // pale sage
+  { bg:'#eaecf8', fg:'#1a1440', ac:'#4838c0' },   // pale indigo
+  { bg:'#fff0d8', fg:'#381e00', ac:'#b06000' },   // pale ochre
+];
+function _activePalettes() {
+  return _appTheme.startsWith('light') ? _REC_PALETTES_LIGHT : _REC_PALETTES_DARK;
+}
 
 const _REC_PATTERNS = [
   '',
@@ -6088,13 +6167,13 @@ function _bookSeed(id, offset) {
 
 function _bookDesign(b) {
   const seed = _bookSeed(b.id);
-  const palIdx    = (b.designPalIdx   != null) ? b.designPalIdx   : (seed % _REC_PALETTES.length);
+  const palIdx    = (b.designPalIdx   != null) ? b.designPalIdx   : (seed % _activePalettes().length);
   const patIdx    = (b.designPatIdx   != null) ? b.designPatIdx   : ((seed >>> 3) % _REC_PATTERNS.length);
   const frameIdx  = (b.designFrame    != null) ? b.designFrame    : ((seed >>> 5) % _REC_FRAME_STYLES.length);
   const cornerIdx = (b.designCorner   != null) ? b.designCorner   : ((seed >>> 7) % _REC_CORNER_SVGS.length);
   const divider   = (b.designDivider  != null) ? b.designDivider  : ((seed >>> 9) % _REC_DIVIDER_STYLES.length);
   return {
-    pal:       _REC_PALETTES[palIdx]  || _REC_PALETTES[0],
+    pal:       _activePalettes()[palIdx] || _activePalettes()[0],
     pat:       _REC_PATTERNS[patIdx]  || '',
     frame:     frameIdx < 0 ? '' : (_REC_FRAME_STYLES[frameIdx] || _REC_FRAME_STYLES[0]),
     cornerSvg: cornerIdx < 0 ? '' : (_REC_CORNER_SVGS[cornerIdx] || ''),
@@ -6255,8 +6334,8 @@ function _recTitleHtml(title, genres) {
 }
 
 function _recCoverHtml(b, seed, paletteIdxOverride) {
-  const palIdx   = paletteIdxOverride !== undefined ? paletteIdxOverride : (seed % _REC_PALETTES.length);
-  const pal      = _REC_PALETTES[palIdx];
+  const palIdx   = paletteIdxOverride !== undefined ? paletteIdxOverride : (seed % _activePalettes().length);
+  const pal      = _activePalettes()[palIdx];
   const pat      = _REC_PATTERNS[(seed >>> 3) % _REC_PATTERNS.length];
   const frame    = _REC_FRAME_STYLES[(seed >>> 5) % _REC_FRAME_STYLES.length];
   const cornerSvg = _REC_CORNER_SVGS[(seed >>> 7) % _REC_CORNER_SVGS.length] || '';
@@ -6601,8 +6680,8 @@ function _buildRecStack(el, result) {
   let prevPalIdx = -1;
   const slidesHtml = allBooks.map((b, i) => {
     const seed = _bookSeed(b.id || b.title || '', i);
-    let palIdx = seed % _REC_PALETTES.length;
-    if (palIdx === prevPalIdx) palIdx = (palIdx + 1) % _REC_PALETTES.length;
+    let palIdx = seed % _activePalettes().length;
+    if (palIdx === prevPalIdx) palIdx = (palIdx + 1) % _activePalettes().length;
     prevPalIdx = palIdx;
     const bookData = JSON.stringify({id:b.id||'',title:b.title||'',author:b.author||''}).replace(/'/g,"&apos;");
     return `<div class="rec-slide" data-book='${bookData}'>
@@ -7771,6 +7850,61 @@ document.addEventListener('change', e => {
 });
 
 // ════════════════════════════════════════════════════════════════════════════════
+// ── APP THEME ────────────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════════════════
+
+function _applyAppTheme(t) {
+  _appTheme = t;
+  document.documentElement.setAttribute('data-theme', t);
+  localStorage.setItem('appTheme', t);
+  try { applyFilters(); } catch(e) {}
+}
+
+window.setAppThemeMode = (mode) => {
+  const color = _appTheme.split('-')[1] || 'blue';
+  _applyAppTheme(`${mode}-${color}`);
+  _renderAppearancePanel();
+};
+
+window.setAppThemeColor = (color) => {
+  const mode = _appTheme.startsWith('light') ? 'light' : 'dark';
+  _applyAppTheme(`${mode}-${color}`);
+  _renderAppearancePanel();
+};
+
+function _renderAppearancePanel() {
+  const el = document.getElementById('spanel-appearance');
+  if (!el) return;
+  const isDark = !_appTheme.startsWith('light');
+  const activeColor = _appTheme.split('-')[1] || 'blue';
+  const colors = [
+    { key:'blue',   label:'Blue',   darkBg:'#0c0d1c', lightBg:'#e3edf6' },
+    { key:'green',  label:'Green',  darkBg:'#0c1a0f', lightBg:'#e0f0e4' },
+    { key:'red',    label:'Red',    darkBg:'#1c0c0c', lightBg:'#f4e0e0' },
+    { key:'purple', label:'Purple', darkBg:'#120a20', lightBg:'#ede6f6' },
+    { key:'orange', label:'Orange', darkBg:'#1e1408', lightBg:'#f6ecde' },
+  ];
+  const modeBtn = (mode, icon, label) => {
+    const on = (mode === 'dark') === isDark;
+    return `<button onclick="setAppThemeMode('${mode}')" style="flex:1;padding:13px 0;border-radius:var(--radius-sm);border:2px solid ${on ? 'var(--accent)' : 'var(--border)'};background:${on ? 'rgba(154,114,48,0.12)' : 'var(--surface2)'};color:${on ? 'var(--accent)' : 'var(--text2)'};font-size:14px;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all 0.15s;">${icon} ${label}</button>`;
+  };
+  const colorSwatches = colors.map(c => {
+    const on = c.key === activeColor;
+    const bg = isDark ? c.darkBg : c.lightBg;
+    return `<button onclick="setAppThemeColor('${c.key}')" style="display:flex;flex-direction:column;align-items:center;gap:5px;background:none;border:none;cursor:pointer;padding:0;">
+      <div style="width:46px;height:46px;border-radius:12px;background:${bg};border:3px solid ${on ? 'var(--accent)' : 'transparent'};outline:${on ? '2px solid var(--accent)' : 'none'};transform:${on ? 'scale(1.12)' : 'scale(1)'};transition:all 0.15s;box-shadow:0 2px 8px rgba(0,0,0,0.3);"></div>
+      <div style="font-size:11px;font-family:'DM Sans',sans-serif;color:${on ? 'var(--accent)' : 'var(--text3)'};">${c.label}</div>
+    </button>`;
+  }).join('');
+  el.innerHTML = `<div style="padding:4px 0 12px;">
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;color:var(--text3);margin-bottom:10px;">Mode</div>
+    <div style="display:flex;gap:10px;margin-bottom:28px;">${modeBtn('dark','🌙','Dark')}${modeBtn('light','☀️','Light')}</div>
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.7px;color:var(--text3);margin-bottom:14px;">Color</div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;">${colorSwatches}</div>
+  </div>`;
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
 // ── SETTINGS ─────────────────────────────────────────────────────────────────
 // ════════════════════════════════════════════════════════════════════════════════
 
@@ -7786,7 +7920,7 @@ window.openSettingsSection = (section) => {
   document.querySelectorAll('.settings-panel').forEach(p => p.classList.remove('active'));
   document.getElementById('spanel-' + section).classList.add('active');
   document.getElementById('settingsBackBtn').style.display = '';
-  const titles = { manage: 'Genres & Locations', borrowers: 'Borrower Log', importexport: 'Import / Export', account: 'Account' };
+  const titles = { manage: 'Genres & Locations', borrowers: 'Borrower Log', importexport: 'Import / Export', account: 'Account', appearance: 'Appearance' };
   document.getElementById('settingsTitle').textContent = titles[section] || 'Settings';
   if (section === 'borrowers') {
     borrowerLogTab = 'all';
@@ -7795,6 +7929,7 @@ window.openSettingsSection = (section) => {
     buildBorrowerLog();
   }
   if (section === 'account') { renderUserAvatarSection(); loadMyHighlights(); }
+  if (section === 'appearance') { _renderAppearancePanel(); }
   if (section === 'importexport') {
     const ownerSection = document.getElementById('ownerWipeSection');
     if (ownerSection) ownerSection.style.display = currentUser && currentUser.email === 'samuelmendlowitz@gmail.com' ? '' : 'none';
