@@ -2364,7 +2364,7 @@ let _discoverGenresListSort   = 'count-desc';
 let currentSort = 'popularity-desc';
 let _personalSort = 'title-asc';
 let _globalSort   = 'popularity-desc';
-let currentBookView = localStorage.getItem('bookView') || 'book'; // 'card' | 'book' | 'shelf'
+let currentBookView = localStorage.getItem('bookView') || 'shelf'; // 'card' | 'book' | 'shelf'
 let filterPanelOpen = false;
 let sortPanelOpen = false;
 let addSelectedGenres = [], editSelectedGenres = [];
@@ -5096,14 +5096,14 @@ function _renderDesignCustomizer() {
 
   // Title font list
   const titleFontRow = document.getElementById('designTitleFontRow');
-  if (titleFontRow) titleFontRow.innerHTML = _DESIGN_TITLE_FONTS.map(f =>
-    `<div class="font-opt${_editDesign.designTitleFont === f.value ? ' active' : ''}" style="${f.value ? 'font-family:'+f.value+';' : ''}" onclick="setDesignTitleFont(${JSON.stringify(f.value)})">${f.name}</div>`
+  if (titleFontRow) titleFontRow.innerHTML = _DESIGN_TITLE_FONTS.map((f, i) =>
+    `<div class="font-opt${_editDesign.designTitleFont === f.value ? ' active' : ''}" style="${f.value ? 'font-family:'+f.value+';' : ''}" onclick="setDesignTitleFont(${i})">${f.name}</div>`
   ).join('');
 
   // Secondary font list
   const secFontRow = document.getElementById('designSecFontRow');
-  if (secFontRow) secFontRow.innerHTML = _DESIGN_SEC_FONTS.map(f =>
-    `<div class="font-opt${_editDesign.designSecFont === f.value ? ' active' : ''}" style="${f.value ? 'font-family:'+f.value+';' : ''}" onclick="setDesignSecFont(${JSON.stringify(f.value)})">${f.name}</div>`
+  if (secFontRow) secFontRow.innerHTML = _DESIGN_SEC_FONTS.map((f, i) =>
+    `<div class="font-opt${_editDesign.designSecFont === f.value ? ' active' : ''}" style="${f.value ? 'font-family:'+f.value+';' : ''}" onclick="setDesignSecFont(${i})">${f.name}</div>`
   ).join('');
 
   // Copy to series visibility
@@ -5132,8 +5132,8 @@ window.setDesignCorner = i => {
   _editDesign.designFrame = -1; // selecting corners (or "no decoration") removes frame
   _renderDesignCustomizer();
 };
-window.setDesignTitleFont = v => _applyDesignChange('designTitleFont', v);
-window.setDesignSecFont   = v => _applyDesignChange('designSecFont',   v);
+window.setDesignTitleFont = i => _applyDesignChange('designTitleFont', _DESIGN_TITLE_FONTS[i]?.value ?? null);
+window.setDesignSecFont   = i => _applyDesignChange('designSecFont',   _DESIGN_SEC_FONTS[i]?.value   ?? null);
 
 window.resetBookDesign = () => {
   _editDesign = {
