@@ -592,7 +592,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 
 /* Book Grid View — 2-col mini rec-style cards */
 .book-list.book-view { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px 16px 100px; }
-.book-list.book-view .series-group { display: contents; }
+.book-list.book-view .series-group { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 8px; overflow: visible; }
 .mini-book-card { border-radius: 10px; aspect-ratio: 3/4; position: relative; overflow: hidden; display: flex; flex-direction: column; cursor: pointer; box-shadow: 0 3px 12px rgba(0,0,0,0.5); transition: transform 0.15s, box-shadow 0.15s; }
 .mini-book-card:active { transform: scale(0.97); box-shadow: 0 1px 6px rgba(0,0,0,0.4); }
 .mini-book-card .rec-frame { inset: 6px; }
@@ -3621,7 +3621,7 @@ function renderBooksGrid(list) {
   }
   const _grouped = groupBySeries(list);
   wrap.innerHTML = _grouped.map(item => {
-    if (item.type === 'group') return _seriesBoxSetHtml(item.books, false);
+    if (item.type === 'group') return '<div class="series-group">' + item.books.map(_miniBookCardHtml).join('') + '</div>';
     return _miniBookCardHtml(item.book);
   }).join('');
   refreshIcons();
@@ -4081,7 +4081,7 @@ function renderGlobalBooks(list, append, totalCount) {
     if (!list.length) return;
     const _gbGrouped = groupBySeries(list);
     wrap.insertAdjacentHTML('beforeend', _gbGrouped.map(item => {
-      if (item.type === 'group') return _seriesBoxSetHtml(item.books, true);
+      if (item.type === 'group') return '<div class="series-group">' + item.books.map(_miniGlobalBookCardHtml).join('') + '</div>';
       return _miniGlobalBookCardHtml(item.book);
     }).join(''));
     refreshIcons();
