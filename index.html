@@ -157,6 +157,7 @@
 [data-theme^="light-"] .book-check { box-shadow: none; }
 /* Light mode: strip drop-shadow filter from icons and logos */
 [data-theme^="light-"] .lucide { filter: none; }
+[data-theme^="light-"] .fab { color: var(--bg); }
 [data-theme^="light-"] .header-logo,
 [data-theme^="light-"] .rec-genre-cluster > svg,
 [data-theme^="light-"] #loadingScreen svg { filter: none !important; }
@@ -547,7 +548,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .search-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 16px 10px 40px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; transition: border-color 0.2s; box-sizing: border-box; }
 .search-input::placeholder { color: var(--text3); }
 .search-input:focus { border-color: var(--accent); }
-.search-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--text3); font-size: 15px; pointer-events: none; }
+.search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text3); width: 16px; height: 16px; pointer-events: none; display: block; stroke: var(--text3); }
 .filter-section-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; font-weight: 500; }
 .filter-hint { font-weight: 300; text-transform: none; letter-spacing: 0; }
 .filter-row { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; flex-wrap: nowrap; }
@@ -656,12 +657,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .shelf-books-row { flex: 1; min-height: 0; overflow-x: auto; overflow-y: hidden; display: flex; flex-direction: row; align-items: flex-end; padding: 6px 12px 0; gap: 3px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
 .shelf-books-row::-webkit-scrollbar { display: none; }
 .shelf-board { height: 20px; flex-shrink: 0; background: linear-gradient(to bottom, #A87840 0%, #7A5228 45%, #5C3D1E 100%); border-top: 3px solid #C8974E; box-shadow: 0 6px 14px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.12); }
-.shelf-spine { width: 48px; flex-shrink: 0; align-self: stretch; display: flex; flex-direction: column; align-items: center; padding: 6px 3px 4px; border-radius: 3px 4px 0 0; cursor: pointer; overflow: hidden; box-shadow: 2px 0 8px rgba(0,0,0,0.55), -1px 0 3px rgba(0,0,0,0.3); transition: transform 0.12s; scroll-snap-align: start; user-select: none; -webkit-user-select: none; }
-/* touch-action: none applied via .shelf-dnd-ready parent while no drag is active;
-   removed on activation so second finger can scroll natively */
-.shelf-dnd-ready .shelf-spine,
-.shelf-dnd-ready .shelf-series-spine,
-.shelf-dnd-ready .shelf-series-box { touch-action: none; }
+.shelf-spine { width: 48px; flex-shrink: 0; align-self: stretch; display: flex; flex-direction: column; align-items: center; padding: 6px 3px 4px; border-radius: 3px 4px 0 0; cursor: pointer; overflow: hidden; box-shadow: 2px 0 8px rgba(0,0,0,0.55), -1px 0 3px rgba(0,0,0,0.3); transition: transform 0.12s; scroll-snap-align: start; user-select: none; -webkit-user-select: none; touch-action: none; }
 .shelf-spine:active { transform: scale(0.96) translateY(2px); }
 .shelf-spine-author { font-family: 'DM Sans', sans-serif; font-size: 6.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; opacity: 0.72; text-align: center; width: 100%; line-height: 1.35; flex-shrink: 0; }
 .shelf-divider { width: 68%; flex-shrink: 0; margin: 3px auto; height: 1px; background: currentColor; opacity: 0.2; }
@@ -675,14 +671,14 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .shelf-spine-genre-names { font-family: 'DM Sans', sans-serif; font-size: 5.5px; opacity: 0.55; text-align: center; line-height: 1.4; flex-shrink: 0; width: 100%; }
 .shelf-spine-rating { font-size: 7px; opacity: 0.82; text-align: center; flex-shrink: 0; letter-spacing: -1px; }
 .shelf-spine-series-num { font-size: 6px; opacity: 0.65; text-align: center; flex-shrink: 0; font-family: 'DM Sans', sans-serif; font-weight: 700; }
-.shelf-series-box { display: flex; flex-direction: column; align-self: stretch; flex-shrink: 0; border-radius: 6px 6px 0 0; overflow: hidden; scroll-snap-align: start; box-shadow: 0 4px 16px rgba(0,0,0,0.6); user-select: none; -webkit-user-select: none; }
+.shelf-series-box { display: flex; flex-direction: column; align-self: stretch; flex-shrink: 0; border-radius: 6px 6px 0 0; overflow: hidden; scroll-snap-align: start; box-shadow: 0 4px 16px rgba(0,0,0,0.6); user-select: none; -webkit-user-select: none; touch-action: none; }
 .shelf-series-box-header { padding: 6px 8px 5px; display: flex; flex-direction: row; align-items: flex-start; justify-content: space-between; gap: 6px; border-bottom: 1px solid rgba(255,255,255,0.12); flex-shrink: 0; }
 .shelf-series-box-header-left { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
 .shelf-series-box-title { font-family: 'Playfair Display', serif; font-size: 10px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
 .shelf-series-box-author { font-family: 'DM Sans', sans-serif; font-size: 7px; opacity: 0.65; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .shelf-series-box-genres { display: flex; flex-wrap: wrap; gap: 2px; justify-content: flex-end; flex-shrink: 0; max-width: 50%; }
 .shelf-series-box-spines { display: flex; flex-direction: row; flex: 1; min-height: 0; gap: 2px; padding: 3px 3px 0; align-items: flex-end; }
-.shelf-series-spine { width: 44px; flex-shrink: 0; align-self: stretch; display: flex; flex-direction: column; align-items: center; padding: 4px 2px 4px; border-radius: 2px 2px 0 0; cursor: pointer; overflow: hidden; box-shadow: 1px 0 6px rgba(0,0,0,0.5); transition: transform 0.12s; user-select: none; -webkit-user-select: none; }
+.shelf-series-spine { width: 44px; flex-shrink: 0; align-self: stretch; display: flex; flex-direction: column; align-items: center; padding: 4px 2px 4px; border-radius: 2px 2px 0 0; cursor: pointer; overflow: hidden; box-shadow: 1px 0 6px rgba(0,0,0,0.5); transition: transform 0.12s; user-select: none; -webkit-user-select: none; touch-action: none; }
 .shelf-series-spine:active { transform: scale(0.95) translateY(2px); }
 .shelf-empty { display: flex; align-items: center; justify-content: center; height: 100%; color: rgba(255,255,255,0.25); font-size: 13px; font-family: 'DM Sans', sans-serif; }
 .shelf-spine.dragging { opacity: 0.25; transform: scale(0.93) translateY(3px); transition: opacity 0.1s, transform 0.1s; }
@@ -1519,7 +1515,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
     </div>
     <div class="subheader-ctrl">
       <div class="search-wrap" style="flex:1;min-width:0">
-        <span class="search-icon">🔍</span>
+        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input class="search-input" type="text" id="searchInput" placeholder="Search title, author or series…" oninput="applyFilters()">
       </div>
       <button class="ctrl-btn" id="filterBtn" onclick="toggleFilterPanel()" title="Filter"><i data-lucide="sliders-horizontal"></i></button>
@@ -1576,7 +1572,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
     <div id="comm-chats">
       <div style="padding:12px 16px 4px;display:flex;gap:8px;align-items:center">
         <div class="search-wrap" style="flex:1">
-          <span class="search-icon">🔍</span>
+          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input class="search-input" id="chatSearch" placeholder="Search chats…" oninput="renderChats()">
         </div>
         <button class="ctrl-btn" id="chatFilterBtn" onclick="toggleChatFilter()" title="Filter"><i data-lucide="sliders-horizontal"></i></button>
@@ -1618,13 +1614,13 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
         </div>
         <div id="disc-friends-search">
           <div class="search-wrap">
-            <span class="search-icon">🔍</span>
+            <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             <input class="search-input" id="friendSearchInput" placeholder="Search by username…" oninput="debounceFriendSearch(this.value)">
           </div>
         </div>
         <div id="disc-clubs-search" style="display:none">
           <div class="search-wrap">
-            <span class="search-icon">🔍</span>
+            <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             <input class="search-input" id="clubSearchInput" placeholder="Search clubs by name or keywords…" oninput="debounceClubSearch(this.value)">
           </div>
         </div>
@@ -1689,7 +1685,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
         <div class="subheader-stats" id="friendLibStats"></div>
         <div class="subheader-ctrl">
           <div class="search-wrap" style="flex:1;min-width:0">
-            <span class="search-icon">🔍</span>
+            <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             <input class="search-input" id="friendLibSearch" placeholder="Search…" oninput="applyFriendLibFilters()">
           </div>
           <button class="ctrl-btn" id="flibFilterBtn" onclick="toggleFlibPanel('filter')"><i data-lucide="sliders-horizontal"></i></button>
@@ -3718,7 +3714,7 @@ function _seriesBoxSetHtml(books, isGlobal) {
 }
 
 // ── SHELF DRAG-AND-DROP ───────────────────────────────────────────────────────
-const _dnd = { id: null, series: null, fromLoc: null, ghost: null, timer: null, active: false, startX: 0, startY: 0, lastX: 0, lastY: 0, dragEl: null, mode: 'book', pointerId: -1 };
+const _dnd = { id: null, series: null, fromLoc: null, ghost: null, timer: null, active: false, startX: 0, startY: 0, lastX: 0, lastY: 0, dragEl: null, mode: 'book', pointerId: -1, scrollDir: 0, scrollSpeed: 0, rafId: 0 };
 let _shelfDndInited = false;
 
 function _initShelfDnd() {
@@ -3728,6 +3724,8 @@ function _initShelfDnd() {
 }
 
 function _shelfCancelDrag() {
+  _dnd.scrollDir = 0;
+  if (_dnd.rafId) { cancelAnimationFrame(_dnd.rafId); _dnd.rafId = 0; }
   clearTimeout(_dnd.timer); _dnd.timer = null;
   document.removeEventListener('pointermove', _shelfPtrPreMove);
   document.removeEventListener('pointerup', _shelfPtrPreUp);
@@ -3741,9 +3739,19 @@ function _shelfCancelDrag() {
   }
   if (_dnd.ghost) { _dnd.ghost.remove(); _dnd.ghost = null; }
   document.querySelectorAll('.shelf-shelf.drop-target').forEach(s => s.classList.remove('drop-target'));
-  document.getElementById('shelfView').classList.add('shelf-dnd-ready'); // restore for next drag
   _dnd.active = false; _dnd.dragEl = null; _dnd.pointerId = -1;
   _dnd.id = null; _dnd.series = null; _dnd.fromLoc = null;
+}
+
+function _shelfAutoScroll() {
+  if (!_dnd.active || _dnd.scrollDir === 0) { _dnd.rafId = 0; return; }
+  const shelfEl = document.getElementById('shelfView');
+  shelfEl.scrollTop += _dnd.scrollDir * _dnd.scrollSpeed;
+  const under = document.elementFromPoint(_dnd.lastX, _dnd.lastY);
+  const shelf = under ? under.closest('.shelf-shelf') : null;
+  document.querySelectorAll('.shelf-shelf.drop-target').forEach(s => s.classList.remove('drop-target'));
+  if (shelf && shelf.dataset.location !== _dnd.fromLoc) shelf.classList.add('drop-target');
+  _dnd.rafId = requestAnimationFrame(_shelfAutoScroll);
 }
 
 function _shelfPtrDown(e) {
@@ -3789,8 +3797,6 @@ function _shelfActivateDrag() {
   let captured = false;
   try { _dnd.dragEl.setPointerCapture(_dnd.pointerId); captured = true; } catch(err) {}
   if (!captured) { _shelfCancelDrag(); return; } // finger lifted before 400ms
-  // Drop touch-action: none so a second finger placed after this point can scroll natively
-  document.getElementById('shelfView').classList.remove('shelf-dnd-ready');
   _dnd.dragEl.addEventListener('pointermove', _shelfPtrMove, { passive: false });
   _dnd.dragEl.addEventListener('pointerup', _shelfPtrEnd);
   _dnd.dragEl.addEventListener('pointercancel', _shelfPtrEnd);
@@ -3835,6 +3841,19 @@ function _shelfPtrMove(e) {
   _dnd.lastX = e.clientX;
   _dnd.lastY = e.clientY;
   _shelfGhostPos(e.clientX, e.clientY);
+  // Edge-triggered auto-scroll: drag ghost within 80px of top/bottom to scroll between shelves
+  const vh = window.innerHeight;
+  const ZONE = 80;
+  if (e.clientY < ZONE) {
+    _dnd.scrollDir = -1;
+    _dnd.scrollSpeed = Math.max(2, Math.round(10 * (1 - e.clientY / ZONE)));
+  } else if (e.clientY > vh - ZONE) {
+    _dnd.scrollDir = 1;
+    _dnd.scrollSpeed = Math.max(2, Math.round(10 * ((e.clientY - (vh - ZONE)) / ZONE)));
+  } else {
+    _dnd.scrollDir = 0;
+  }
+  if (_dnd.scrollDir !== 0 && !_dnd.rafId) _dnd.rafId = requestAnimationFrame(_shelfAutoScroll);
   const under = document.elementFromPoint(e.clientX, e.clientY);
   const shelf = under ? under.closest('.shelf-shelf') : null;
   document.querySelectorAll('.shelf-shelf.drop-target').forEach(s => s.classList.remove('drop-target'));
@@ -3847,6 +3866,8 @@ function _shelfPtrEnd(e) {
   _dnd.dragEl.removeEventListener('pointerup', _shelfPtrEnd);
   _dnd.dragEl.removeEventListener('pointercancel', _shelfPtrEnd);
   try { _dnd.dragEl.releasePointerCapture(_dnd.pointerId); } catch(err) {}
+  _dnd.scrollDir = 0;
+  if (_dnd.rafId) { cancelAnimationFrame(_dnd.rafId); _dnd.rafId = 0; }
   const under = document.elementFromPoint(_dnd.lastX, _dnd.lastY);
   const shelf = under ? under.closest('.shelf-shelf') : null;
   const newLoc = shelf ? shelf.dataset.location : null;
@@ -3856,7 +3877,6 @@ function _shelfPtrEnd(e) {
   _dnd.active = false;
   const { id: dragId, series: dragSeries, fromLoc, mode } = _dnd;
   _dnd.id = null; _dnd.series = null; _dnd.fromLoc = null; _dnd.dragEl = null; _dnd.pointerId = -1;
-  document.getElementById('shelfView').classList.add('shelf-dnd-ready'); // restore for next drag
   if (!newLoc || newLoc === fromLoc) return;
   if (mode === 'series' && dragSeries) _shelfMoveSeries(dragSeries, fromLoc, newLoc);
   else if (mode === 'book' && dragId) _shelfMoveBook(dragId, newLoc);
@@ -4070,10 +4090,7 @@ function renderShelfView(list, isGlobal) {
   }).join('');
 
   refreshIcons();
-  if (!isGlobal && currentPage !== 'wishlist') {
-    document.getElementById('shelfView').classList.add('shelf-dnd-ready');
-    _initShelfDnd();
-  }
+  if (!isGlobal && currentPage !== 'wishlist') _initShelfDnd();
 }
 
 function renderBooksShelf(list) {
@@ -7242,7 +7259,7 @@ window._renderAuthorsList = function() {
   // Build stable outer shell only when it's missing (first load or after returning from detail)
   if (!document.getElementById('disc-authors-items')) {
     el.innerHTML = `<div class="disc-search-bar">
-      <div class="search-wrap"><span class="search-icon">🔍</span>
+      <div class="search-wrap"><svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       <input class="search-input" id="disc-authors-search" placeholder="Search authors…" autocomplete="off"></div>
     </div>
     <div id="disc-authors-sort-bar"></div>
@@ -7458,7 +7475,7 @@ window._renderGenresList = function() {
   if (!el) return;
   if (!document.getElementById('disc-genres-items')) {
     el.innerHTML = `<div class="disc-search-bar">
-      <div class="search-wrap"><span class="search-icon">🔍</span>
+      <div class="search-wrap"><svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       <input class="search-input" id="disc-genres-search" placeholder="Search genres…" autocomplete="off"></div>
     </div>
     <div id="disc-genres-sort-bar"></div>
