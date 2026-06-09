@@ -713,6 +713,27 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .copy-series-btn .lucide { width: 13px; height: 13px; }
 
 /* List view — spreadsheet rows */
+/* Shelf View */
+.book-list.shelf-view { display: flex; flex-direction: column; gap: 0; padding: 0 0 100px; }
+.shelf-section { padding: 0 20px; }
+.shelf-section-header { display: flex; align-items: center; gap: 8px; padding: 14px 0 8px; border-bottom: 1px solid var(--border); }
+.shelf-section-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; color: var(--text2); flex: 1; }
+.shelf-section-count { font-size: 10px; color: var(--text3); background: var(--surface2); border-radius: 10px; padding: 1px 7px; font-weight: 600; }
+.shelf-books-list { display: flex; flex-direction: column; border-radius: var(--radius-sm); transition: background 0.15s; }
+.shelf-section.drop-target .shelf-books-list { background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
+.shelf-section.drop-target .shelf-section-label { color: var(--accent); }
+.shelf-book-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); user-select: none; position: relative; }
+.shelf-book-row:last-child { border-bottom: none; }
+.shelf-book-row.dragging { opacity: 0.3; }
+.shelf-drag-handle { width: 20px; height: 36px; display: flex; align-items: center; justify-content: center; color: var(--text3); flex-shrink: 0; opacity: 0.4; }
+.shelf-drag-handle .lucide { width: 14px; height: 14px; }
+.shelf-book-color { width: 5px; height: 44px; border-radius: 3px; flex-shrink: 0; }
+.shelf-book-info { flex: 1; min-width: 0; cursor: pointer; }
+.shelf-book-title { font-size: 13.5px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
+.shelf-book-meta { font-size: 11px; color: var(--text3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.shelf-book-status { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; border: 1.5px solid var(--border); color: transparent; cursor: pointer; }
+.shelf-book-status.is-read { border-color: #c9a96e; background: rgba(201,169,110,0.12); color: #c9a96e; }
+.shelf-drag-ghost { position: fixed; z-index: 9999; pointer-events: none; background: var(--surface2); border: 1.5px solid var(--accent); border-radius: var(--radius); padding: 9px 14px; font-size: 13px; font-weight: 600; color: var(--text); max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 8px 28px rgba(0,0,0,0.6); transform: rotate(2deg) scale(1.03); }
 .series-group { border: 1px solid rgba(201,169,110,0.32); border-radius: var(--radius); overflow: hidden; }
 .series-group .book-card { border: none; border-radius: 0; border-bottom: 1px solid var(--border); }
 .series-group .book-card:last-child { border-bottom: none; }
@@ -3855,7 +3876,6 @@ function renderBooksShelf(list) {
     refreshIcons();
     return;
   }
-  // Group by location
   const locMap = {};
   list.forEach(b => {
     const loc = b.location || orderedLocations[0] || 'Bookshelf';
