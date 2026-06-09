@@ -3603,7 +3603,10 @@ function renderBooks(list) {
   const isShelf = currentBookView === 'shelf';
   shelfEl.style.display = isShelf ? '' : 'none';
   wrap.style.display = isShelf ? 'none' : '';
+<<<<<<< Updated upstream
   document.getElementById('globalLoadSentinel').style.display = 'none';
+=======
+>>>>>>> Stashed changes
   if (isShelf) { renderShelfView(list, false); return; }
   wrap.classList.toggle('book-view', currentBookView === 'book');
   if (currentBookView === 'book') { renderBooksGrid(list); return; }
@@ -3692,6 +3695,266 @@ function _seriesBoxSetHtml(books, isGlobal) {
   </div>
   <div class="sbs-spines">${spinesHtml}</div>
 </div>`;
+}
+
+// ── SHELF SPINE VIEW ─────────────────────────────────────────────────────────
+function _shelfDividerHtml(v) {
+  if (v === 1) return '<div class="shelf-divider dashed"></div>';
+  if (v === 2) return '<div class="shelf-divider dots">· · ·</div>';
+  return '<div class="shelf-divider"></div>';
+}
+
+function _shelfSpineHtml(b, isGlobal) {
+  const seed = _bookSeed(b.id);
+  const pal = _REC_PALETTES[seed % _REC_PALETTES.length];
+  const pat = _REC_PATTERNS[(seed >>> 3) % _REC_PATTERNS.length];
+  const divVar = (seed >>> 6) % 3;
+  const safeId = (b.id||'').replace(/'/g, "\\'");
+  const genres = (b.genres||[]).filter(g => g !== 'Non-Fiction');
+  const openFn = isGlobal ? `openGlobalBookInfo('${safeId}')` : `openBookInfo('${safeId}')`;
+  const authorNames = (b.author || '').split(/\s+(?:and|&)\s+/i).map(n => n.trim()).filter(Boolean);
+  const authorHtml = authorNames.map(n => `<div>${esc(n)}</div>`).join('');
+  let avg = 0;
+  if (isGlobal) {
+    avg = (b.ratingCount > 0) ? b.ratingTotal / b.ratingCount : 0;
+  } else {
+    const gbId = createGlobalBookId(b.title||'', b.author||'');
+    const gb = globalBookCache.find(x => x.id === gbId);
+    avg = (gb && gb.ratingCount > 0) ? gb.ratingTotal / gb.ratingCount : (b.rating || 0);
+  }
+  const stars = avg > 0 ? '★'.repeat(Math.round(avg)) + '☆'.repeat(5 - Math.round(avg)) : '';
+  const genreIconHtml = genres.length
+    ? `<div class="shelf-spine-genre-icon">${_genreIconHtml(genres[0], 'shelf-icon')}</div>` : '';
+  const seriesNumHtml = (b.series && b.seriesNumber != null && b.seriesNumber !== '')
+    ? `<div class="shelf-spine-series-num" style="color:${pal.ac}">#${b.seriesNumber}</div>` : '';
+  const div1 = _shelfDividerHtml(divVar);
+  const div2 = _shelfDividerHtml((divVar + 1) % 3);
+  const div3 = _shelfDividerHtml((divVar + 2) % 3);
+  return `<div class="shelf-spine" data-id="${b.id||''}" style="background:${pal.bg};${pat ? pat+';' : ''}color:${pal.fg};" onclick="${openFn}">
+  ${seriesNumHtml}
+  <div class="shelf-spine-author">${authorHtml}</div>
+  ${div1}
+  <div class="shelf-spine-title-wrap">
+    <div class="shelf-spine-title">${esc(b.title||'')}</div>
+  </div>
+  ${genres.length ? div2 : ''}
+  ${genreIconHtml}
+  ${stars ? div3 : ''}
+  ${stars ? `<div class="shelf-spine-rating" style="color:${pal.ac}">${stars}</div>` : ''}
+</div>`;
+}
+
+function _shelfSeriesBoxHtml(books, isGlobal) {
+  const first = books[0];
+  const seriesSeed = _bookSeed(first.series || first.id, 7);
+  const boxPalIdx = seriesSeed % _REC_PALETTES.length;
+  const boxPal = _REC_PALETTES[boxPalIdx];
+  const boxPat = _REC_PATTERNS[(seriesSeed >>> 3) % _REC_PATTERNS.length];
+  const genres = (first.genres||[]).filter(g => g !== 'Non-Fiction');
+  const genreTagsHtml = genres.slice(0, 3).map(g =>
+    `<span class="tag genre" style="font-size:7px;padding:1px 4px;">${_genreIconHtml(g,'tag-icon')}${esc(g)}</span>`
+  ).join('');
+  const spinesHtml = books.map((b, i) => {
+    const bSeed = _bookSeed(b.id);
+    const bPal = _REC_PALETTES[(boxPalIdx + 1 + i) % _REC_PALETTES.length];
+    const bPat = _REC_PATTERNS[(bSeed >>> 3) % _REC_PATTERNS.length];
+    const numLabel = (b.seriesNumber != null && b.seriesNumber !== '') ? `#${b.seriesNumber}` : (b.seriesTag || '');
+    const safeId = (b.id||'').replace(/'/g, "\\'");
+    const openFn = isGlobal ? `openGlobalBookInfo('${safeId}')` : `openBookInfo('${safeId}')`;
+    let avg = 0;
+    if (isGlobal) { avg = (b.ratingCount > 0) ? b.ratingTotal / b.ratingCount : 0; }
+    else { const gbId = createGlobalBookId(b.title||'', b.author||''); const gb = globalBookCache.find(x => x.id === gbId); avg = (gb && gb.ratingCount > 0) ? gb.ratingTotal / gb.ratingCount : (b.rating || 0); }
+    const stars = avg > 0 ? '★'.repeat(Math.round(avg)) + '☆'.repeat(5 - Math.round(avg)) : '';
+    return `<div class="shelf-series-spine" style="background:${bPal.bg};${bPat?bPat+';':''}color:${bPal.fg};" onclick="${openFn}">
+  <div class="shelf-spine-series-num" style="color:${bPal.ac}">${esc(numLabel)}</div>
+  <div class="shelf-spine-title-wrap"><div class="shelf-spine-title">${esc(b.title||'')}</div></div>
+  ${stars ? `<div class="shelf-spine-rating" style="color:${bPal.ac}">${stars}</div>` : ''}
+</div>`;
+  }).join('');
+  const safeSeries = esc(first.series||'');
+  return `<div class="shelf-series-box" data-series="${safeSeries}" style="background:${boxPal.bg};${boxPat?boxPat+';':''}color:${boxPal.fg};">
+  <div class="shelf-series-box-header">
+    <div class="shelf-series-box-header-left">
+      <div class="shelf-series-box-title">${safeSeries}</div>
+      <div class="shelf-series-box-author">${esc(first.author||'')}</div>
+    </div>
+    ${genreTagsHtml ? `<div class="shelf-series-box-genres">${genreTagsHtml}</div>` : ''}
+  </div>
+  <div class="shelf-series-box-spines">${spinesHtml}</div>
+</div>`;
+}
+
+function renderShelfView(list, isGlobal) {
+  const root = document.getElementById('shelfView');
+  document.getElementById('listHeader').textContent = list.length + ' book' + (list.length !== 1 ? 's' : '');
+  if (!list.length) { root.innerHTML = '<div class="shelf-empty">No books found</div>'; return; }
+
+  let shelves;
+  if (isGlobal) {
+    const byAuthor = {};
+    list.forEach(b => {
+      const key = (b.author || 'Unknown').trim();
+      if (!byAuthor[key]) byAuthor[key] = { score: 0, books: [] };
+      byAuthor[key].books.push(b);
+      byAuthor[key].score += (b.popularity || 0) + (b.ratingCount || 0) * 2;
+    });
+    shelves = Object.entries(byAuthor)
+      .sort(([, a], [, b]) => b.score - a.score)
+      .map(([author, { books: ab }]) => ({ label: author, rawLoc: author, books: ab }));
+  } else if (currentPage === 'wishlist') {
+    const byAuthor = {};
+    list.forEach(b => { const key = (b.author || 'Unknown').trim(); if (!byAuthor[key]) byAuthor[key] = []; byAuthor[key].push(b); });
+    shelves = Object.entries(byAuthor).sort(([a],[b]) => a.localeCompare(b))
+      .map(([author, ab]) => ({ label: author, rawLoc: author, books: ab }));
+  } else {
+    const byLoc = {};
+    list.forEach(b => { const loc = b.location || 'Other'; if (!byLoc[loc]) byLoc[loc] = []; byLoc[loc].push(b); });
+    const locOrder = [...orderedLocations, 'Borrowed', 'GlobalRead'];
+    const seen = new Set();
+    shelves = [];
+    locOrder.forEach(loc => { if (byLoc[loc]?.length) { shelves.push({ label: loc === 'GlobalRead' ? 'Not Owned' : loc, rawLoc: loc, books: byLoc[loc] }); seen.add(loc); } });
+    Object.keys(byLoc).forEach(loc => { if (!seen.has(loc) && byLoc[loc].length) shelves.push({ label: loc, rawLoc: loc, books: byLoc[loc] }); });
+  }
+
+  root.innerHTML = shelves.map(({ label, rawLoc, books: shelfBooks }) => {
+    const grouped = groupBySeries(shelfBooks);
+    const spinesHtml = grouped.map(item => {
+      if (item.type === 'group') return _shelfSeriesBoxHtml(item.books, isGlobal);
+      return _shelfSpineHtml(item.book, isGlobal);
+    }).join('');
+    return `<div class="shelf-shelf" data-location="${esc(rawLoc)}">
+  <div class="shelf-location-label">${esc(label)}</div>
+  <div class="shelf-books-row">${spinesHtml}</div>
+  <div class="shelf-board"></div>
+</div>`;
+  }).join('');
+
+  refreshIcons();
+  if (!isGlobal && currentPage === 'mylibrary') _initShelfDnd();
+}
+
+// ── SHELF DRAG-AND-DROP ───────────────────────────────────────────────────────
+const _dnd = { id: null, series: null, fromLoc: null, ghost: null, timer: null, active: false, startX: 0, startY: 0, lastX: 0, lastY: 0, dragEl: null, mode: 'book' };
+let _shelfDndInited = false;
+
+function _initShelfDnd() {
+  if (_shelfDndInited) return;
+  _shelfDndInited = true;
+  document.addEventListener('touchstart', _shelfTouchStart, { passive: true });
+  document.addEventListener('touchmove', _shelfTouchMove, { passive: false });
+  document.addEventListener('touchend', _shelfTouchEnd, { passive: true });
+  document.addEventListener('touchcancel', _shelfTouchEnd, { passive: true });
+}
+
+function _shelfTouchStart(e) {
+  if (currentPage !== 'mylibrary' || currentBookView !== 'shelf') return;
+  if (e.touches.length !== 1) return;
+  const t = e.touches[0];
+  // Series box takes priority over individual spine
+  const seriesBox = e.target.closest ? e.target.closest('.shelf-series-box') : null;
+  const spine = !seriesBox && (e.target.closest ? e.target.closest('.shelf-spine') : null);
+  if (!seriesBox && !spine) return;
+  const shelf = (seriesBox || spine).closest('.shelf-shelf');
+  _dnd.startX = _dnd.lastX = t.clientX;
+  _dnd.startY = _dnd.lastY = t.clientY;
+  _dnd.fromLoc = shelf ? shelf.dataset.location : null;
+  _dnd.active = false;
+  clearTimeout(_dnd.timer);
+  if (seriesBox) {
+    _dnd.mode = 'series';
+    _dnd.series = seriesBox.dataset.series;
+    _dnd.id = null;
+    _dnd.dragEl = seriesBox;
+  } else {
+    _dnd.mode = 'book';
+    _dnd.id = spine.dataset.id;
+    _dnd.series = null;
+    _dnd.dragEl = spine;
+  }
+  _dnd.timer = setTimeout(() => {
+    _dnd.active = true;
+    _dnd.dragEl.classList.add('dragging');
+    _dnd.ghost = document.createElement('div');
+    _dnd.ghost.className = 'shelf-drag-ghost';
+    if (_dnd.mode === 'series') {
+      _dnd.ghost.textContent = _dnd.series || 'Series';
+    } else {
+      const b = books.find(x => x.id === _dnd.id);
+      _dnd.ghost.textContent = b ? (b.title || '') : '';
+    }
+    document.body.appendChild(_dnd.ghost);
+    _shelfGhostPos(_dnd.lastX, _dnd.lastY);
+    if (navigator.vibrate) navigator.vibrate(30);
+  }, 400);
+}
+
+function _shelfTouchMove(e) {
+  if (!_dnd.dragEl || e.touches.length !== 1) return;
+  const t = e.touches[0];
+  _dnd.lastX = t.clientX;
+  _dnd.lastY = t.clientY;
+  if (!_dnd.active) {
+    if (Math.abs(t.clientX - _dnd.startX) > 8 || Math.abs(t.clientY - _dnd.startY) > 8) {
+      clearTimeout(_dnd.timer); _dnd.timer = null; _dnd.dragEl = null;
+    }
+    return;
+  }
+  e.preventDefault();
+  _shelfGhostPos(t.clientX, t.clientY);
+  const under = document.elementFromPoint(t.clientX, t.clientY);
+  const shelf = under ? under.closest('.shelf-shelf') : null;
+  document.querySelectorAll('.shelf-shelf.drop-target').forEach(s => s.classList.remove('drop-target'));
+  if (shelf && shelf.dataset.location !== _dnd.fromLoc) shelf.classList.add('drop-target');
+}
+
+function _shelfTouchEnd() {
+  clearTimeout(_dnd.timer); _dnd.timer = null;
+  if (!_dnd.active) { _dnd.id = null; _dnd.series = null; _dnd.fromLoc = null; _dnd.dragEl = null; return; }
+  const under = document.elementFromPoint(_dnd.lastX, _dnd.lastY);
+  const shelf = under ? under.closest('.shelf-shelf') : null;
+  const newLoc = shelf ? shelf.dataset.location : null;
+  if (_dnd.ghost) { _dnd.ghost.remove(); _dnd.ghost = null; }
+  document.querySelectorAll('.shelf-shelf.drop-target').forEach(s => s.classList.remove('drop-target'));
+  if (_dnd.dragEl) _dnd.dragEl.classList.remove('dragging');
+  _dnd.active = false;
+  const { id: dragId, series: dragSeries, fromLoc, mode } = _dnd;
+  _dnd.id = null; _dnd.series = null; _dnd.fromLoc = null; _dnd.dragEl = null;
+  if (!newLoc || newLoc === fromLoc) return;
+  if (mode === 'series' && dragSeries) _shelfMoveSeries(dragSeries, fromLoc, newLoc);
+  else if (mode === 'book' && dragId) _shelfMoveBook(dragId, newLoc);
+}
+
+function _shelfGhostPos(x, y) {
+  if (_dnd.ghost) { _dnd.ghost.style.left = (x - 20) + 'px'; _dnd.ghost.style.top = (y - 32) + 'px'; }
+}
+
+async function _shelfMoveBook(id, newLoc) {
+  const b = books.find(x => x.id === id);
+  if (!b || b.location === newLoc) return;
+  const oldLoc = b.location;
+  b.location = newLoc;
+  applyFilters();
+  try {
+    await updateBook(id, { location: newLoc });
+  } catch(e) {
+    b.location = oldLoc;
+    applyFilters();
+    showStatus('Failed to move book.', 'error');
+  }
+}
+
+async function _shelfMoveSeries(series, fromLoc, newLoc) {
+  const toMove = books.filter(b => b.series === series && b.location === fromLoc);
+  if (!toMove.length) return;
+  toMove.forEach(b => { b.location = newLoc; });
+  applyFilters();
+  try {
+    await Promise.all(toMove.map(b => updateBook(b.id, { location: newLoc })));
+  } catch(e) {
+    toMove.forEach(b => { b.location = fromLoc; });
+    applyFilters();
+    showStatus('Failed to move series.', 'error');
+  }
 }
 
 function renderBooksGrid(list) {
@@ -4286,7 +4549,11 @@ function renderGlobalBooks(list, append, totalCount) {
   const wrap = document.getElementById('bookList');
   const isShelf = currentBookView === 'shelf';
   if (!append) {
+<<<<<<< Updated upstream
     shelfEl.style.display = isShelf ? 'block' : 'none';
+=======
+    shelfEl.style.display = isShelf ? '' : 'none';
+>>>>>>> Stashed changes
     wrap.style.display = isShelf ? 'none' : '';
     wrap.classList.toggle('book-view', currentBookView === 'book');
   }
