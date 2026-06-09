@@ -3603,10 +3603,7 @@ function renderBooks(list) {
   const isShelf = currentBookView === 'shelf';
   shelfEl.style.display = isShelf ? '' : 'none';
   wrap.style.display = isShelf ? 'none' : '';
-<<<<<<< Updated upstream
   document.getElementById('globalLoadSentinel').style.display = 'none';
-=======
->>>>>>> Stashed changes
   if (isShelf) { renderShelfView(list, false); return; }
   wrap.classList.toggle('book-view', currentBookView === 'book');
   if (currentBookView === 'book') { renderBooksGrid(list); return; }
@@ -4549,11 +4546,7 @@ function renderGlobalBooks(list, append, totalCount) {
   const wrap = document.getElementById('bookList');
   const isShelf = currentBookView === 'shelf';
   if (!append) {
-<<<<<<< Updated upstream
-    shelfEl.style.display = isShelf ? 'block' : 'none';
-=======
     shelfEl.style.display = isShelf ? '' : 'none';
->>>>>>> Stashed changes
     wrap.style.display = isShelf ? 'none' : '';
     wrap.classList.toggle('book-view', currentBookView === 'book');
   }
