@@ -158,7 +158,8 @@
 /* Light mode: strip drop-shadow filter from icons */
 [data-theme^="light-"] .lucide { filter: none; }
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-html { background-color: var(--header-bg); }
+html { background-color: var(--bg); }
+html.app-loaded { background-color: var(--header-bg); }
 body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); background-image: var(--grain); color: var(--text); min-height: 100vh; overflow-x: hidden; }
 
 /* LOGIN SCREEN */
@@ -1392,7 +1393,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 <body>
 
 <!-- LOADING SCREEN -->
-<div id="loadingScreen" style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0f0e0d;">
+<div id="loadingScreen" style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg);">
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 145" fill="none" style="width:90px;margin-bottom:20px;display:block;color:#c9a96e;filter:drop-shadow(0 2px 5px rgba(0,0,20,0.97)) drop-shadow(0 -1px 0 rgba(220,185,80,0.16));"><line x1="41" y1="27" x2="70" y2="128" stroke="currentColor" stroke-width="13" stroke-linecap="round"/><line x1="159" y1="27" x2="130" y2="128" stroke="currentColor" stroke-width="13" stroke-linecap="round"/><path d="M41 27 C 92 44,100 95,100 113" stroke="currentColor" stroke-width="7" stroke-linecap="round"/><path d="M159 27 C 108 44,100 95,100 113" stroke="currentColor" stroke-width="7" stroke-linecap="round"/></svg>
   <div style="font-family:'Playfair Display',serif;font-size:28px;color:#e8c98a;margin-bottom:12px;">Miriam's Library</div>
   <div style="width:32px;height:32px;border:3px solid #3a3632;border-top-color:#c9a96e;border-radius:50%;animation:spin 0.7s linear infinite;margin-top:8px;"></div>
@@ -2750,6 +2751,7 @@ onAuthStateChanged(auth, async user => {
     currentUser = user;
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('mainApp').style.display = 'block';
+    document.documentElement.classList.add('app-loaded');
     document.getElementById('settingsUserName').textContent = user.displayName || '';
     document.getElementById('settingsUserEmail').textContent = user.email || '';
     const _vbi = document.getElementById('viewBtnIcon');
@@ -2775,6 +2777,7 @@ onAuthStateChanged(auth, async user => {
     chatLastMessages = {}; clubLastMessages = {}; clubsList = [];
     document.getElementById('loginScreen').style.display = 'flex';
     document.getElementById('mainApp').style.display = 'none';
+    document.documentElement.classList.remove('app-loaded');
   }
 });
 
