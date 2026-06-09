@@ -126,7 +126,7 @@
 [data-theme^="light-"] { color-scheme: light; }
 [data-theme^="light-"] .modal-overlay,
 [data-theme^="light-"] .settings-overlay { background: rgba(0,0,0,0.35) !important; }
-[data-theme^="light-"] .login-logo { filter: drop-shadow(0 2px 6px rgba(0,0,0,0.15)) !important; }
+[data-theme^="light-"] .login-logo { filter: none !important; }
 /* Light mode: strip dark leather text-shadows */
 [data-theme^="light-"] .login-title,
 [data-theme^="light-"] .book-title,
@@ -155,8 +155,25 @@
 [data-theme^="light-"] .add-new-input,
 [data-theme^="light-"] .tag,
 [data-theme^="light-"] .book-check { box-shadow: none; }
-/* Light mode: strip drop-shadow filter from icons */
+/* Light mode: strip drop-shadow filter from icons and logos */
 [data-theme^="light-"] .lucide { filter: none; }
+[data-theme^="light-"] .header-logo,
+[data-theme^="light-"] .rec-genre-cluster > svg { filter: none !important; }
+/* Light mode: strip box-shadows from all shadow-heavy elements */
+[data-theme^="light-"] .mini-book-card,
+[data-theme^="light-"] .mini-book-card:active,
+[data-theme^="light-"] .series-boxset,
+[data-theme^="light-"] .sbs-spine,
+[data-theme^="light-"] .shelf-board,
+[data-theme^="light-"] .shelf-spine,
+[data-theme^="light-"] .shelf-series-box,
+[data-theme^="light-"] .shelf-series-spine,
+[data-theme^="light-"] .shelf-drag-ghost,
+[data-theme^="light-"] .design-prev-front,
+[data-theme^="light-"] .design-prev-spine,
+[data-theme^="light-"] .review-dropdown,
+[data-theme^="light-"] .hl-ac,
+[data-theme^="light-"] .fab-csv { box-shadow: none; }
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 html { background-color: var(--bg); }
 html.app-loaded { background-color: var(--header-bg); }
@@ -3695,32 +3712,27 @@ function _seriesBoxSetHtml(books, isGlobal) {
 }
 
 // ── SHELF DRAG-AND-DROP ───────────────────────────────────────────────────────
-const _dnd = { id: null, series: null, fromLoc: null, ghost: null, timer: null, active: false, startX: 0, startY: 0, lastX: 0, lastY: 0, dragEl: null, mode: 'book', touchId: -1 };
+const _dnd = { id: null, series: null, fromLoc: null, ghost: null, timer: null, active: false, startX: 0, startY: 0, lastX: 0, lastY: 0, dragEl: null, mode: 'book', pointerId: -1 };
 let _shelfDndInited = false;
 
 function _initShelfDnd() {
   if (_shelfDndInited) return;
   _shelfDndInited = true;
-  document.addEventListener('touchstart', _shelfTouchStart, { passive: true });
-  document.addEventListener('touchmove', _shelfTouchMove, { passive: false });
-  document.addEventListener('touchend', _shelfTouchEnd, { passive: true });
-  document.addEventListener('touchcancel', _shelfTouchEnd, { passive: true });
+  document.addEventListener('pointerdown', _shelfPtrDown);
 }
 
-function _shelfTouchStart(e) {
+function _shelfPtrDown(e) {
   if (currentPage !== 'mylibrary' || currentBookView !== 'shelf') return;
-  if (e.touches.length !== 1) return;
-  const t = e.touches[0];
-  // Priority: series spine (individual book inside box) > series header (whole series) > standalone spine
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
   const seriesSpine = e.target.closest ? e.target.closest('.shelf-series-spine') : null;
   const seriesHeader = !seriesSpine && (e.target.closest ? e.target.closest('.shelf-series-box-header') : null);
   const spine = !seriesSpine && !seriesHeader && (e.target.closest ? e.target.closest('.shelf-spine') : null);
   if (!seriesSpine && !seriesHeader && !spine) return;
   const anchor = seriesSpine || seriesHeader || spine;
   const shelf = anchor.closest('.shelf-shelf');
-  _dnd.startX = _dnd.lastX = t.clientX;
-  _dnd.startY = _dnd.lastY = t.clientY;
-  _dnd.touchId = t.identifier;
+  _dnd.startX = _dnd.lastX = e.clientX;
+  _dnd.startY = _dnd.lastY = e.clientY;
+  _dnd.pointerId = e.pointerId;
   _dnd.fromLoc = shelf ? shelf.dataset.location : null;
   _dnd.active = false;
   clearTimeout(_dnd.timer);
@@ -3736,67 +3748,86 @@ function _shelfTouchStart(e) {
     _dnd.series = null;
     _dnd.dragEl = seriesSpine || spine;
   }
-  _dnd.timer = setTimeout(() => {
-    _dnd.active = true;
-    _dnd.dragEl.classList.add('dragging');
-    _dnd.ghost = document.createElement('div');
-    _dnd.ghost.className = 'shelf-drag-ghost';
-    if (_dnd.mode === 'series') {
-      _dnd.ghost.textContent = _dnd.series || 'Series';
-    } else {
-      const b = books.find(x => x.id === _dnd.id);
-      _dnd.ghost.textContent = b ? (b.title || '') : '';
-    }
-    document.body.appendChild(_dnd.ghost);
-    _shelfGhostPos(_dnd.lastX, _dnd.lastY);
-    if (navigator.vibrate) navigator.vibrate(30);
-  }, 400);
+  document.addEventListener('pointermove', _shelfPtrPreMove);
+  document.addEventListener('pointerup', _shelfPtrPreUp);
+  document.addEventListener('pointercancel', _shelfPtrPreUp);
+  _dnd.timer = setTimeout(_shelfActivateDrag, 400);
 }
 
-function _shelfTouchMove(e) {
+function _shelfActivateDrag() {
+  document.removeEventListener('pointermove', _shelfPtrPreMove);
+  document.removeEventListener('pointerup', _shelfPtrPreUp);
+  document.removeEventListener('pointercancel', _shelfPtrPreUp);
   if (!_dnd.dragEl) return;
-  // Find only our tracked drag touch — if another finger moved, let the browser scroll
-  let t = null;
-  for (let i = 0; i < e.changedTouches.length; i++) {
-    if (e.changedTouches[i].identifier === _dnd.touchId) { t = e.changedTouches[i]; break; }
+  _dnd.active = true;
+  _dnd.dragEl.classList.add('dragging');
+  // Capture this pointer so all its events route to dragEl; second finger fires independently → native scroll
+  try { _dnd.dragEl.setPointerCapture(_dnd.pointerId); } catch(err) {}
+  _dnd.dragEl.addEventListener('pointermove', _shelfPtrMove, { passive: false });
+  _dnd.dragEl.addEventListener('pointerup', _shelfPtrEnd);
+  _dnd.dragEl.addEventListener('pointercancel', _shelfPtrEnd);
+  _dnd.ghost = document.createElement('div');
+  _dnd.ghost.className = 'shelf-drag-ghost';
+  if (_dnd.mode === 'series') {
+    _dnd.ghost.textContent = _dnd.series || 'Series';
+  } else {
+    const b = books.find(x => x.id === _dnd.id);
+    _dnd.ghost.textContent = b ? (b.title || '') : '';
   }
-  if (!t) return;
-  _dnd.lastX = t.clientX;
-  _dnd.lastY = t.clientY;
-  if (!_dnd.active) {
-    if (Math.abs(t.clientX - _dnd.startX) > 8 || Math.abs(t.clientY - _dnd.startY) > 8) {
-      clearTimeout(_dnd.timer); _dnd.timer = null; _dnd.dragEl = null;
-    }
-    return;
+  document.body.appendChild(_dnd.ghost);
+  _shelfGhostPos(_dnd.lastX, _dnd.lastY);
+  if (navigator.vibrate) navigator.vibrate(30);
+}
+
+function _shelfPtrPreMove(e) {
+  if (e.pointerId !== _dnd.pointerId) return;
+  _dnd.lastX = e.clientX;
+  _dnd.lastY = e.clientY;
+  if (Math.abs(e.clientX - _dnd.startX) > 8 || Math.abs(e.clientY - _dnd.startY) > 8) {
+    clearTimeout(_dnd.timer); _dnd.timer = null;
+    document.removeEventListener('pointermove', _shelfPtrPreMove);
+    document.removeEventListener('pointerup', _shelfPtrPreUp);
+    document.removeEventListener('pointercancel', _shelfPtrPreUp);
+    _dnd.dragEl = null; _dnd.pointerId = -1;
   }
+}
+
+function _shelfPtrPreUp(e) {
+  if (e.pointerId !== _dnd.pointerId) return;
+  clearTimeout(_dnd.timer); _dnd.timer = null;
+  document.removeEventListener('pointermove', _shelfPtrPreMove);
+  document.removeEventListener('pointerup', _shelfPtrPreUp);
+  document.removeEventListener('pointercancel', _shelfPtrPreUp);
+  _dnd.dragEl = null; _dnd.pointerId = -1;
+}
+
+function _shelfPtrMove(e) {
+  if (e.pointerId !== _dnd.pointerId) return;
   e.preventDefault();
-  _shelfGhostPos(t.clientX, t.clientY);
-  const under = document.elementFromPoint(t.clientX, t.clientY);
+  _dnd.lastX = e.clientX;
+  _dnd.lastY = e.clientY;
+  _shelfGhostPos(e.clientX, e.clientY);
+  const under = document.elementFromPoint(e.clientX, e.clientY);
   const shelf = under ? under.closest('.shelf-shelf') : null;
   document.querySelectorAll('.shelf-shelf.drop-target').forEach(s => s.classList.remove('drop-target'));
   if (shelf && shelf.dataset.location !== _dnd.fromLoc) shelf.classList.add('drop-target');
 }
 
-function _shelfTouchEnd(e) {
-  // Only act when our tracked drag touch lifts
-  if (e && e.changedTouches) {
-    let found = false;
-    for (let i = 0; i < e.changedTouches.length; i++) {
-      if (e.changedTouches[i].identifier === _dnd.touchId) { found = true; break; }
-    }
-    if (!found) return;
-  }
-  clearTimeout(_dnd.timer); _dnd.timer = null;
-  if (!_dnd.active) { _dnd.id = null; _dnd.series = null; _dnd.fromLoc = null; _dnd.dragEl = null; _dnd.touchId = -1; return; }
+function _shelfPtrEnd(e) {
+  if (e.pointerId !== _dnd.pointerId) return;
+  _dnd.dragEl.removeEventListener('pointermove', _shelfPtrMove);
+  _dnd.dragEl.removeEventListener('pointerup', _shelfPtrEnd);
+  _dnd.dragEl.removeEventListener('pointercancel', _shelfPtrEnd);
+  try { _dnd.dragEl.releasePointerCapture(_dnd.pointerId); } catch(err) {}
   const under = document.elementFromPoint(_dnd.lastX, _dnd.lastY);
   const shelf = under ? under.closest('.shelf-shelf') : null;
   const newLoc = shelf ? shelf.dataset.location : null;
   if (_dnd.ghost) { _dnd.ghost.remove(); _dnd.ghost = null; }
   document.querySelectorAll('.shelf-shelf.drop-target').forEach(s => s.classList.remove('drop-target'));
-  if (_dnd.dragEl) _dnd.dragEl.classList.remove('dragging');
+  _dnd.dragEl.classList.remove('dragging');
   _dnd.active = false;
   const { id: dragId, series: dragSeries, fromLoc, mode } = _dnd;
-  _dnd.id = null; _dnd.series = null; _dnd.fromLoc = null; _dnd.dragEl = null; _dnd.touchId = -1;
+  _dnd.id = null; _dnd.series = null; _dnd.fromLoc = null; _dnd.dragEl = null; _dnd.pointerId = -1;
   if (!newLoc || newLoc === fromLoc) return;
   if (mode === 'series' && dragSeries) _shelfMoveSeries(dragSeries, fromLoc, newLoc);
   else if (mode === 'book' && dragId) _shelfMoveBook(dragId, newLoc);
