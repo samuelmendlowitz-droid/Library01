@@ -683,10 +683,6 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .shelf-spine.dragging { opacity: 0.25; transform: scale(0.93) translateY(3px); transition: opacity 0.1s, transform 0.1s; }
 .shelf-shelf.drop-target { background: rgba(201,169,110,0.08); }
 .shelf-shelf.drop-target .shelf-board { background: linear-gradient(to bottom, #C8A060 0%, #A87840 45%, #7A5228 100%); border-top-color: #E0C070; }
-/* During drag, allow second finger to scroll the shelf view natively */
-#shelfView.shelf-dragging .shelf-spine,
-#shelfView.shelf-dragging .shelf-series-box,
-#shelfView.shelf-dragging .shelf-series-spine { touch-action: auto; }
 /* Shelf list-view sections (drag-and-drop) */
 .book-list.shelf-view { display: flex; flex-direction: column; gap: 0; padding: 0 0 100px; }
 .shelf-section { padding: 0 20px; }
@@ -3718,12 +3714,44 @@ function _seriesBoxSetHtml(books, isGlobal) {
 
 // ── SHELF DRAG-AND-DROP ───────────────────────────────────────────────────────
 const _dnd = { id: null, series: null, fromLoc: null, ghost: null, timer: null, active: false, startX: 0, startY: 0, lastX: 0, lastY: 0, dragEl: null, mode: 'book', pointerId: -1, scrollDir: 0, scrollSpeed: 0, rafId: 0 };
+const _scrollTouch = { id: -1, lastY: 0 };
 let _shelfDndInited = false;
 
 function _initShelfDnd() {
   if (_shelfDndInited) return;
   _shelfDndInited = true;
   document.addEventListener('pointerdown', _shelfPtrDown);
+}
+
+function _shelfScrollTouchStart(e) {
+  if (_scrollTouch.id !== -1) return;
+  const t = e.changedTouches[0];
+  if (t) { _scrollTouch.id = t.identifier; _scrollTouch.lastY = t.clientY; }
+}
+function _shelfScrollTouchMove(e) {
+  if (_scrollTouch.id === -1) return;
+  for (let i = 0; i < e.changedTouches.length; i++) {
+    const t = e.changedTouches[i];
+    if (t.identifier === _scrollTouch.id) {
+      const delta = _scrollTouch.lastY - t.clientY;
+      _scrollTouch.lastY = t.clientY;
+      const sv = document.getElementById('shelfView');
+      if (sv) sv.scrollTop += delta;
+      break;
+    }
+  }
+}
+function _shelfScrollTouchEnd(e) {
+  for (let i = 0; i < e.changedTouches.length; i++) {
+    if (e.changedTouches[i].identifier === _scrollTouch.id) { _scrollTouch.id = -1; break; }
+  }
+}
+function _shelfScrollClear() {
+  document.removeEventListener('touchstart', _shelfScrollTouchStart);
+  document.removeEventListener('touchmove', _shelfScrollTouchMove);
+  document.removeEventListener('touchend', _shelfScrollTouchEnd);
+  document.removeEventListener('touchcancel', _shelfScrollTouchEnd);
+  _scrollTouch.id = -1;
 }
 
 function _shelfCancelDrag() {
@@ -3743,6 +3771,7 @@ function _shelfCancelDrag() {
   if (_dnd.ghost) { _dnd.ghost.remove(); _dnd.ghost = null; }
   document.querySelectorAll('.shelf-shelf.drop-target').forEach(s => s.classList.remove('drop-target'));
   document.getElementById('shelfView').classList.remove('shelf-dragging');
+  _shelfScrollClear();
   _dnd.active = false; _dnd.dragEl = null; _dnd.pointerId = -1;
   _dnd.id = null; _dnd.series = null; _dnd.fromLoc = null;
 }
@@ -3802,6 +3831,11 @@ function _shelfActivateDrag() {
   try { _dnd.dragEl.setPointerCapture(_dnd.pointerId); captured = true; } catch(err) {}
   if (!captured) { _shelfCancelDrag(); return; } // finger lifted before 400ms
   document.getElementById('shelfView').classList.add('shelf-dragging');
+  _scrollTouch.id = -1;
+  document.addEventListener('touchstart', _shelfScrollTouchStart, { passive: true });
+  document.addEventListener('touchmove', _shelfScrollTouchMove, { passive: true });
+  document.addEventListener('touchend', _shelfScrollTouchEnd, { passive: true });
+  document.addEventListener('touchcancel', _shelfScrollTouchEnd, { passive: true });
   _dnd.dragEl.addEventListener('pointermove', _shelfPtrMove, { passive: true });
   _dnd.dragEl.addEventListener('pointerup', _shelfPtrEnd);
   _dnd.dragEl.addEventListener('pointercancel', _shelfPtrEnd);
@@ -3879,6 +3913,7 @@ function _shelfPtrEnd(e) {
   document.querySelectorAll('.shelf-shelf.drop-target').forEach(s => s.classList.remove('drop-target'));
   _dnd.dragEl.classList.remove('dragging');
   document.getElementById('shelfView').classList.remove('shelf-dragging');
+  _shelfScrollClear();
   _dnd.active = false;
   const { id: dragId, series: dragSeries, fromLoc, mode } = _dnd;
   _dnd.id = null; _dnd.series = null; _dnd.fromLoc = null; _dnd.dragEl = null; _dnd.pointerId = -1;
