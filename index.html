@@ -3695,7 +3695,7 @@ function _seriesBoxSetHtml(books, isGlobal) {
 }
 
 // ── SHELF DRAG-AND-DROP ───────────────────────────────────────────────────────
-const _dnd = { id: null, series: null, fromLoc: null, ghost: null, timer: null, active: false, startX: 0, startY: 0, lastX: 0, lastY: 0, dragEl: null, mode: 'book' };
+const _dnd = { id: null, series: null, fromLoc: null, ghost: null, timer: null, active: false, startX: 0, startY: 0, lastX: 0, lastY: 0, dragEl: null, mode: 'book', touchId: -1 };
 let _shelfDndInited = false;
 
 function _initShelfDnd() {
@@ -3711,26 +3711,30 @@ function _shelfTouchStart(e) {
   if (currentPage !== 'mylibrary' || currentBookView !== 'shelf') return;
   if (e.touches.length !== 1) return;
   const t = e.touches[0];
-  // Series box takes priority over individual spine
-  const seriesBox = e.target.closest ? e.target.closest('.shelf-series-box') : null;
-  const spine = !seriesBox && (e.target.closest ? e.target.closest('.shelf-spine') : null);
-  if (!seriesBox && !spine) return;
-  const shelf = (seriesBox || spine).closest('.shelf-shelf');
+  // Priority: series spine (individual book inside box) > series header (whole series) > standalone spine
+  const seriesSpine = e.target.closest ? e.target.closest('.shelf-series-spine') : null;
+  const seriesHeader = !seriesSpine && (e.target.closest ? e.target.closest('.shelf-series-box-header') : null);
+  const spine = !seriesSpine && !seriesHeader && (e.target.closest ? e.target.closest('.shelf-spine') : null);
+  if (!seriesSpine && !seriesHeader && !spine) return;
+  const anchor = seriesSpine || seriesHeader || spine;
+  const shelf = anchor.closest('.shelf-shelf');
   _dnd.startX = _dnd.lastX = t.clientX;
   _dnd.startY = _dnd.lastY = t.clientY;
+  _dnd.touchId = t.identifier;
   _dnd.fromLoc = shelf ? shelf.dataset.location : null;
   _dnd.active = false;
   clearTimeout(_dnd.timer);
-  if (seriesBox) {
+  if (seriesHeader) {
+    const seriesBox = seriesHeader.closest('.shelf-series-box');
     _dnd.mode = 'series';
-    _dnd.series = seriesBox.dataset.series;
+    _dnd.series = seriesBox ? seriesBox.dataset.series : null;
     _dnd.id = null;
-    _dnd.dragEl = seriesBox;
+    _dnd.dragEl = seriesBox || seriesHeader;
   } else {
     _dnd.mode = 'book';
-    _dnd.id = spine.dataset.id;
+    _dnd.id = (seriesSpine || spine).dataset.id;
     _dnd.series = null;
-    _dnd.dragEl = spine;
+    _dnd.dragEl = seriesSpine || spine;
   }
   _dnd.timer = setTimeout(() => {
     _dnd.active = true;
@@ -3750,8 +3754,13 @@ function _shelfTouchStart(e) {
 }
 
 function _shelfTouchMove(e) {
-  if (!_dnd.dragEl || e.touches.length !== 1) return;
-  const t = e.touches[0];
+  if (!_dnd.dragEl) return;
+  // Find only our tracked drag touch — if another finger moved, let the browser scroll
+  let t = null;
+  for (let i = 0; i < e.changedTouches.length; i++) {
+    if (e.changedTouches[i].identifier === _dnd.touchId) { t = e.changedTouches[i]; break; }
+  }
+  if (!t) return;
   _dnd.lastX = t.clientX;
   _dnd.lastY = t.clientY;
   if (!_dnd.active) {
@@ -3768,9 +3777,17 @@ function _shelfTouchMove(e) {
   if (shelf && shelf.dataset.location !== _dnd.fromLoc) shelf.classList.add('drop-target');
 }
 
-function _shelfTouchEnd() {
+function _shelfTouchEnd(e) {
+  // Only act when our tracked drag touch lifts
+  if (e && e.changedTouches) {
+    let found = false;
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      if (e.changedTouches[i].identifier === _dnd.touchId) { found = true; break; }
+    }
+    if (!found) return;
+  }
   clearTimeout(_dnd.timer); _dnd.timer = null;
-  if (!_dnd.active) { _dnd.id = null; _dnd.series = null; _dnd.fromLoc = null; _dnd.dragEl = null; return; }
+  if (!_dnd.active) { _dnd.id = null; _dnd.series = null; _dnd.fromLoc = null; _dnd.dragEl = null; _dnd.touchId = -1; return; }
   const under = document.elementFromPoint(_dnd.lastX, _dnd.lastY);
   const shelf = under ? under.closest('.shelf-shelf') : null;
   const newLoc = shelf ? shelf.dataset.location : null;
@@ -3779,7 +3796,7 @@ function _shelfTouchEnd() {
   if (_dnd.dragEl) _dnd.dragEl.classList.remove('dragging');
   _dnd.active = false;
   const { id: dragId, series: dragSeries, fromLoc, mode } = _dnd;
-  _dnd.id = null; _dnd.series = null; _dnd.fromLoc = null; _dnd.dragEl = null;
+  _dnd.id = null; _dnd.series = null; _dnd.fromLoc = null; _dnd.dragEl = null; _dnd.touchId = -1;
   if (!newLoc || newLoc === fromLoc) return;
   if (mode === 'series' && dragSeries) _shelfMoveSeries(dragSeries, fromLoc, newLoc);
   else if (mode === 'book' && dragId) _shelfMoveBook(dragId, newLoc);
@@ -3916,7 +3933,7 @@ function _shelfSeriesBoxHtml(books, isGlobal) {
     if (isGlobal) { avg = (b.ratingCount > 0) ? b.ratingTotal / b.ratingCount : 0; }
     else { const gbId = createGlobalBookId(b.title||'', b.author||''); const gb = globalBookCache.find(x => x.id === gbId); avg = (gb && gb.ratingCount > 0) ? gb.ratingTotal / gb.ratingCount : (b.rating || 0); }
     const stars = avg > 0 ? '★'.repeat(Math.round(avg)) + '☆'.repeat(5 - Math.round(avg)) : '';
-    return `<div class="shelf-series-spine" style="background:${bPal.bg};${bPat?bPat+';':''}color:${bPal.fg};" onclick="${openFn}">
+    return `<div class="shelf-series-spine" data-id="${b.id||''}" style="background:${bPal.bg};${bPat?bPat+';':''}color:${bPal.fg};" onclick="${openFn}">
   <div class="sbs-spine-num" style="color:${bPal.ac}">${esc(numLabel)}</div>
   <div class="shelf-spine-title-wrap"><div class="shelf-spine-title" style="font-family:${spineFont};">${esc(b.title||'')}</div></div>
   ${stars ? `<div class="sbs-spine-rating" style="color:${bPal.ac}">${stars}</div>` : ''}
