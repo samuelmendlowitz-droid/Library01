@@ -3891,7 +3891,8 @@ function renderBooksShelf(list) {
   wrap.innerHTML = sections.map(({ loc, books: bks }) => {
     const booksHtml = bks.map(b => {
       const seed = _bookSeed(b.id);
-      const pal = _REC_PALETTES[seed % _REC_PALETTES.length];
+      const palettes = _activePalettes();
+      const pal = palettes[seed % palettes.length];
       const safeId = b.id.replace(/'/g, "\\'");
       const metaParts = [b.author || ''];
       if (b.series) metaParts.push(b.series + (b.seriesNumber ? ' #' + b.seriesNumber : ''));
