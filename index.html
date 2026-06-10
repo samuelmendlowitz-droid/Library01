@@ -1448,6 +1448,27 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .login-btn, .login-btn * { color: var(--bg) !important; }
 
 
+/* ── PREMIUM / PAYWALL ─────────────────────────────────────────────────────── */
+.premium-modal { text-align: center; }
+.premium-crown { font-size: 42px; margin-bottom: 10px; }
+.premium-headline { font-family: 'Playfair Display', serif; font-size: 24px; color: var(--accent); margin-bottom: 8px; }
+.premium-sub { font-size: 14px; color: var(--text2); margin-bottom: 20px; line-height: 1.5; }
+.premium-features { text-align: left; background: var(--surface2); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 22px; display: flex; flex-direction: column; gap: 10px; }
+.premium-feature-row { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text); }
+.premium-feature-row .lucide { color: var(--accent); flex-shrink: 0; width: 16px; height: 16px; }
+.premium-plans { display: flex; gap: 10px; margin-bottom: 18px; }
+.premium-plan { flex: 1; border: 2px solid var(--border); border-radius: var(--radius); padding: 12px 10px; cursor: pointer; text-align: center; transition: all 0.15s; background: var(--surface2); }
+.premium-plan.selected { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface2)); }
+.premium-plan-name { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text2); margin-bottom: 4px; }
+.premium-plan-price { font-size: 20px; font-weight: 700; color: var(--text); font-family: 'DM Sans', sans-serif; }
+.premium-plan-period { font-size: 11px; color: var(--text3); }
+.premium-plan-badge { font-size: 10px; background: var(--accent); color: var(--bg); border-radius: 6px; padding: 1px 6px; font-weight: 700; margin-top: 4px; display: inline-block; }
+.premium-restore { font-size: 12px; color: var(--text3); text-align: center; margin-top: 12px; cursor: pointer; text-decoration: underline; }
+.premium-active-badge { display: inline-flex; align-items: center; gap: 6px; background: color-mix(in srgb, var(--accent) 15%, var(--surface2)); border: 1px solid var(--accent); border-radius: 20px; padding: 4px 12px; font-size: 12px; font-weight: 600; color: var(--accent); }
+.paywall-lock { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 20px; gap: 10px; }
+.paywall-lock .lucide { color: var(--accent); width: 32px; height: 32px; }
+.paywall-lock-title { font-size: 15px; font-weight: 700; color: var(--text); }
+.paywall-lock-sub { font-size: 13px; color: var(--text2); text-align: center; }
 </style>
 <meta name="google-adsense-account" content="ca-pub-6686010470640539">
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6686010470640539" crossorigin="anonymous"></script>
@@ -2124,6 +2145,38 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
       <button class="btn-submit" id="rrSaveBtn" onclick="submitRateReview()" style="flex:1;">Save</button>
       <button class="btn-submit" onclick="closeModal('rateReviewModal')" style="flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text1);">Skip</button>
     </div>
+  </div>
+</div>
+
+<!-- PREMIUM / PAYWALL MODAL -->
+<div class="modal-overlay" id="premiumModal" onclick="closeOnOverlay(event,'premiumModal')">
+  <div class="modal premium-modal">
+    <div class="modal-handle"></div>
+    <button class="modal-close" onclick="closeModal('premiumModal')"><i data-lucide="x"></i></button>
+    <div class="premium-crown">👑</div>
+    <div class="premium-headline">Miriam's Library Premium</div>
+    <div class="premium-sub">Unlock the full experience — ad-free with custom book designs and more.</div>
+    <div class="premium-features">
+      <div class="premium-feature-row"><i data-lucide="ban"></i> No ads, ever</div>
+      <div class="premium-feature-row"><i data-lucide="palette"></i> Custom book &amp; spine designs</div>
+      <div class="premium-feature-row"><i data-lucide="sparkles"></i> Advanced genre themes</div>
+      <div class="premium-feature-row"><i data-lucide="bar-chart-2"></i> Full reading stats &amp; insights</div>
+    </div>
+    <div class="premium-plans">
+      <div class="premium-plan" id="planMonthly" onclick="selectPremiumPlan('monthly')">
+        <div class="premium-plan-name">Monthly</div>
+        <div class="premium-plan-price">$1.99</div>
+        <div class="premium-plan-period">per month</div>
+      </div>
+      <div class="premium-plan selected" id="planYearly" onclick="selectPremiumPlan('yearly')">
+        <div class="premium-plan-name">Yearly</div>
+        <div class="premium-plan-price">$16</div>
+        <div class="premium-plan-period">per year</div>
+        <div class="premium-plan-badge">Save 33%</div>
+      </div>
+    </div>
+    <button class="btn-submit" id="premiumCheckoutBtn" onclick="startPremiumCheckout()">Start Free Trial</button>
+    <div class="premium-restore" onclick="restorePremium()">Restore purchase</div>
   </div>
 </div>
 
@@ -2858,6 +2911,7 @@ onAuthStateChanged(auth, async user => {
     loadBooks();          // don't block on global books
     loadNotifications();  // async, non-blocking
     preloadGlobalBooks().then(() => syncUserBooksToCache()); // background, merge after
+    _loadPremiumStatus(); // load Stripe subscription status from Firestore
   } else {
     currentUser = null;
     books = [];
@@ -10701,6 +10755,98 @@ window.cancelBorrow = async (ownerUid, bookId, bookTitle) => {
     }
   }, { rootMargin: '200px' });
   observer.observe(sentinel);
+})();
+
+// ── PREMIUM / STRIPE INTEGRATION ─────────────────────────────────────────────
+
+// ↓↓ REPLACE with your deployed Cloud Function URL ↓↓
+const CHECKOUT_FUNCTION_URL = 'https://us-central1-miriams-library-17fa3.cloudfunctions.net/createCheckoutSession';
+
+let _selectedPlan = 'yearly';
+
+// Check premium status from Firestore (called after auth)
+async function _loadPremiumStatus() {
+  if (!currentUser) return;
+  try {
+    const snap = await getDoc(doc(db, 'users', currentUser.uid));
+    const data = snap.data() || {};
+    const active = data.premium === true && (!data.premiumExpiry || data.premiumExpiry > Date.now());
+    currentUser._isPremium = active;
+    currentUser._premiumPlan = data.premiumPlan || null;
+  } catch(e) { /* offline — keep existing value */ }
+}
+
+// Gate function: returns true if user has premium (owner always gets it)
+window._isPremiumUser = () => {
+  if (!currentUser) return false;
+  if (currentUser.email === 'samuelmendlowitz@gmail.com') return true;
+  return currentUser._isPremium === true;
+};
+
+window.selectPremiumPlan = (plan) => {
+  _selectedPlan = plan;
+  document.getElementById('planMonthly').classList.toggle('selected', plan === 'monthly');
+  document.getElementById('planYearly').classList.toggle('selected', plan === 'yearly');
+  document.getElementById('premiumCheckoutBtn').textContent =
+    plan === 'yearly' ? 'Start Free Trial' : 'Subscribe Monthly';
+};
+
+window.openPremiumModal = () => {
+  if (_isPremiumUser()) { showStatus('You already have Premium! ✨', 'success'); return; }
+  selectPremiumPlan('yearly');
+  openModal('premiumModal');
+};
+
+window.startPremiumCheckout = async () => {
+  if (!currentUser) { showStatus('Sign in first to subscribe.', 'error'); return; }
+  const btn = document.getElementById('premiumCheckoutBtn');
+  btn.disabled = true;
+  btn.textContent = 'Loading…';
+  try {
+    const res = await fetch(CHECKOUT_FUNCTION_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        uid: currentUser.uid,
+        email: currentUser.email,
+        plan: _selectedPlan,
+        returnUrl: window.location.href.split('?')[0],
+      }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const { url } = await res.json();
+    window.location.href = url;   // redirect to Stripe Checkout
+  } catch(e) {
+    showStatus('Could not start checkout: ' + e.message, 'error');
+    btn.disabled = false;
+    btn.textContent = _selectedPlan === 'yearly' ? 'Start Free Trial' : 'Subscribe Monthly';
+  }
+};
+
+window.restorePremium = async () => {
+  if (!currentUser) return;
+  await _loadPremiumStatus();
+  if (_isPremiumUser()) {
+    showStatus('Premium restored! ✨', 'success');
+    closeModal('premiumModal');
+  } else {
+    showStatus('No active subscription found.', 'error');
+  }
+};
+
+// Handle Stripe return URL (?checkout=success / ?checkout=cancel)
+(function() {
+  const p = new URLSearchParams(window.location.search);
+  if (p.get('checkout') === 'success') {
+    history.replaceState({}, '', window.location.pathname);
+    // Give webhook a moment to write to Firestore, then reload premium status
+    setTimeout(async () => {
+      await _loadPremiumStatus();
+      showStatus('🎉 Welcome to Premium!', 'success');
+    }, 3000);
+  } else if (p.get('checkout') === 'cancel') {
+    history.replaceState({}, '', window.location.pathname);
+  }
 })();
 
 </script>
