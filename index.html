@@ -10810,17 +10810,17 @@ window.startPremiumCheckout = async (plan) => {
     if (btn) { btn.disabled = false; btn.textContent = resolvedPlan === 'yearly' ? 'Subscribe — $16 / year' : 'Subscribe — $1.99 / month'; }
   };
 
-  // Pre-create customers/{uid} doc so Extension can find/create Stripe customer.
-  // If this fails (rules not yet updated) we log and proceed — newer Extension
-  // versions can create the Stripe customer via Firebase Auth directly.
-  // Required rule: match /customers/{uid} { allow write: if request.auth.uid == uid; }
+  // Ensure customers/{uid} doc exists — Extension crashes with null if it's missing.
   try {
-    await setDoc(doc(db, 'customers', currentUser.uid), {
-      email: currentUser.email,
-      name: currentUser.displayName || '',
-    }, { merge: true });
-  } catch(permErr) {
-    console.warn('customers pre-create skipped:', permErr.code, permErr.message);
+    const custRef = doc(db, 'customers', currentUser.uid);
+    const custSnap = await getDoc(custRef);
+    if (!custSnap.exists()) {
+      await setDoc(custRef, { email: currentUser.email || '', name: currentUser.displayName || '' });
+    }
+  } catch(setupErr) {
+    showStatus('Setup error: ' + setupErr.message, 'error');
+    resetBtn();
+    return;
   }
 
   showStatus('Opening checkout…', 'info');
