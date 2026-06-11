@@ -8471,16 +8471,6 @@ window.openPremiumModal = () => {
   openModal('premiumModal');
 };
 
-window.startPremiumCheckout = (plan) => {
-  const url = plan === 'yearly' ? STRIPE_YEARLY_LINK : STRIPE_MONTHLY_LINK;
-  if (url.includes('REPLACE')) {
-    showStatus('Payments not yet configured — coming soon!', 'error');
-    setTimeout(hideStatus, 3000);
-    return;
-  }
-  window.open(url, '_blank', 'noopener');
-};
-
 window.restorePremium = async () => {
   if (!currentUser) return;
   try {
@@ -10761,10 +10751,12 @@ window.cancelBorrow = async (ownerUid, bookId, bookTitle) => {
   observer.observe(sentinel);
 })();
 
-// ── PREMIUM / STRIPE EXTENSION INTEGRATION ───────────────────────────────────
-const STRIPE_PRICE_IDS = {
-  monthly: 'price_1TgEmqAUMgalmOBaQ6kZaZKA',
-  yearly:  'price_1TgEnyAUMgalmOBa6KHoklPM',
+// ── PREMIUM / STRIPE PAYMENT LINKS ───────────────────────────────────────────
+// Replace these with your Payment Link URLs from the Stripe Dashboard
+// (Payments → Payment links → Create link → select recurring price)
+const STRIPE_PAYMENT_LINKS = {
+  monthly: 'https://buy.stripe.com/REPLACE_MONTHLY',
+  yearly:  'https://buy.stripe.com/REPLACE_YEARLY',
 };
 
 let _selectedPlan = 'yearly';
@@ -10799,64 +10791,21 @@ window._isPremiumUser = () => {
   return currentUser._isPremium === true;
 };
 
-window.startPremiumCheckout = async (plan) => {
+window.startPremiumCheckout = (plan) => {
   if (!currentUser) { showStatus('Sign in first to subscribe.', 'error'); return; }
   const resolvedPlan = plan || _selectedPlan || 'yearly';
-  const priceId = STRIPE_PRICE_IDS[resolvedPlan];
-  if (!priceId) { showStatus('Price not configured.', 'error'); return; }
-  const btn = document.getElementById('premiumCheckoutBtn');
-  if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
-  const resetBtn = () => {
-    if (btn) { btn.disabled = false; btn.textContent = resolvedPlan === 'yearly' ? 'Subscribe — $16 / year' : 'Subscribe — $1.99 / month'; }
-  };
-
-  // Write customers/{uid} doc and wait for the Firestore server to confirm the
-  // write before creating the checkout session. With persistentLocalCache,
-  // setDoc resolves when the local cache is written — not the server. The
-  // Extension's Cloud Function reads from the server, so we must call
-  // waitForPendingWrites() to guarantee the doc is visible server-side first.
-  try {
-    await setDoc(doc(db, 'customers', currentUser.uid),
-      { email: currentUser.email || '', name: currentUser.displayName || '' },
-      { merge: true });
-    await waitForPendingWrites(db);
-  } catch(setupErr) {
-    showStatus('Setup error: ' + setupErr.message, 'error');
-    resetBtn();
+  const baseUrl = STRIPE_PAYMENT_LINKS[resolvedPlan];
+  if (!baseUrl || baseUrl.includes('REPLACE_')) {
+    showStatus('Checkout not configured yet.', 'error');
     return;
   }
-
-  showStatus('Opening checkout…', 'info');
-  try {
-    const sessionRef = await addDoc(
-      collection(db, 'customers', currentUser.uid, 'checkout_sessions'),
-      {
-        mode: 'subscription',
-        price: priceId,
-        success_url: window.location.href.split('?')[0] + '?checkout=success',
-        cancel_url:  window.location.href.split('?')[0] + '?checkout=cancel',
-      }
-    );
-    const unsub = onSnapshot(sessionRef, (snap) => {
-      const data = snap.data();
-      if (!data) return;
-      const { error, url } = data;
-      if (error) {
-        unsub();
-        const msg = error?.message ?? (typeof error === 'string' ? error : JSON.stringify(error));
-        showStatus('Checkout error: ' + msg, 'error');
-        resetBtn();
-        return;
-      }
-      if (url) { unsub(); window.location.assign(url); }
-    }, (err) => {
-      showStatus('Session error: ' + err.message, 'error');
-      resetBtn();
-    });
-  } catch(e) {
-    showStatus('Could not start checkout: ' + e.message, 'error');
-    resetBtn();
-  }
+  const btn = document.getElementById('premiumCheckoutBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Opening…'; }
+  const params = new URLSearchParams({
+    client_reference_id: currentUser.uid,
+    prefilled_email: currentUser.email || '',
+  });
+  window.location.assign(`${baseUrl}?${params.toString()}`);
 };
 
 window.restorePremium = async () => {
