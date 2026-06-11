@@ -10803,35 +10803,53 @@ window.startPremiumCheckout = async (plan) => {
   if (!priceId) { showStatus('Price not configured.', 'error'); return; }
   const btn = document.getElementById('premiumCheckoutBtn');
   if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
-  showStatus('Opening checkout…', 'info');
+  const resetBtn = () => {
+    if (btn) { btn.disabled = false; btn.textContent = resolvedPlan === 'yearly' ? 'Subscribe — $16 / year' : 'Subscribe — $1.99 / month'; }
+  };
+
+  // Pre-create customers/{uid} doc so Extension can find/create Stripe customer.
+  // If this fails (rules not yet updated) we log and proceed — newer Extension
+  // versions can create the Stripe customer via Firebase Auth directly.
+  // Required rule: match /customers/{uid} { allow write: if request.auth.uid == uid; }
   try {
-    // Ensure customers/{uid} doc exists so extension can look up / create Stripe customer
     await setDoc(doc(db, 'customers', currentUser.uid), {
       email: currentUser.email,
       name: currentUser.displayName || '',
     }, { merge: true });
+  } catch(permErr) {
+    console.warn('customers pre-create skipped:', permErr.code, permErr.message);
+  }
 
+  showStatus('Opening checkout…', 'info');
+  try {
     const sessionRef = await addDoc(
       collection(db, 'customers', currentUser.uid, 'checkout_sessions'),
       {
+        mode: 'subscription',
         price: priceId,
         success_url: window.location.href.split('?')[0] + '?checkout=success',
         cancel_url:  window.location.href.split('?')[0] + '?checkout=cancel',
       }
     );
     const unsub = onSnapshot(sessionRef, (snap) => {
-      const { error, url } = snap.data() || {};
+      const data = snap.data();
+      if (!data) return;
+      const { error, url } = data;
       if (error) {
         unsub();
-        showStatus('Checkout error: ' + error.message, 'error');
-        if (btn) { btn.disabled = false; btn.textContent = resolvedPlan === 'yearly' ? 'Subscribe — $16 / year' : 'Subscribe — $1.99 / month'; }
+        const msg = error?.message ?? (typeof error === 'string' ? error : JSON.stringify(error));
+        showStatus('Checkout error: ' + msg, 'error');
+        resetBtn();
         return;
       }
       if (url) { unsub(); window.location.assign(url); }
+    }, (err) => {
+      showStatus('Session error: ' + err.message, 'error');
+      resetBtn();
     });
   } catch(e) {
     showStatus('Could not start checkout: ' + e.message, 'error');
-    if (btn) { btn.disabled = false; btn.textContent = resolvedPlan === 'yearly' ? 'Subscribe — $16 / year' : 'Subscribe — $1.99 / month'; }
+    resetBtn();
   }
 };
 
