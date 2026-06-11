@@ -10786,9 +10786,10 @@ async function _loadPremiumStatus() {
       currentUser._premiumPlan = subsSnap.docs[0].data()?.price?.id || null;
       return;
     }
-    // Fallback: manual override field in the user's settings doc
-    const settingsSnap = await getDoc(doc(db, 'users', currentUser.uid, 'meta', 'settings'));
-    const hasPremium = settingsSnap.exists() && settingsSnap.data()?.isPremium === true;
+    // Fallback: manual override — force a server read to bypass persistent cache
+    const metaSnap = await getDocsFromServer(collection(db, 'users', currentUser.uid, 'meta'));
+    const settingsDoc = metaSnap.docs.find(d => d.id === 'settings');
+    const hasPremium = !!(settingsDoc && settingsDoc.data()?.isPremium === true);
     _isPremium = hasPremium;
     currentUser._isPremium = hasPremium;
     currentUser._premiumPlan = null;
@@ -10850,7 +10851,9 @@ window.restorePremium = async () => {
     showStatus('Premium restored! ✨', 'success');
     closeModal('premiumModal');
   } else {
-    showStatus('No active subscription found.', 'error');
+    // Show UID to help user find the right Firestore document
+    const uid = currentUser.uid;
+    showStatus(`Not found. In Firebase Console → Firestore → users → ${uid} → meta → settings → add isPremium (boolean) = true`, 'error');
   }
 };
 
