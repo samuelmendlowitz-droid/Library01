@@ -2556,7 +2556,7 @@ All columns other than Author, Title, Series and Genres should be left empty or 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as fbSignOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { getFirestore, initializeFirestore, persistentLocalCache, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, getDocsFromCache, getDocsFromServer, query, where, limit, orderBy, startAfter, onSnapshot, serverTimestamp, increment, arrayUnion, arrayRemove, getCountFromServer } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, initializeFirestore, persistentLocalCache, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, getDocsFromCache, getDocsFromServer, query, where, limit, orderBy, startAfter, onSnapshot, serverTimestamp, increment, arrayUnion, arrayRemove, getCountFromServer, waitForPendingWrites } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 // ── CONFIG ───────────────────────────────────────────────────────────────────
 const firebaseConfig = {
@@ -10810,12 +10810,16 @@ window.startPremiumCheckout = async (plan) => {
     if (btn) { btn.disabled = false; btn.textContent = resolvedPlan === 'yearly' ? 'Subscribe — $16 / year' : 'Subscribe — $1.99 / month'; }
   };
 
-  // Ensure customers/{uid} doc exists — Extension crashes with null if it's missing.
+  // Ensure customers/{uid} doc exists on the SERVER before creating the checkout
+  // session. With persistentLocalCache, setDoc resolves when the local cache
+  // is written — not the server. waitForPendingWrites() blocks until Firestore
+  // confirms the write server-side, so the Extension sees the doc when it runs.
   try {
     const custRef = doc(db, 'customers', currentUser.uid);
-    const custSnap = await getDoc(custRef);
+    const custSnap = await getDocFromServer(custRef);
     if (!custSnap.exists()) {
       await setDoc(custRef, { email: currentUser.email || '', name: currentUser.displayName || '' });
+      await waitForPendingWrites(db); // wait for server confirmation
     }
   } catch(setupErr) {
     showStatus('Setup error: ' + setupErr.message, 'error');
