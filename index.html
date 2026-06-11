@@ -10757,78 +10757,72 @@ window.cancelBorrow = async (ownerUid, bookId, bookTitle) => {
   observer.observe(sentinel);
 })();
 
-// ── PREMIUM / STRIPE INTEGRATION ─────────────────────────────────────────────
+// ── PREMIUM / STRIPE EXTENSION INTEGRATION ───────────────────────────────────
+// Uses Firebase "Run Payments with Stripe" Extension (Firestore-triggered).
+// Replace price_XXX values below with your real Stripe Price IDs from the
+// Stripe Dashboard → Products page.
+const STRIPE_PRICE_IDS = {
+  monthly: 'price_XXXXXXXXXXXXXXXX',  // ← paste your monthly price ID here
+  yearly:  'price_YYYYYYYYYYYYYYYY',  // ← paste your yearly price ID here
+};
 
-// ↓↓ REPLACE with your deployed Cloud Function URL ↓↓
-const CHECKOUT_FUNCTION_URL = 'https://us-central1-miriams-library-17fa3.cloudfunctions.net/createCheckoutSession';
-
-let _selectedPlan = 'yearly';
-
-// Check premium status from Firestore (called after auth)
+// Reads active subscription from extension's Firestore path
 async function _loadPremiumStatus() {
   if (!currentUser) return;
   try {
-    const snap = await getDoc(doc(db, 'users', currentUser.uid));
-    const data = snap.data() || {};
-    const active = data.premium === true && (!data.premiumExpiry || data.premiumExpiry > Date.now());
-    currentUser._isPremium = active;
-    currentUser._premiumPlan = data.premiumPlan || null;
+    const subsSnap = await getDocs(
+      query(
+        collection(db, 'customers', currentUser.uid, 'subscriptions'),
+        where('status', 'in', ['active', 'trialing'])
+      )
+    );
+    currentUser._isPremium = !subsSnap.empty;
+    currentUser._premiumPlan = subsSnap.empty ? null : (subsSnap.docs[0].data()?.price?.id || null);
   } catch(e) { /* offline — keep existing value */ }
 }
 
-// Gate function: returns true if user has premium (owner always gets it)
+// Gate function: owner always has premium; others need active Stripe subscription
 window._isPremiumUser = () => {
   if (!currentUser) return false;
   if (currentUser.email === 'samuelmendlowitz@gmail.com') return true;
   return currentUser._isPremium === true;
 };
 
-window.selectPremiumPlan = (plan) => {
-  _selectedPlan = plan;
-  document.getElementById('planMonthly').classList.toggle('selected', plan === 'monthly');
-  document.getElementById('planYearly').classList.toggle('selected', plan === 'yearly');
-  document.getElementById('premiumCheckoutBtn').textContent =
-    plan === 'yearly' ? 'Start Free Trial' : 'Subscribe Monthly';
-};
-
-window.openPremiumModal = () => {
-  if (_isPremiumUser()) { showStatus('You already have Premium! ✨', 'success'); return; }
-  selectPremiumPlan('yearly');
-  openModal('premiumModal');
-};
-
-window.startPremiumCheckout = async () => {
+window.startPremiumCheckout = async (plan) => {
   if (!currentUser) { showStatus('Sign in first to subscribe.', 'error'); return; }
-  const btn = document.getElementById('premiumCheckoutBtn');
-  btn.disabled = true;
-  btn.textContent = 'Loading…';
+  const priceId = STRIPE_PRICE_IDS[plan || 'yearly'];
+  if (!priceId || priceId.startsWith('price_XXX') || priceId.startsWith('price_YYY')) {
+    showStatus('Payments coming soon — price IDs not yet configured.', 'error');
+    return;
+  }
+  showStatus('Opening checkout…', 'info');
   try {
-    const res = await fetch(CHECKOUT_FUNCTION_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        uid: currentUser.uid,
-        email: currentUser.email,
-        plan: _selectedPlan,
-        returnUrl: window.location.href.split('?')[0],
-      }),
+    const sessionRef = await addDoc(
+      collection(db, 'customers', currentUser.uid, 'checkout_sessions'),
+      {
+        price: priceId,
+        success_url: window.location.href.split('?')[0] + '?checkout=success',
+        cancel_url:  window.location.href.split('?')[0] + '?checkout=cancel',
+      }
+    );
+    const unsub = onSnapshot(sessionRef, (snap) => {
+      const { error, url } = snap.data() || {};
+      if (error) { unsub(); showStatus('Checkout error: ' + error.message, 'error'); return; }
+      if (url)   { unsub(); window.location.assign(url); }
     });
-    if (!res.ok) throw new Error(await res.text());
-    const { url } = await res.json();
-    window.location.href = url;   // redirect to Stripe Checkout
   } catch(e) {
     showStatus('Could not start checkout: ' + e.message, 'error');
-    btn.disabled = false;
-    btn.textContent = _selectedPlan === 'yearly' ? 'Start Free Trial' : 'Subscribe Monthly';
   }
 };
 
 window.restorePremium = async () => {
   if (!currentUser) return;
+  showStatus('Checking subscription…', 'info');
   await _loadPremiumStatus();
   if (_isPremiumUser()) {
     showStatus('Premium restored! ✨', 'success');
     closeModal('premiumModal');
+    _renderPremiumModal();
   } else {
     showStatus('No active subscription found.', 'error');
   }
@@ -10839,10 +10833,10 @@ window.restorePremium = async () => {
   const p = new URLSearchParams(window.location.search);
   if (p.get('checkout') === 'success') {
     history.replaceState({}, '', window.location.pathname);
-    // Give webhook a moment to write to Firestore, then reload premium status
     setTimeout(async () => {
       await _loadPremiumStatus();
       showStatus('🎉 Welcome to Premium!', 'success');
+      _renderPremiumModal();
     }, 3000);
   } else if (p.get('checkout') === 'cancel') {
     history.replaceState({}, '', window.location.pathname);
