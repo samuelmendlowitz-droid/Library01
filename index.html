@@ -2913,6 +2913,9 @@ onAuthStateChanged(auth, async user => {
     loadNotifications();  // async, non-blocking
     preloadGlobalBooks().then(() => syncUserBooksToCache()); // background, merge after
     _loadPremiumStatus(); // load Stripe subscription status from Firestore
+    // Ensure customers/{uid} doc exists at login so the Stripe Extension can
+    // find/create the Stripe customer when checkout is attempted.
+    setDoc(doc(db, 'customers', user.uid), { email: user.email || '', name: user.displayName || '' }, { merge: true }).catch(() => {});
   } else {
     currentUser = null;
     books = [];
