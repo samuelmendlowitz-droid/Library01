@@ -10864,11 +10864,15 @@ window.restorePremium = async () => {
     const uid = currentUser.uid;
     const body = document.getElementById('premiumModalBody');
     if (body) {
-      body.innerHTML += `<div style="margin-top:12px;padding:12px;background:color-mix(in srgb,var(--accent) 10%,var(--surface2));border-radius:var(--radius);font-size:11px;color:var(--text2);line-height:1.6;word-break:break-all;">
-        <strong style="color:var(--text)">No subscription found.</strong><br>
+      // Remove any previous error message before adding a new one
+      body.querySelector('#premiumRestoreError')?.remove();
+      const errDiv = document.createElement('div');
+      errDiv.id = 'premiumRestoreError';
+      errDiv.style.cssText = 'margin-top:12px;padding:12px;background:color-mix(in srgb,var(--accent) 10%,var(--surface2));border-radius:var(--radius);font-size:11px;color:var(--text2);line-height:1.6;word-break:break-all;';
+      errDiv.innerHTML = `<strong style="color:var(--text)">No subscription found.</strong><br>
         If you just subscribed, wait a moment and try again.<br><br>
-        To manually activate: Firebase Console → Firestore → <strong>users → ${uid} → meta → settings</strong> → add <strong>isPremium = true</strong> (boolean)
-      </div>`;
+        To manually activate: Firebase Console → Firestore → <strong>users → ${uid} → meta → settings</strong> → add <strong>isPremium = true</strong> (boolean)`;
+      body.appendChild(errDiv);
     }
   }
 };
