@@ -10821,7 +10821,13 @@ window.startPremiumCheckout = (plan) => {
     client_reference_id: currentUser.uid,
     prefilled_email: currentUser.email || '',
   });
-  window.location.assign(`${baseUrl}?${params.toString()}`);
+  const stripeUrl = `${baseUrl}?${params.toString()}`;
+  window.open(stripeUrl, '_blank', 'noopener');
+  // Reset button after a moment — user stays on this page and Stripe opens in new tab
+  setTimeout(() => {
+    if (btn) { btn.disabled = false; btn.textContent = _selectedPlan === 'monthly' ? 'Subscribe — $1.99 / month' : 'Subscribe — $16 / year'; }
+    showStatus('Complete payment in the new tab, then tap Restore Purchase.', 'info');
+  }, 2000);
 };
 
 window.restorePremium = async () => {
@@ -10894,6 +10900,21 @@ window._activatePendingCheckout = () => {
     history.replaceState({}, '', window.location.pathname);
   }
 })();
+
+// When the browser restores this page from bfcache (user pressed Back after
+// landing on Stripe), the button is still frozen as "Opening…" disabled.
+// pageshow with persisted:true fires in that case — reset the button.
+window.addEventListener('pageshow', (e) => {
+  if (!e.persisted) return;
+  const btn = document.getElementById('premiumCheckoutBtn');
+  if (btn && btn.textContent === 'Opening…') {
+    btn.disabled = false;
+    btn.textContent = _selectedPlan === 'monthly' ? 'Subscribe — $1.99 / month' : 'Subscribe — $16 / year';
+  }
+  // If they're coming back from Stripe without a redirect, try to activate
+  _pendingCheckoutSuccess = true;
+  if (typeof _activatePendingCheckout === 'function' && currentUser) _activatePendingCheckout();
+});
 
 </script>
 </body>
