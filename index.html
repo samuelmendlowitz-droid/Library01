@@ -2154,30 +2154,32 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
   <div class="modal premium-modal">
     <div class="modal-handle"></div>
     <button class="modal-close" onclick="closeModal('premiumModal')"><i data-lucide="x"></i></button>
-    <div class="premium-crown">👑</div>
-    <div class="premium-headline">Miriam's Library Premium</div>
-    <div class="premium-sub">Unlock the full experience — ad-free with custom book designs and more.</div>
-    <div class="premium-features">
-      <div class="premium-feature-row"><i data-lucide="ban"></i> No ads, ever</div>
-      <div class="premium-feature-row"><i data-lucide="palette"></i> Custom book &amp; spine designs</div>
-      <div class="premium-feature-row"><i data-lucide="sparkles"></i> Advanced genre themes</div>
-      <div class="premium-feature-row"><i data-lucide="bar-chart-2"></i> Full reading stats &amp; insights</div>
-    </div>
-    <div class="premium-plans">
-      <div class="premium-plan" id="planMonthly" onclick="selectPremiumPlan('monthly')">
-        <div class="premium-plan-name">Monthly</div>
-        <div class="premium-plan-price">$1.99</div>
-        <div class="premium-plan-period">per month</div>
+    <div id="premiumModalBody">
+      <div class="premium-crown">👑</div>
+      <div class="premium-headline">Miriam's Library Premium</div>
+      <div class="premium-sub">Unlock the full experience — ad-free with custom book designs and more.</div>
+      <div class="premium-features">
+        <div class="premium-feature-row"><i data-lucide="ban"></i> No ads, ever</div>
+        <div class="premium-feature-row"><i data-lucide="palette"></i> Custom book &amp; spine designs</div>
+        <div class="premium-feature-row"><i data-lucide="sparkles"></i> Advanced genre themes</div>
+        <div class="premium-feature-row"><i data-lucide="bar-chart-2"></i> Full reading stats &amp; insights</div>
       </div>
-      <div class="premium-plan selected" id="planYearly" onclick="selectPremiumPlan('yearly')">
-        <div class="premium-plan-name">Yearly</div>
-        <div class="premium-plan-price">$16</div>
-        <div class="premium-plan-period">per year</div>
-        <div class="premium-plan-badge">Save 33%</div>
+      <div class="premium-plans">
+        <div class="premium-plan" id="planMonthly" onclick="selectPremiumPlan('monthly')">
+          <div class="premium-plan-name">Monthly</div>
+          <div class="premium-plan-price">$1.99</div>
+          <div class="premium-plan-period">per month</div>
+        </div>
+        <div class="premium-plan selected" id="planYearly" onclick="selectPremiumPlan('yearly')">
+          <div class="premium-plan-name">Yearly</div>
+          <div class="premium-plan-price">$16</div>
+          <div class="premium-plan-period">per year</div>
+          <div class="premium-plan-badge">Save 33%</div>
+        </div>
       </div>
+      <button class="btn-submit" id="premiumCheckoutBtn" onclick="startPremiumCheckout()">Subscribe — $16 / year</button>
+      <div class="premium-restore" onclick="restorePremium()">Restore purchase</div>
     </div>
-    <button class="btn-submit" id="premiumCheckoutBtn" onclick="startPremiumCheckout()">Subscribe — $16 / year</button>
-    <div class="premium-restore" onclick="restorePremium()">Restore purchase</div>
   </div>
 </div>
 
@@ -2324,14 +2326,6 @@ All columns other than Author, Title, Series and Genres should be left empty or 
   </div>
 </div>
 
-<!-- PREMIUM MODAL -->
-<div class="modal-overlay" id="premiumModal" onclick="closeOnOverlay(event,'premiumModal')">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <button class="modal-close" onclick="closeModal('premiumModal')"><i data-lucide="x"></i></button>
-    <div id="premiumModalContent"></div>
-  </div>
-</div>
 
 <!-- SETTINGS MODAL -->
 <div class="settings-overlay" id="settingsOverlay" onclick="closeSettingsOnOverlay(event)">
@@ -10803,9 +10797,24 @@ window._isPremiumUser = () => {
   return currentUser._isPremium === true;
 };
 
+// Shows the "You're Premium" confirmation inside the modal body
+function _showPremiumConfirmation() {
+  const body = document.getElementById('premiumModalBody');
+  if (!body) return;
+  body.innerHTML = `
+    <div style="text-align:center;padding:28px 0 24px;">
+      <div style="font-size:52px;margin-bottom:16px;">👑</div>
+      <div style="font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--accent);margin-bottom:10px;">You're Premium!</div>
+      <div style="font-size:14px;color:var(--text2);line-height:1.7;margin-bottom:24px;">All features are unlocked.<br>Thank you for your support ✨</div>
+      <button class="btn-submit" onclick="closeModal('premiumModal')">Start exploring →</button>
+    </div>`;
+  refreshIcons();
+}
+
 // Called after premium status is confirmed — re-renders all premium-gated UI
 function _onPremiumUnlocked() {
   currentUser._isPremium = true;
+  _isPremium = true;
   // Re-render theme swatches so locked ones become available
   const themeContainer = document.querySelector('.theme-swatches') || document.getElementById('themeSwatches');
   if (themeContainer && typeof _renderThemeSwatches === 'function') _renderThemeSwatches();
@@ -10844,16 +10853,23 @@ window.startPremiumCheckout = (plan) => {
 
 window.restorePremium = async () => {
   if (!currentUser) return;
-  showStatus('Checking subscription…', 'info');
+  const restoreBtn = document.querySelector('.premium-restore');
+  if (restoreBtn) { restoreBtn.textContent = 'Checking…'; restoreBtn.style.pointerEvents = 'none'; }
   await _loadPremiumStatus();
+  if (restoreBtn) { restoreBtn.textContent = 'Restore purchase'; restoreBtn.style.pointerEvents = ''; }
   if (_isPremiumUser()) {
     _onPremiumUnlocked();
-    showStatus('Premium restored! ✨', 'success');
-    closeModal('premiumModal');
+    _showPremiumConfirmation();
   } else {
-    // Show UID to help user find the right Firestore document
     const uid = currentUser.uid;
-    showStatus(`Not found. In Firebase Console → Firestore → users → ${uid} → meta → settings → add isPremium (boolean) = true`, 'error');
+    const body = document.getElementById('premiumModalBody');
+    if (body) {
+      body.innerHTML += `<div style="margin-top:12px;padding:12px;background:color-mix(in srgb,var(--accent) 10%,var(--surface2));border-radius:var(--radius);font-size:11px;color:var(--text2);line-height:1.6;word-break:break-all;">
+        <strong style="color:var(--text)">No subscription found.</strong><br>
+        If you just subscribed, wait a moment and try again.<br><br>
+        To manually activate: Firebase Console → Firestore → <strong>users → ${uid} → meta → settings</strong> → add <strong>isPremium = true</strong> (boolean)
+      </div>`;
+    }
   }
 };
 
@@ -10880,8 +10896,7 @@ window._activatePendingCheckout = () => {
       currentUser._isPremium = true;
       currentUser._premiumPlan = snap.docs[0].data()?.price?.id || null;
       _onPremiumUnlocked();
-      showStatus('🎉 Welcome to Premium! All features unlocked.', 'success');
-      closeModal('premiumModal');
+      _showPremiumConfirmation();
       return;
     }
     if (Date.now() > deadline) {
@@ -10894,8 +10909,7 @@ window._activatePendingCheckout = () => {
       await _loadPremiumStatus();
       if (_isPremiumUser()) {
         _onPremiumUnlocked();
-        showStatus('🎉 Welcome to Premium!', 'success');
-        closeModal('premiumModal');
+        _showPremiumConfirmation();
       } else {
         showStatus('Subscription processing — tap Restore Purchase in a moment.', 'info');
       }
