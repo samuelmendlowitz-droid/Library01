@@ -2176,7 +2176,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
         <div class="premium-plan-badge">Save 33%</div>
       </div>
     </div>
-    <button class="btn-submit" id="premiumCheckoutBtn" onclick="startPremiumCheckout()">Start Free Trial</button>
+    <button class="btn-submit" id="premiumCheckoutBtn" onclick="startPremiumCheckout()">Subscribe — $16 / year</button>
     <div class="premium-restore" onclick="restorePremium()">Restore purchase</div>
   </div>
 </div>
@@ -10759,12 +10759,19 @@ window.cancelBorrow = async (ownerUid, bookId, bookTitle) => {
 })();
 
 // ── PREMIUM / STRIPE EXTENSION INTEGRATION ───────────────────────────────────
-// Uses Firebase "Run Payments with Stripe" Extension (Firestore-triggered).
-// Replace price_XXX values below with your real Stripe Price IDs from the
-// Stripe Dashboard → Products page.
 const STRIPE_PRICE_IDS = {
   monthly: 'price_1TgEmqAUMgalmOBaQ6kZaZKA',
   yearly:  'price_1TgEnyAUMgalmOBa6KHoklPM',
+};
+
+let _selectedPlan = 'yearly';
+
+window.selectPremiumPlan = (plan) => {
+  _selectedPlan = plan;
+  document.getElementById('planMonthly')?.classList.toggle('selected', plan === 'monthly');
+  document.getElementById('planYearly')?.classList.toggle('selected', plan === 'yearly');
+  const btn = document.getElementById('premiumCheckoutBtn');
+  if (btn) btn.textContent = plan === 'yearly' ? 'Subscribe — $16 / year' : 'Subscribe — $1.99 / month';
 };
 
 // Reads active subscription from extension's Firestore path
@@ -10791,13 +10798,19 @@ window._isPremiumUser = () => {
 
 window.startPremiumCheckout = async (plan) => {
   if (!currentUser) { showStatus('Sign in first to subscribe.', 'error'); return; }
-  const priceId = STRIPE_PRICE_IDS[plan || 'yearly'];
-  if (!priceId || priceId.startsWith('price_XXX') || priceId.startsWith('price_YYY')) {
-    showStatus('Payments coming soon — price IDs not yet configured.', 'error');
-    return;
-  }
+  const resolvedPlan = plan || _selectedPlan || 'yearly';
+  const priceId = STRIPE_PRICE_IDS[resolvedPlan];
+  if (!priceId) { showStatus('Price not configured.', 'error'); return; }
+  const btn = document.getElementById('premiumCheckoutBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
   showStatus('Opening checkout…', 'info');
   try {
+    // Ensure customers/{uid} doc exists so extension can look up / create Stripe customer
+    await setDoc(doc(db, 'customers', currentUser.uid), {
+      email: currentUser.email,
+      name: currentUser.displayName || '',
+    }, { merge: true });
+
     const sessionRef = await addDoc(
       collection(db, 'customers', currentUser.uid, 'checkout_sessions'),
       {
@@ -10808,11 +10821,17 @@ window.startPremiumCheckout = async (plan) => {
     );
     const unsub = onSnapshot(sessionRef, (snap) => {
       const { error, url } = snap.data() || {};
-      if (error) { unsub(); showStatus('Checkout error: ' + error.message, 'error'); return; }
-      if (url)   { unsub(); window.location.assign(url); }
+      if (error) {
+        unsub();
+        showStatus('Checkout error: ' + error.message, 'error');
+        if (btn) { btn.disabled = false; btn.textContent = resolvedPlan === 'yearly' ? 'Subscribe — $16 / year' : 'Subscribe — $1.99 / month'; }
+        return;
+      }
+      if (url) { unsub(); window.location.assign(url); }
     });
   } catch(e) {
     showStatus('Could not start checkout: ' + e.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = resolvedPlan === 'yearly' ? 'Subscribe — $16 / year' : 'Subscribe — $1.99 / month'; }
   }
 };
 
@@ -10823,7 +10842,6 @@ window.restorePremium = async () => {
   if (_isPremiumUser()) {
     showStatus('Premium restored! ✨', 'success');
     closeModal('premiumModal');
-    _renderPremiumModal();
   } else {
     showStatus('No active subscription found.', 'error');
   }
