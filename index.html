@@ -2912,7 +2912,7 @@ onAuthStateChanged(auth, async user => {
     loadBooks();          // don't block on global books
     loadNotifications();  // async, non-blocking
     preloadGlobalBooks().then(() => syncUserBooksToCache()); // background, merge after
-    _loadPremiumStatus(); // load Stripe subscription status from Firestore
+    _loadPremiumStatus().then(() => _activatePendingCheckout && _activatePendingCheckout()); // load status, then handle return from checkout if needed
     // Ensure customers/{uid} doc exists at login so the Stripe Extension can
     // find/create the Stripe customer when checkout is attempted.
     setDoc(doc(db, 'customers', user.uid), { email: user.email || '', name: user.displayName || '' }, { merge: true }).catch(() => {});
@@ -10791,6 +10791,22 @@ window._isPremiumUser = () => {
   return currentUser._isPremium === true;
 };
 
+// Called after premium status is confirmed — re-renders all premium-gated UI
+function _onPremiumUnlocked() {
+  currentUser._isPremium = true;
+  // Re-render theme swatches so locked ones become available
+  const themeContainer = document.querySelector('.theme-swatches') || document.getElementById('themeSwatches');
+  if (themeContainer && typeof _renderThemeSwatches === 'function') _renderThemeSwatches();
+  // Hide premium badge on design section
+  const designBadge = document.getElementById('designPremiumBadge');
+  if (designBadge) designBadge.style.display = 'none';
+  // Update settings premium row subtitle
+  const sub = document.getElementById('premiumSettingsSub');
+  if (sub) sub.textContent = 'Active — all features unlocked';
+  // Re-render appearance panel if visible
+  if (typeof _renderAppearancePanel === 'function') _renderAppearancePanel();
+}
+
 window.startPremiumCheckout = (plan) => {
   if (!currentUser) { showStatus('Sign in first to subscribe.', 'error'); return; }
   const resolvedPlan = plan || _selectedPlan || 'yearly';
@@ -10813,6 +10829,7 @@ window.restorePremium = async () => {
   showStatus('Checking subscription…', 'info');
   await _loadPremiumStatus();
   if (_isPremiumUser()) {
+    _onPremiumUnlocked();
     showStatus('Premium restored! ✨', 'success');
     closeModal('premiumModal');
   } else {
@@ -10820,16 +10837,59 @@ window.restorePremium = async () => {
   }
 };
 
-// Handle Stripe return URL (?checkout=success / ?checkout=cancel)
+// Set when the page loads with ?checkout=success — consumed after auth is ready
+let _pendingCheckoutSuccess = false;
+
+// Called from onAuthStateChanged after user is confirmed — waits for the
+// Stripe Extension webhook to write the subscription to Firestore.
+window._activatePendingCheckout = () => {
+  if (!_pendingCheckoutSuccess || !currentUser) return;
+  _pendingCheckoutSuccess = false;
+
+  showStatus('Activating your subscription…', 'info');
+
+  const subsCol = collection(db, 'customers', currentUser.uid, 'subscriptions');
+  const subsQuery = query(subsCol, where('status', 'in', ['active', 'trialing']));
+
+  // Listen in real-time — fires immediately if subscription already exists,
+  // or the moment the Extension webhook writes it.
+  const deadline = Date.now() + 90_000; // give up after 90 seconds
+  const unsub = onSnapshot(subsQuery, (snap) => {
+    if (!snap.empty) {
+      unsub();
+      currentUser._isPremium = true;
+      currentUser._premiumPlan = snap.docs[0].data()?.price?.id || null;
+      _onPremiumUnlocked();
+      showStatus('🎉 Welcome to Premium! All features unlocked.', 'success');
+      closeModal('premiumModal');
+      return;
+    }
+    if (Date.now() > deadline) {
+      unsub();
+      showStatus('Subscription processing — tap Restore Purchase in a moment.', 'info');
+    }
+  }, () => {
+    // Firestore error — fall back to a single read after 5s
+    setTimeout(async () => {
+      await _loadPremiumStatus();
+      if (_isPremiumUser()) {
+        _onPremiumUnlocked();
+        showStatus('🎉 Welcome to Premium!', 'success');
+        closeModal('premiumModal');
+      } else {
+        showStatus('Subscription processing — tap Restore Purchase in a moment.', 'info');
+      }
+    }, 5000);
+  });
+};
+
+// Detect Stripe return URL (?checkout=success / ?checkout=cancel) immediately
+// on page load — set flag, then wait for auth to fire _activatePendingCheckout.
 (function() {
   const p = new URLSearchParams(window.location.search);
   if (p.get('checkout') === 'success') {
     history.replaceState({}, '', window.location.pathname);
-    setTimeout(async () => {
-      await _loadPremiumStatus();
-      showStatus('🎉 Welcome to Premium!', 'success');
-      _renderPremiumModal();
-    }, 3000);
+    _pendingCheckoutSuccess = true;
   } else if (p.get('checkout') === 'cancel') {
     history.replaceState({}, '', window.location.pathname);
   }
