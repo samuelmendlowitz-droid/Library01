@@ -10781,13 +10781,16 @@ async function _loadPremiumStatus() {
       )
     );
     if (!subsSnap.empty) {
+      _isPremium = true;
       currentUser._isPremium = true;
       currentUser._premiumPlan = subsSnap.docs[0].data()?.price?.id || null;
       return;
     }
     // Fallback: manual override field in the user's settings doc
     const settingsSnap = await getDoc(doc(db, 'users', currentUser.uid, 'meta', 'settings'));
-    currentUser._isPremium = settingsSnap.exists() && settingsSnap.data()?.isPremium === true;
+    const hasPremium = settingsSnap.exists() && settingsSnap.data()?.isPremium === true;
+    _isPremium = hasPremium;
+    currentUser._isPremium = hasPremium;
     currentUser._premiumPlan = null;
   } catch(e) { /* offline — keep existing value */ }
 }
