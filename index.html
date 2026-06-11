@@ -10769,18 +10769,26 @@ window.selectPremiumPlan = (plan) => {
   if (btn) btn.textContent = plan === 'yearly' ? 'Subscribe — $16 / year' : 'Subscribe — $1.99 / month';
 };
 
-// Reads active subscription from extension's Firestore path
+// Reads active subscription — checks Stripe Extension path AND manual override field
 async function _loadPremiumStatus() {
   if (!currentUser) return;
   try {
+    // Primary: Stripe Extension writes active subscriptions here
     const subsSnap = await getDocs(
       query(
         collection(db, 'customers', currentUser.uid, 'subscriptions'),
         where('status', 'in', ['active', 'trialing'])
       )
     );
-    currentUser._isPremium = !subsSnap.empty;
-    currentUser._premiumPlan = subsSnap.empty ? null : (subsSnap.docs[0].data()?.price?.id || null);
+    if (!subsSnap.empty) {
+      currentUser._isPremium = true;
+      currentUser._premiumPlan = subsSnap.docs[0].data()?.price?.id || null;
+      return;
+    }
+    // Fallback: manual override field on the customers doc itself
+    const custSnap = await getDoc(doc(db, 'customers', currentUser.uid));
+    currentUser._isPremium = custSnap.exists() && custSnap.data()?.isPremium === true;
+    currentUser._premiumPlan = null;
   } catch(e) { /* offline — keep existing value */ }
 }
 
