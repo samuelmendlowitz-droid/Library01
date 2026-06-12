@@ -10811,8 +10811,14 @@ async function _loadPremiumStatus() {
         where('status', 'in', ['active', 'trialing'])
       )
     );
+    console.log('[premium] customers subscriptions count:', subsSnap.size);
     if (!subsSnap.empty) {
       const subData = subsSnap.docs[0].data();
+      console.log('[premium] subData:', JSON.stringify({
+        status: subData.status,
+        cancel_at_period_end: subData.cancel_at_period_end,
+        current_period_end: subData.current_period_end?.toDate?.()?.toString(),
+      }));
       _isPremium = true;
       currentUser._isPremium = true;
       currentUser._premiumPlan = subData?.price?.id || null;
@@ -10826,12 +10832,13 @@ async function _loadPremiumStatus() {
     const metaSnap = await getDocsFromServer(collection(db, 'users', currentUser.uid, 'meta'));
     const settingsDoc = metaSnap.docs.find(d => d.id === 'settings');
     const hasPremium = !!(settingsDoc && settingsDoc.data()?.isPremium === true);
+    console.log('[premium] no stripe subscription found — isPremium flag:', hasPremium);
     _isPremium = hasPremium;
     currentUser._isPremium = hasPremium;
     currentUser._premiumPlan = null;
     currentUser._subscriptionEndsAt = null;
     _trackPremiumChange(hasPremium);
-  } catch(e) { /* offline — keep existing value */ }
+  } catch(e) { console.warn('[premium] _loadPremiumStatus error:', e); }
 }
 
 // Detects when a user transitions from premium → not premium and reverts their settings
