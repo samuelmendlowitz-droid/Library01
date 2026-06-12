@@ -8081,6 +8081,14 @@ window.closeModal = id => { document.getElementById(id).classList.remove('open')
 window.closeOnOverlay = (e, id) => { if (e.target.id === id) closeModal(id); };
 
 // ── STATUS ────────────────────────────────────────────────────────────────────
+// TEMPORARY debug helper — remove once premium expiry diagnosis is done
+function _debugToast(msg) {
+  const d = document.createElement('div');
+  d.textContent = '🔍 ' + msg;
+  d.style.cssText = 'position:fixed;top:60px;left:12px;right:12px;z-index:99999;background:#1a1a2e;color:#e0e0ff;font-size:12px;font-family:monospace;padding:10px 14px;border-radius:8px;border:1px solid #555;line-height:1.5;word-break:break-all;';
+  document.body.appendChild(d);
+}
+
 function showStatus(msg, type) {
   const b = document.getElementById('statusBar');
   b.innerHTML = msg; b.className = 'status-bar ' + type;
@@ -10839,34 +10847,29 @@ async function _loadPremiumStatus() {
         where('status', 'in', ['active', 'trialing'])
       )
     );
-    console.log('[premium] customers subscriptions count:', subsSnap.size);
     if (!subsSnap.empty) {
       const subData = subsSnap.docs[0].data();
-      console.log('[premium] subData:', JSON.stringify({
-        status: subData.status,
-        cancel_at_period_end: subData.cancel_at_period_end,
-        current_period_end: subData.current_period_end?.toDate?.()?.toString(),
-      }));
+      const cape = subData.cancel_at_period_end;
+      const cpe  = subData.current_period_end?.toDate?.()?.toString() || 'null';
+      _debugToast(`Sub found. status=${subData.status} cancel_at_period_end=${cape} current_period_end=${cpe}`);
       _isPremium = true;
       currentUser._isPremium = true;
       currentUser._premiumPlan = subData?.price?.id || null;
-      // If cancelled but still in billing period, show expiry date
       currentUser._subscriptionEndsAt = (subData?.cancel_at_period_end && subData?.current_period_end)
         ? subData.current_period_end.toDate() : null;
       _trackPremiumChange(true);
       return;
     }
-    // Fallback: manual override — force a server read to bypass persistent cache
     const metaSnap = await getDocsFromServer(collection(db, 'users', currentUser.uid, 'meta'));
     const settingsDoc = metaSnap.docs.find(d => d.id === 'settings');
     const hasPremium = !!(settingsDoc && settingsDoc.data()?.isPremium === true);
-    console.log('[premium] no stripe subscription found — isPremium flag:', hasPremium);
+    _debugToast(`No Stripe sub doc found. isPremium flag=${hasPremium}`);
     _isPremium = hasPremium;
     currentUser._isPremium = hasPremium;
     currentUser._premiumPlan = null;
     currentUser._subscriptionEndsAt = null;
     _trackPremiumChange(hasPremium);
-  } catch(e) { console.warn('[premium] _loadPremiumStatus error:', e); }
+  } catch(e) { _debugToast('_loadPremiumStatus error: ' + e.message); }
 }
 
 // Detects when a user transitions from premium → not premium and reverts their settings
