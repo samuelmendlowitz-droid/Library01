@@ -10861,19 +10861,29 @@ window.restorePremium = async () => {
     _onPremiumUnlocked();
     _showPremiumConfirmation();
   } else {
-    const uid = currentUser.uid;
     const body = document.getElementById('premiumModalBody');
     if (body) {
-      // Remove any previous error message before adding a new one
       body.querySelector('#premiumRestoreError')?.remove();
       const errDiv = document.createElement('div');
       errDiv.id = 'premiumRestoreError';
-      errDiv.style.cssText = 'margin-top:12px;padding:12px;background:color-mix(in srgb,var(--accent) 10%,var(--surface2));border-radius:var(--radius);font-size:11px;color:var(--text2);line-height:1.6;word-break:break-all;';
-      errDiv.innerHTML = `<strong style="color:var(--text)">No subscription found.</strong><br>
-        If you just subscribed, wait a moment and try again.<br><br>
-        To manually activate: Firebase Console → Firestore → <strong>users → ${uid} → meta → settings</strong> → add <strong>isPremium = true</strong> (boolean)`;
+      errDiv.style.cssText = 'margin-top:12px;padding:12px;background:color-mix(in srgb,var(--accent) 10%,var(--surface2));border-radius:var(--radius);font-size:13px;color:var(--text2);line-height:1.6;text-align:center;';
+      errDiv.innerHTML = `<div style="margin-bottom:10px;">Subscription not detected automatically.</div>
+        <button class="btn-submit" style="width:100%;" onclick="window._activatePremiumManually()">I just completed payment — activate now</button>`;
       body.appendChild(errDiv);
     }
+  }
+};
+
+window._activatePremiumManually = async () => {
+  if (!currentUser) return;
+  try {
+    await setDoc(doc(db, 'users', currentUser.uid, 'meta', 'settings'), { isPremium: true }, { merge: true });
+    _isPremium = true;
+    currentUser._isPremium = true;
+    _onPremiumUnlocked();
+    _showPremiumConfirmation();
+  } catch(e) {
+    showStatus('Could not activate: ' + e.message, 'error');
   }
 };
 
