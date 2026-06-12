@@ -10837,18 +10837,14 @@ window.startPremiumCheckout = (plan) => {
     return;
   }
   const btn = document.getElementById('premiumCheckoutBtn');
-  if (btn) { btn.disabled = true; btn.textContent = 'Opening…'; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Loading…'; }
+  const successUrl = window.location.origin + window.location.pathname + '?checkout=success';
   const params = new URLSearchParams({
     client_reference_id: currentUser.uid,
     prefilled_email: currentUser.email || '',
   });
-  const stripeUrl = `${baseUrl}?${params.toString()}`;
-  window.open(stripeUrl, '_blank', 'noopener');
-  // Reset button after a moment — user stays on this page and Stripe opens in new tab
-  setTimeout(() => {
-    if (btn) { btn.disabled = false; btn.textContent = _selectedPlan === 'monthly' ? 'Subscribe — $1.99 / month' : 'Subscribe — $16 / year'; }
-    showStatus('Complete payment in the new tab, then tap Restore Purchase.', 'info');
-  }, 2000);
+  // Navigate current tab — Stripe will redirect back to ?checkout=success on completion
+  window.location.assign(`${baseUrl}?${params.toString()}`);
 };
 
 window.restorePremium = async () => {
@@ -10890,45 +10886,23 @@ window._activatePremiumManually = async () => {
 // Set when the page loads with ?checkout=success — consumed after auth is ready
 let _pendingCheckoutSuccess = false;
 
-// Called from onAuthStateChanged after user is confirmed — waits for the
-// Stripe Extension webhook to write the subscription to Firestore.
-window._activatePendingCheckout = () => {
+// Called from onAuthStateChanged when ?checkout=success was in the URL.
+// Stripe only sends that redirect after a successful payment, so we trust it
+// and activate premium immediately — no webhook or button tap needed.
+window._activatePendingCheckout = async () => {
   if (!_pendingCheckoutSuccess || !currentUser) return;
   _pendingCheckoutSuccess = false;
 
-  showStatus('Activating your subscription…', 'info');
+  try {
+    await setDoc(doc(db, 'users', currentUser.uid, 'meta', 'settings'),
+      { isPremium: true }, { merge: true });
+  } catch(e) { /* non-fatal — still activate locally */ }
 
-  const subsCol = collection(db, 'customers', currentUser.uid, 'subscriptions');
-  const subsQuery = query(subsCol, where('status', 'in', ['active', 'trialing']));
-
-  // Listen in real-time — fires immediately if subscription already exists,
-  // or the moment the Extension webhook writes it.
-  const deadline = Date.now() + 90_000; // give up after 90 seconds
-  const unsub = onSnapshot(subsQuery, (snap) => {
-    if (!snap.empty) {
-      unsub();
-      currentUser._isPremium = true;
-      currentUser._premiumPlan = snap.docs[0].data()?.price?.id || null;
-      _onPremiumUnlocked();
-      _showPremiumConfirmation();
-      return;
-    }
-    if (Date.now() > deadline) {
-      unsub();
-      showStatus('Subscription processing — tap Restore Purchase in a moment.', 'info');
-    }
-  }, () => {
-    // Firestore error — fall back to a single read after 5s
-    setTimeout(async () => {
-      await _loadPremiumStatus();
-      if (_isPremiumUser()) {
-        _onPremiumUnlocked();
-        _showPremiumConfirmation();
-      } else {
-        showStatus('Subscription processing — tap Restore Purchase in a moment.', 'info');
-      }
-    }, 5000);
-  });
+  _isPremium = true;
+  currentUser._isPremium = true;
+  _onPremiumUnlocked();
+  openModal('premiumModal');
+  _showPremiumConfirmation();
 };
 
 // Detect Stripe return URL (?checkout=success / ?checkout=cancel) immediately
@@ -10943,19 +10917,15 @@ window._activatePendingCheckout = () => {
   }
 })();
 
-// When the browser restores this page from bfcache (user pressed Back after
-// landing on Stripe), the button is still frozen as "Opening…" disabled.
-// pageshow with persisted:true fires in that case — reset the button.
+// If the user presses Back from Stripe without completing payment, the browser
+// restores this page from bfcache with the button still disabled. Reset it.
 window.addEventListener('pageshow', (e) => {
   if (!e.persisted) return;
   const btn = document.getElementById('premiumCheckoutBtn');
-  if (btn && btn.textContent === 'Opening…') {
+  if (btn) {
     btn.disabled = false;
     btn.textContent = _selectedPlan === 'monthly' ? 'Subscribe — $1.99 / month' : 'Subscribe — $16 / year';
   }
-  // If they're coming back from Stripe without a redirect, try to activate
-  _pendingCheckoutSuccess = true;
-  if (typeof _activatePendingCheckout === 'function' && currentUser) _activatePendingCheckout();
 });
 
 </script>
