@@ -2344,11 +2344,6 @@ All columns other than Author, Title, Series and Genres should be left empty or 
 
       <!-- HOME menu -->
       <div class="settings-panel active" id="spanel-home">
-        <button class="settings-menu-item" onclick="openSettingsSection('account')">
-          <span class="smi-icon" style="color:var(--accent)"><i data-lucide="crown"></i></span>
-          <div class="smi-text"><div class="smi-title" style="color:var(--accent)">Premium</div><div class="smi-sub" id="premiumSettingsSub">Unlock themes &amp; book design</div></div>
-          <span class="smi-arrow"><i data-lucide="chevron-right"></i></span>
-        </button>
         <button class="settings-menu-item" onclick="openSettingsSection('appearance')">
           <span class="smi-icon"><i data-lucide="sun-moon"></i></span>
           <div class="smi-text"><div class="smi-title">Appearance</div><div class="smi-sub">Theme color and dark / light mode</div></div>
@@ -8508,7 +8503,7 @@ function _renderAccountPremiumSection() {
         </div>
       </div>
       <button class="btn-submit" style="width:100%;"
-        onclick="window.location.assign(STRIPE_PORTAL_URL)">Manage Subscription</button>`;
+        onclick="openStripePortal()">Manage Subscription</button>`;
   } else {
     el.innerHTML = `
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
@@ -10784,6 +10779,7 @@ const STRIPE_PAYMENT_LINKS = {
   yearly:  'https://buy.stripe.com/8x200i4SL6wO07s2yR2Fa00',
 };
 const STRIPE_PORTAL_URL = 'https://billing.stripe.com/p/login/8x200i4SL6wO07s2yR2Fa00';
+window.openStripePortal = () => window.location.assign(STRIPE_PORTAL_URL);
 
 let _selectedPlan = 'yearly';
 
