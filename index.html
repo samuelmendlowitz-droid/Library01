@@ -2467,7 +2467,7 @@ All columns other than Author, Title, Series and Genres should be left empty or 
               <input class="avatar-char-input" id="userIconCharInput" maxlength="2" placeholder="A" oninput="previewUserIcon()">
               <div style="font-size:11px;color:var(--text3);margin:12px 0 6px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Color</div>
               <div class="club-color-row" id="userColorRow" style="gap:8px"></div>
-              <button onclick="saveUserIcon()" style="margin-top:14px;padding:8px 18px;background:var(--accent);color:var(--bg);border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Save Icon</button>
+              <button id="saveUserIconBtn" onclick="saveUserIcon()" style="margin-top:14px;padding:8px 18px;background:var(--accent);color:var(--bg);border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Save Icon</button>
             </div>
           </div>
         </div>
@@ -2749,16 +2749,17 @@ window.pickUserColor = (color) => {
 };
 
 window.saveUserIcon = async () => {
+  const btn = document.getElementById('saveUserIconBtn');
+  const done = _flashSaveBtn(btn, 'Save Icon');
   const input = document.getElementById('userIconCharInput');
   const char = (input?.value || '').trim() || (currentUser?.displayName || '?')[0].toUpperCase();
   userIconChar = char;
   profileCache[currentUser.uid] = { iconChar: char, iconColor: userIconColor };
   try {
     await setDoc(userSettingsDoc(), { iconChar: char, iconColor: userIconColor }, { merge: true });
-    showStatus('Icon saved!', 'success');
-    setTimeout(hideStatus, 2000);
+    done(true);
     renderChats();
-  } catch(e) { showStatus('Error: ' + e.message, 'error'); }
+  } catch(e) { done(false); showStatus('Error: ' + e.message, 'error'); }
 };
 
 window.editDisplayName = () => {
