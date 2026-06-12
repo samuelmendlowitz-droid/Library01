@@ -2506,7 +2506,7 @@ All columns other than Author, Title, Series and Genres should be left empty or 
             <div id="hl-about-count" style="font-size:11px;color:var(--text3);margin-top:2px;text-align:right;">200 left</div>
           </div>
           <div id="hl-section"></div>
-          <button onclick="saveHighlights()" style="margin-top:12px;padding:9px 18px;background:var(--accent);color:var(--bg);border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Save Profile</button>
+          <button id="saveHighlightsBtn" onclick="saveHighlights()" style="margin-top:12px;padding:9px 18px;background:var(--accent);color:var(--bg);border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Save Profile</button>
         </div>
         <button class="btn-signout-settings" onclick="signOut()"><i data-lucide="log-out"></i> Sign Out</button>
       </div>
@@ -2792,12 +2792,12 @@ window.saveSettingsUsername = async () => {
     return;
   }
   const btn = document.querySelector('#usernameEdit button');
-  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  const done = _flashSaveBtn(btn, 'Save');
   try {
     const existing = await getDoc(usernameDoc(lower));
     if (existing.exists() && existing.data().uid !== currentUser.uid) {
       errEl.textContent = 'That username is already taken';
-      if (btn) { btn.disabled = false; btn.textContent = 'Save'; }
+      done(false);
       return;
     }
     if (userUsername) {
@@ -2808,14 +2808,16 @@ window.saveSettingsUsername = async () => {
     await setDoc(userProfileDoc(currentUser.uid), { username: lower, displayName: currentUser.displayName || '' });
     await setDoc(userSettingsDoc(), { username: lower }, { merge: true });
     userUsername = lower;
-    document.getElementById('usernameDisplayText').textContent = '@' + lower;
-    document.getElementById('usernameDisplay').style.display = 'flex';
-    document.getElementById('usernameEdit').style.display = 'none';
-    showStatus('Username updated.', 'success');
+    done(true);
+    setTimeout(() => {
+      document.getElementById('usernameDisplayText').textContent = '@' + lower;
+      document.getElementById('usernameDisplay').style.display = 'flex';
+      document.getElementById('usernameEdit').style.display = 'none';
+    }, 1500);
   } catch(e) {
     errEl.textContent = 'Save failed: ' + e.message;
+    done(false);
   }
-  if (btn) { btn.disabled = false; btn.textContent = 'Save'; }
 };
 
 async function loadBorrowLog() {
@@ -5269,8 +5271,8 @@ window.saveEdit = async () => {
   const wishlist = document.getElementById('editWishlist').checked;
   const rating = parseInt(document.getElementById('editRating').value) || 0;
   if (!title || !author) { showStatus('Please enter title and author.', 'error'); return; }
-  const btn = document.querySelector('#editSheet .btn-submit');
-  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  const btn = document.getElementById('saveEditBtn');
+  const _editDone = _flashSaveBtn(btn, 'Save Changes');
   try {
     const b = books.find(x => x.id === editingId);
     const oldRating = b ? b.rating || 0 : 0;
@@ -5282,9 +5284,8 @@ window.saveEdit = async () => {
     await updateBook(editingId, newData);
     if (oldRating !== rating) updateGlobalRating(title, author, oldRating, rating);
   } catch(e) {
+    _editDone(false);
     showStatus('Error saving.', 'error');
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = 'Save Changes'; }
   }
 };
 
@@ -5947,7 +5948,7 @@ window.setRRStar = (val) => {
 window.submitRateReview = async () => {
   if (!currentUser || !_rrBookId) return;
   const btn = document.getElementById('rrSaveBtn');
-  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  const _rrDone = _flashSaveBtn(btn, 'Save');
   try {
     const b = books.find(x => x.id === _rrBookId);
     const oldRating = b?.rating || 0;
@@ -5980,12 +5981,11 @@ window.submitRateReview = async () => {
       _reviewCache.delete(_rrGbId);
     }
     closeModal('rateReviewModal');
-    showStatus('Saved!', 'success'); setTimeout(hideStatus, 2000);
   } catch(e) {
     console.error('submitRateReview:', e);
+    _rrDone(false);
     showStatus('Error saving.', 'error'); setTimeout(hideStatus, 3000);
   }
-  if (btn) { btn.disabled = false; btn.textContent = 'Save'; }
 };
 
 window.addGlobalToWishlist = async (globalId) => {
@@ -6153,6 +6153,8 @@ async function loadMyHighlights() {
 }
 
 window.saveHighlights = async () => {
+  const btn = document.getElementById('saveHighlightsBtn');
+  const done = _flashSaveBtn(btn, 'Save Profile');
   const aboutMe = (document.getElementById('hl-about-me')?.value || '').trim().slice(0, 200);
   const highlights = {
     books:   [...(_myHighlights.books   || [])],
@@ -6162,8 +6164,8 @@ window.saveHighlights = async () => {
   };
   try {
     await setDoc(userSettingsDoc(), { highlights, aboutMe }, { merge: true });
-    showStatus('Profile saved!', 'success'); setTimeout(hideStatus, 2000);
-  } catch(e) { showStatus('Error saving profile.', 'error'); setTimeout(hideStatus, 2000); }
+    done(true);
+  } catch(e) { done(false); showStatus('Error saving profile.', 'error'); setTimeout(hideStatus, 2000); }
 };
 
 async function loadAndRenderFriendHighlights(uid) {
@@ -8083,6 +8085,25 @@ function showStatus(msg, type) {
   b.innerHTML = msg; b.className = 'status-bar ' + type;
 }
 function hideStatus() { document.getElementById('statusBar').className = 'status-bar'; }
+
+// Reusable save-button state helper.
+// Sets the button to "Saving…" immediately.
+// Returns a done(success) callback: on success shows "Saved" for 1.5s then reverts;
+// on failure reverts immediately so the user can retry.
+function _flashSaveBtn(btn, originalLabel) {
+  if (!btn) return () => {};
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  return (success = true) => {
+    if (success) {
+      btn.textContent = 'Saved';
+      setTimeout(() => { btn.disabled = false; btn.textContent = originalLabel; }, 1500);
+    } else {
+      btn.disabled = false;
+      btn.textContent = originalLabel;
+    }
+  };
+}
 
 // ── UTILS ─────────────────────────────────────────────────────────────────────
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
@@ -10440,6 +10461,8 @@ window.saveClubEdit = async () => {
   const name = document.getElementById('editClubName').value.trim();
   const desc = document.getElementById('editClubDesc').value.trim();
   if (!name) { showStatus('Name required', 'error'); return; }
+  const btn = document.querySelector('[onclick="saveClubEdit()"]');
+  const done = _flashSaveBtn(btn, 'Save Changes');
   const subjects = {
     books:   [...(_clubSubjects.books   || [])],
     authors: [...(_clubSubjects.authors || [])],
@@ -10456,9 +10479,8 @@ window.saveClubEdit = async () => {
     const idx = clubsList.findIndex(c => c.id === currentClubId);
     if (idx >= 0) clubsList[idx] = { ...clubsList[idx], ...currentClubData };
     renderChats();
-    showStatus('Club updated!', 'success');
-    setTimeout(hideStatus, 2000);
-  } catch(e) { showStatus('Error: ' + e.message, 'error'); }
+    done(true);
+  } catch(e) { done(false); showStatus('Error: ' + e.message, 'error'); }
 };
 
 window.toggleClubAdmin = async (uid, username, isCurrentlyAdmin) => {
