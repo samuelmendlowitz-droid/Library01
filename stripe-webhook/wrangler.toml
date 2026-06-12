@@ -1,0 +1,10 @@
+name = "library01-stripe-webhook"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+# Secrets are set separately via: npx wrangler secret put <NAME>
+# Required secrets:
+#   STRIPE_WEBHOOK_SECRET   (from Stripe Dashboard → Webhooks → signing secret)
+#   FIREBASE_PROJECT_ID     (your Firebase project ID string)
+#   FIREBASE_CLIENT_EMAIL   (service account client_email from JSON key)
+#   FIREBASE_PRIVATE_KEY    (service account private_key from JSON key — full PEM)
