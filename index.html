@@ -2344,6 +2344,11 @@ All columns other than Author, Title, Series and Genres should be left empty or 
 
       <!-- HOME menu -->
       <div class="settings-panel active" id="spanel-home">
+        <button class="settings-menu-item" onclick="openSettingsSection('account')">
+          <span class="smi-icon"><i data-lucide="user"></i></span>
+          <div class="smi-text"><div class="smi-title">Profile Settings</div><div class="smi-sub" id="premiumSettingsSub">Account, subscription &amp; more</div></div>
+          <span class="smi-arrow"><i data-lucide="chevron-right"></i></span>
+        </button>
         <button class="settings-menu-item" onclick="openSettingsSection('appearance')">
           <span class="smi-icon"><i data-lucide="sun-moon"></i></span>
           <div class="smi-text"><div class="smi-title">Appearance</div><div class="smi-sub">Theme color and dark / light mode</div></div>
@@ -2362,11 +2367,6 @@ All columns other than Author, Title, Series and Genres should be left empty or 
         <button class="settings-menu-item" onclick="openSettingsSection('importexport')">
           <span class="smi-icon"><i data-lucide="arrow-up-down"></i></span>
           <div class="smi-text"><div class="smi-title">Import / Export</div><div class="smi-sub">Bulk upload or download your library</div></div>
-          <span class="smi-arrow"><i data-lucide="chevron-right"></i></span>
-        </button>
-        <button class="settings-menu-item" onclick="openSettingsSection('account')">
-          <span class="smi-icon"><i data-lucide="user"></i></span>
-          <div class="smi-text"><div class="smi-title">Profile Settings</div><div class="smi-sub">Account, subscription &amp; more</div></div>
           <span class="smi-arrow"><i data-lucide="chevron-right"></i></span>
         </button>
       </div>
@@ -6707,21 +6707,22 @@ function _bookSeed(id, offset) {
 
 function _bookDesign(b) {
   const seed = _bookSeed(b.id);
-  const palMode = b.designPalMode || (_appTheme.startsWith('light') ? 'light' : 'dark');
+  const d = _isPremiumUser() ? b : {};
+  const palMode = d.designPalMode || (_appTheme.startsWith('light') ? 'light' : 'dark');
   const palettes = _palettesForMode(palMode);
-  const palIdx    = (b.designPalIdx   != null) ? b.designPalIdx   : (seed % palettes.length);
-  const patIdx    = (b.designPatIdx   != null) ? b.designPatIdx   : ((seed >>> 3) % _REC_PATTERNS.length);
-  const frameIdx  = (b.designFrame    != null) ? b.designFrame    : ((seed >>> 5) % _REC_FRAME_STYLES.length);
-  const cornerIdx = (b.designCorner   != null) ? b.designCorner   : ((seed >>> 7) % _REC_CORNER_SVGS.length);
-  const divider   = (b.designDivider  != null) ? b.designDivider  : ((seed >>> 9) % _REC_DIVIDER_STYLES.length);
+  const palIdx    = (d.designPalIdx   != null) ? d.designPalIdx   : (seed % palettes.length);
+  const patIdx    = (d.designPatIdx   != null) ? d.designPatIdx   : ((seed >>> 3) % _REC_PATTERNS.length);
+  const frameIdx  = (d.designFrame    != null) ? d.designFrame    : ((seed >>> 5) % _REC_FRAME_STYLES.length);
+  const cornerIdx = (d.designCorner   != null) ? d.designCorner   : ((seed >>> 7) % _REC_CORNER_SVGS.length);
+  const divider   = (d.designDivider  != null) ? d.designDivider  : ((seed >>> 9) % _REC_DIVIDER_STYLES.length);
   return {
     pal:       palettes[palIdx] || palettes[0],
     pat:       _REC_PATTERNS[patIdx]  || '',
     frame:     frameIdx < 0 ? '' : (_REC_FRAME_STYLES[frameIdx] || _REC_FRAME_STYLES[0]),
     cornerSvg: cornerIdx < 0 ? '' : (_REC_CORNER_SVGS[cornerIdx] || ''),
     divStyle:  _REC_DIVIDER_STYLES[divider] || 'plain',
-    titleFont: b.designTitleFont || null,
-    secFont:   b.designSecFont   || null,
+    titleFont: d.designTitleFont || null,
+    secFont:   d.designSecFont   || null,
     palMode, palIdx, patIdx, frameIdx, cornerIdx, divider,
   };
 }
@@ -8494,12 +8495,16 @@ function _renderAccountPremiumSection() {
   const el = document.getElementById('accountPremiumSection');
   if (!el) return;
   if (_isPremiumUser()) {
+    const endsAt = currentUser && currentUser._subscriptionEndsAt;
+    const subLine = endsAt
+      ? `<div style="font-size:12px;color:#e57373;margin-top:2px;">Expiring ${endsAt.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})}</div>`
+      : `<div style="font-size:12px;color:var(--text3);margin-top:2px;">All features unlocked</div>`;
     el.innerHTML = `
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
         <span style="font-size:28px;line-height:1;">👑</span>
         <div>
           <div style="font-size:15px;font-weight:700;color:var(--accent);font-family:'DM Sans',sans-serif;">Premium Member</div>
-          <div style="font-size:12px;color:var(--text3);margin-top:2px;">All features unlocked</div>
+          ${subLine}
         </div>
       </div>
       <button class="btn-submit" style="width:100%;"
@@ -10803,9 +10808,14 @@ async function _loadPremiumStatus() {
       )
     );
     if (!subsSnap.empty) {
+      const subData = subsSnap.docs[0].data();
       _isPremium = true;
       currentUser._isPremium = true;
-      currentUser._premiumPlan = subsSnap.docs[0].data()?.price?.id || null;
+      currentUser._premiumPlan = subData?.price?.id || null;
+      // If cancelled but still in billing period, show expiry date
+      currentUser._subscriptionEndsAt = (subData?.cancel_at_period_end && subData?.current_period_end)
+        ? subData.current_period_end.toDate() : null;
+      _trackPremiumChange(true);
       return;
     }
     // Fallback: manual override — force a server read to bypass persistent cache
@@ -10815,7 +10825,45 @@ async function _loadPremiumStatus() {
     _isPremium = hasPremium;
     currentUser._isPremium = hasPremium;
     currentUser._premiumPlan = null;
+    currentUser._subscriptionEndsAt = null;
+    _trackPremiumChange(hasPremium);
   } catch(e) { /* offline — keep existing value */ }
+}
+
+// Detects when a user transitions from premium → not premium and reverts their settings
+function _trackPremiumChange(nowPremium) {
+  if (!currentUser) return;
+  const key = '_wasPremium_' + currentUser.uid;
+  const wasPremium = localStorage.getItem(key) === 'true';
+  localStorage.setItem(key, nowPremium ? 'true' : 'false');
+  if (wasPremium && !nowPremium) _revertFromPremium();
+}
+
+// Reverts to default theme (blue) and re-renders books when premium lapses.
+// Custom book design data stays in Firestore — _bookDesign() ignores it when
+// not premium, and it auto-restores when premium is re-activated.
+async function _revertFromPremium() {
+  const mode = _appTheme.startsWith('light') ? 'light' : 'dark';
+  // Back up their premium theme choice so it can be restored later
+  try {
+    await setDoc(userSettingsDoc(), { premiumThemeBackup: _appTheme }, { merge: true });
+  } catch(e) {}
+  _applyAppTheme(`${mode}-blue`);
+  if (typeof _renderAppearancePanel === 'function') _renderAppearancePanel();
+  if (typeof renderBooks === 'function') renderBooks();
+}
+
+// Restores premium theme backup and re-renders books when premium is re-activated
+async function _restorePremiumSettings() {
+  if (!currentUser) return;
+  try {
+    const metaSnap = await getDocsFromServer(collection(db, 'users', currentUser.uid, 'meta'));
+    const s = metaSnap.docs.find(d => d.id === 'settings');
+    const backup = s?.data()?.premiumThemeBackup;
+    if (backup) _applyAppTheme(backup);
+    if (typeof _renderAppearancePanel === 'function') _renderAppearancePanel();
+  } catch(e) {}
+  if (typeof renderBooks === 'function') renderBooks();
 }
 
 // Gate function: owner always has premium; others need active Stripe subscription
@@ -10843,6 +10891,7 @@ function _showPremiumConfirmation() {
 function _onPremiumUnlocked() {
   currentUser._isPremium = true;
   _isPremium = true;
+  _trackPremiumChange(true);
   // Re-render theme swatches so locked ones become available
   const themeContainer = document.querySelector('.theme-swatches') || document.getElementById('themeSwatches');
   if (themeContainer && typeof _renderThemeSwatches === 'function') _renderThemeSwatches();
@@ -10852,9 +10901,10 @@ function _onPremiumUnlocked() {
   // Update settings premium row subtitle
   const sub = document.getElementById('premiumSettingsSub');
   if (sub) sub.textContent = 'Active — all features unlocked';
-  // Re-render appearance panel if visible
+  // Restore backed-up theme and re-render books with custom designs
+  _restorePremiumSettings();
+  // Re-render appearance panel and account section
   if (typeof _renderAppearancePanel === 'function') _renderAppearancePanel();
-  // Re-render account premium section if visible
   _renderAccountPremiumSection();
 }
 
