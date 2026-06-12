@@ -651,8 +651,8 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 
 /* ── Shelf View ──────────────────────────────────────────────────────────────── */
 .shelf-view-root { height: calc(100dvh - var(--total-header-h, 0px)); overflow-y: scroll; scroll-snap-type: y mandatory; background: var(--bg); overscroll-behavior: contain; }
-.shelf-shelf { height: 50%; scroll-snap-align: start; display: flex; flex-direction: column; min-height: 0; }
-.shelf-location-label { font-family: 'DM Sans', sans-serif; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: rgba(255,255,255,0.35); padding: 5px 14px 2px; flex-shrink: 0; }
+.shelf-shelf { height: 50%; scroll-snap-align: start; display: flex; flex-direction: column; min-height: 0; position: relative; }
+.shelf-location-label { position: absolute; bottom: 0; left: 12px; z-index: 2; height: 20px; display: flex; align-items: center; font-family: 'DM Sans', sans-serif; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: rgba(255,255,255,0.55); pointer-events: none; }
 .shelf-books-row { flex: 1; min-height: 0; overflow-x: auto; overflow-y: hidden; display: flex; flex-direction: row; align-items: flex-end; padding: 6px 12px 0; gap: 3px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
 .shelf-books-row::-webkit-scrollbar { display: none; }
 .shelf-board { height: 20px; flex-shrink: 0; background: linear-gradient(to bottom, #A87840 0%, #7A5228 45%, #5C3D1E 100%); border-top: 3px solid #C8974E; box-shadow: 0 6px 14px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.12); }
