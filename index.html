@@ -10803,8 +10803,9 @@ window.selectPremiumPlan = (plan) => {
 async function _loadPremiumStatus() {
   if (!currentUser) return;
   try {
-    // Primary: Stripe Extension writes active subscriptions here
-    const subsSnap = await getDocs(
+    // Primary: Stripe Extension writes active subscriptions here — force server
+    // read so cancellation / cancel_at_period_end changes are never stale.
+    const subsSnap = await getDocsFromServer(
       query(
         collection(db, 'customers', currentUser.uid, 'subscriptions'),
         where('status', 'in', ['active', 'trialing'])
