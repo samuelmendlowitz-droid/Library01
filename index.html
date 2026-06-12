@@ -680,6 +680,9 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .shelf-series-spine { width: 44px; flex-shrink: 0; align-self: stretch; display: flex; flex-direction: column; align-items: center; padding: 4px 2px 4px; border-radius: 2px 2px 0 0; cursor: pointer; overflow: hidden; box-shadow: 1px 0 6px rgba(0,0,0,0.5); transition: transform 0.12s; user-select: none; -webkit-user-select: none; touch-action: none; }
 .shelf-series-spine:active { transform: scale(0.95) translateY(2px); }
 .shelf-empty { display: flex; align-items: center; justify-content: center; height: 100%; color: rgba(255,255,255,0.25); font-size: 13px; font-family: 'DM Sans', sans-serif; }
+/* Allow native touch scroll in global/wishlist shelf (no DnD) */
+#shelfView:not(.shelf-dnd-mode) .shelf-spine,
+#shelfView:not(.shelf-dnd-mode) .shelf-series-box { touch-action: pan-x pan-y; }
 .shelf-spine.dragging { opacity: 0.25; transform: scale(0.93) translateY(3px); transition: opacity 0.1s, transform 0.1s; }
 .shelf-shelf.drop-target { background: rgba(201,169,110,0.08); }
 .shelf-shelf.drop-target .shelf-board { background: linear-gradient(to bottom, #C8A060 0%, #A87840 45%, #7A5228 100%); border-top-color: #E0C070; }
@@ -4180,7 +4183,9 @@ function renderShelfView(list, isGlobal) {
   }).join('');
 
   refreshIcons();
-  if (!isGlobal && currentPage !== 'wishlist') _initShelfDnd();
+  const dndActive = !isGlobal && currentPage !== 'wishlist';
+  root.classList.toggle('shelf-dnd-mode', dndActive);
+  if (dndActive) _initShelfDnd();
 }
 
 function renderBooksShelf(list) {
