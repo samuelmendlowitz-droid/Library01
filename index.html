@@ -2327,15 +2327,6 @@ All columns other than Author, Title, Series and Genres should be left empty or 
 </div>
 
 
-<!-- MANAGE MEMBERSHIP MODAL -->
-<div class="modal-overlay" id="manageMembershipModal" onclick="closeOnOverlay(event,'manageMembershipModal')">
-  <div class="modal" style="max-width:360px;">
-    <div class="modal-handle"></div>
-    <button class="modal-close" onclick="closeModal('manageMembershipModal')"><i data-lucide="x"></i></button>
-    <div id="manageMembershipBody"></div>
-  </div>
-</div>
-
 <!-- SETTINGS MODAL -->
 <div class="settings-overlay" id="settingsOverlay" onclick="closeSettingsOnOverlay(event)">
   <div class="settings-sheet" id="settingsSheet">
@@ -2380,7 +2371,7 @@ All columns other than Author, Title, Series and Genres should be left empty or 
         </button>
         <button class="settings-menu-item" onclick="openSettingsSection('account')">
           <span class="smi-icon"><i data-lucide="user"></i></span>
-          <div class="smi-text"><div class="smi-title">Account</div><div class="smi-sub">View account info or sign out</div></div>
+          <div class="smi-text"><div class="smi-title">Profile Settings</div><div class="smi-sub">Account, subscription &amp; more</div></div>
           <span class="smi-arrow"><i data-lucide="chevron-right"></i></span>
         </button>
       </div>
@@ -8516,7 +8507,8 @@ function _renderAccountPremiumSection() {
           <div style="font-size:12px;color:var(--text3);margin-top:2px;">All features unlocked</div>
         </div>
       </div>
-      <button class="btn-submit" onclick="openManageMembership()" style="width:100%;">Manage Membership</button>`;
+      <button class="btn-submit" style="width:100%;"
+        onclick="window.location.assign(STRIPE_PORTAL_URL)">Manage Subscription</button>`;
   } else {
     el.innerHTML = `
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
@@ -8526,78 +8518,10 @@ function _renderAccountPremiumSection() {
           <div style="font-size:12px;color:var(--text3);margin-top:2px;">Themes, book designs &amp; more</div>
         </div>
       </div>
-      <button class="btn-submit" onclick="closeSettings();openPremiumModal();" style="width:100%;">Upgrade to Premium</button>`;
+      <button class="btn-submit" style="width:100%;"
+        onclick="closeSettings();openPremiumModal();">Get Premium</button>`;
   }
 }
-
-window.openManageMembership = () => {
-  _renderManageMembershipOptions();
-  openModal('manageMembershipModal');
-};
-
-function _renderManageMembershipOptions() {
-  const body = document.getElementById('manageMembershipBody');
-  if (!body) return;
-  body.innerHTML = `
-    <div style="text-align:center;padding:8px 0 20px;">
-      <div style="font-size:36px;margin-bottom:10px;">👑</div>
-      <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--accent);margin-bottom:4px;">Manage Membership</div>
-      <div style="font-size:13px;color:var(--text3);">Premium — all features active</div>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:10px;">
-      <button class="settings-menu-item" style="border-radius:var(--radius);" onclick="_pauseMembership()">
-        <span class="smi-icon"><i data-lucide="pause-circle"></i></span>
-        <div class="smi-text"><div class="smi-title">Pause membership</div><div class="smi-sub">Temporarily suspend billing</div></div>
-        <span class="smi-arrow"><i data-lucide="chevron-right"></i></span>
-      </button>
-      <button class="settings-menu-item" style="border-radius:var(--radius);" onclick="_confirmCancelMembership()">
-        <span class="smi-icon" style="color:var(--danger)"><i data-lucide="x-circle"></i></span>
-        <div class="smi-text"><div class="smi-title" style="color:var(--danger)">Cancel membership</div><div class="smi-sub">End your subscription</div></div>
-        <span class="smi-arrow"><i data-lucide="chevron-right"></i></span>
-      </button>
-    </div>`;
-  refreshIcons();
-}
-
-window._pauseMembership = () => {
-  const body = document.getElementById('manageMembershipBody');
-  if (!body) return;
-  body.innerHTML = `
-    <div style="padding:12px 0 20px;">
-      <div style="font-size:22px;margin-bottom:12px;">⏸️</div>
-      <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px;">Pause Membership</div>
-      <div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:20px;">To pause your membership, please manage it directly through Stripe.</div>
-      <button class="btn-submit" style="width:100%;margin-bottom:10px;" onclick="window.open('https://billing.stripe.com','_blank','noopener')">Open Billing Portal</button>
-      <button onclick="_renderManageMembershipOptions()" style="width:100%;padding:10px;background:none;border:none;color:var(--text3);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">← Back</button>
-    </div>`;
-};
-
-window._confirmCancelMembership = () => {
-  const body = document.getElementById('manageMembershipBody');
-  if (!body) return;
-  body.innerHTML = `
-    <div style="padding:12px 0 20px;text-align:center;">
-      <div style="font-size:36px;margin-bottom:12px;">😢</div>
-      <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--text);margin-bottom:10px;">Cancel membership?</div>
-      <div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:24px;">You'll lose access to all premium features — themes, book designs, and more.</div>
-      <button class="btn-submit" style="width:100%;margin-bottom:10px;background:var(--danger);" onclick="_executeCancelMembership()">Yes, cancel membership</button>
-      <button onclick="_renderManageMembershipOptions()" style="width:100%;padding:10px;background:none;border:none;color:var(--text3);font-size:13px;cursor:pointer;font-family:'DM Sans',sans-serif;">← Keep my membership</button>
-    </div>`;
-};
-
-window._executeCancelMembership = async () => {
-  const body = document.getElementById('manageMembershipBody');
-  if (body) body.innerHTML = `<div style="text-align:center;padding:30px 0;color:var(--text3);font-size:14px;">Cancelling…</div>`;
-  try {
-    await setDoc(doc(db, 'users', currentUser.uid, 'meta', 'settings'), { isPremium: false }, { merge: true });
-  } catch(e) { /* non-fatal */ }
-  _isPremium = false;
-  if (currentUser) currentUser._isPremium = false;
-  _updatePremiumSettingsRow();
-  _renderAccountPremiumSection();
-  closeModal('manageMembershipModal');
-  showStatus('Membership cancelled. Visit Stripe to stop future charges.', 'info');
-};
 
 function _renderPremiumModal() {
   const content = document.getElementById('premiumModalContent');
@@ -8653,7 +8577,7 @@ window.openSettingsSection = (section) => {
   document.querySelectorAll('.settings-panel').forEach(p => p.classList.remove('active'));
   document.getElementById('spanel-' + section).classList.add('active');
   document.getElementById('settingsBackBtn').style.display = '';
-  const titles = { manage: 'Genres & Locations', borrowers: 'Borrower Log', importexport: 'Import / Export', account: 'Account', appearance: 'Appearance' };
+  const titles = { manage: 'Genres & Locations', borrowers: 'Borrower Log', importexport: 'Import / Export', account: 'Profile Settings', appearance: 'Appearance' };
   document.getElementById('settingsTitle').textContent = titles[section] || 'Settings';
   if (section === 'borrowers') {
     borrowerLogTab = 'all';
@@ -10859,6 +10783,7 @@ const STRIPE_PAYMENT_LINKS = {
   monthly: 'https://buy.stripe.com/fZu9AS84X9J01bw8Xf2Fa01',
   yearly:  'https://buy.stripe.com/8x200i4SL6wO07s2yR2Fa00',
 };
+const STRIPE_PORTAL_URL = 'REPLACE_PORTAL_URL';
 
 let _selectedPlan = 'yearly';
 
