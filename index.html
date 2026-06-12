@@ -8499,6 +8499,9 @@ function _renderAccountPremiumSection() {
     const subLine = endsAt
       ? `<div style="font-size:12px;color:#e57373;margin-top:2px;">Expiring ${endsAt.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})}</div>`
       : `<div style="font-size:12px;color:var(--text3);margin-top:2px;">All features unlocked</div>`;
+    const expiryNote = endsAt
+      ? `<div style="font-size:12px;color:var(--text3);line-height:1.5;margin-bottom:14px;">When your premium expires, all customizations will revert to the defaults. If you ever go premium again, your design choices will be saved and restored.</div>`
+      : ``;
     el.innerHTML = `
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
         <span style="font-size:28px;line-height:1;">👑</span>
@@ -8507,7 +8510,7 @@ function _renderAccountPremiumSection() {
           ${subLine}
         </div>
       </div>
-      <button class="btn-submit" style="width:100%;"
+      ${expiryNote}<button class="btn-submit" style="width:100%;"
         onclick="openStripePortal()">Manage Subscription</button>`;
   } else {
     el.innerHTML = `
