@@ -2257,7 +2257,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
     <div class="modal-handle"></div>
     <button class="modal-close" onclick="closeModal('csvModal')"><i data-lucide="x"></i></button>
     <div class="modal-title"><i data-lucide="download"></i> Bulk Add from CSV</div>
-    <p style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6;">Upload a CSV file with columns: <strong style="color:var(--accent)">Title, Author, Read, Genres, Location, Series, SeriesNumber, Rating</strong></p>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6;">Upload a CSV with columns: <strong style="color:var(--accent)">Title, Author, Read, Genres (semicolons), Location, Series, SeriesNumber, Rating</strong></p>
     <div class="csv-drop" onclick="document.getElementById('csvFileInput').click()">
       <div class="csv-drop-icon"><i data-lucide="file-text"></i></div>
       <div class="csv-drop-label">Tap to select CSV file</div>
@@ -2284,11 +2284,23 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
       <div class="bulk-step">
         <div class="bulk-step-header">
           <div class="bulk-step-num">1</div>
-          <div class="bulk-step-title">Download the format file</div>
+          <div class="bulk-step-title">Copy this prompt</div>
         </div>
-        <div class="bulk-step-desc">Download the template CSV so your AI knows exactly how to format the data.</div>
-        <button class="btn-bulk-action" onclick="downloadFormatFile()">
-          <span>⬇️</span> Download Format File
+        <div class="bulk-prompt-box" id="bulkPromptBox">You are my personal librarian. I will give you a list of books (or a photo of my bookshelf) and I want you to output a CSV file with exactly these 8 columns in this order:
+
+1. Title
+2. Author
+3. Read (TRUE or FALSE — use FALSE unless I say otherwise)
+4. Genres (separate multiple genres with semicolons, e.g. Fantasy;Adventure;Epic Fantasy)
+5. Location (leave blank)
+6. Series (the series name if the book belongs to one, otherwise leave blank)
+7. SeriesNumber (the book's number in the series, e.g. 1, 2, 3 — leave blank if not in a series)
+8. Rating (leave as 0)
+
+For every book, look up the correct Author, Genres, Series, and SeriesNumber.
+Output only the CSV with a header row — no explanation needed.</div>
+        <button class="btn-bulk-action" id="copyPromptBtn" onclick="copyBulkPrompt()">
+          <i data-lucide="clipboard"></i> Copy Prompt
         </button>
       </div>
 
@@ -2296,36 +2308,18 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
       <div class="bulk-step">
         <div class="bulk-step-header">
           <div class="bulk-step-num">2</div>
-          <div class="bulk-step-title">Copy the prompt below</div>
+          <div class="bulk-step-title">Give the AI the prompt</div>
         </div>
-        <div class="bulk-prompt-box" id="bulkPromptBox">You are my personal librarian.
-The system I use to store my books is in the attached file.
-I will tell you a list of books, or give you a photo of my bookshelf and I want you to add those books to a csv file with the same columns, in the same order as the attached file.
-
-For every book I list, look up the correct Author, Genres, Series name, and SeriesNumber (the book's position in the series, e.g. 1, 2, 3) and fill those in.
-Separate multiple genres with semicolons (e.g. Fantasy;Adventure).
-Leave Read, Location, and Rating empty (use their default values from the format file).</div>
-        <button class="btn-bulk-action" id="copyPromptBtn" onclick="copyBulkPrompt()">
-          <i data-lucide="clipboard"></i> Copy Prompt
-        </button>
+        <div class="bulk-step-desc">
+          Paste the prompt into ChatGPT, Claude, or any AI, then tell it your books — or share a <strong>photo of your bookshelf</strong> or use <strong>voice mode</strong>. The AI will output a ready-to-upload CSV.
+        </div>
+        <div class="bulk-step-note">✨ We recommend ChatGPT or Claude for best results.</div>
       </div>
 
       <!-- Step 3 -->
       <div class="bulk-step">
         <div class="bulk-step-header">
           <div class="bulk-step-num">3</div>
-          <div class="bulk-step-title">Give the AI the prompt and file</div>
-        </div>
-        <div class="bulk-step-desc">
-          Give your AI the prompt and the format file you downloaded. You can use <strong>voice mode</strong> to dictate a list of books, or share a <strong>photo of your bookshelf</strong> — the AI will do the rest!
-        </div>
-        <div class="bulk-step-note">✨ We recommend ChatGPT or Claude for best results.</div>
-      </div>
-
-      <!-- Step 4 -->
-      <div class="bulk-step">
-        <div class="bulk-step-header">
-          <div class="bulk-step-num">4</div>
           <div class="bulk-step-title">Upload the file the AI gives you</div>
         </div>
         <div class="bulk-step-desc">Save the CSV the AI creates, then upload it here — our system handles the rest!</div>
