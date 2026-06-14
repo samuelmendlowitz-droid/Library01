@@ -8416,30 +8416,25 @@ window.handleCsvUpload = async e => {
 };
 
 function _renderSettingsUndoItem() {
-  const btn  = document.getElementById('settingsUndoBulkBtn');
+  const btn   = document.getElementById('settingsUndoBulkBtn');
   const title = document.getElementById('settingsUndoBulkTitle');
-  const sub  = document.getElementById('settingsUndoBulkSub');
-  const icon = document.getElementById('settingsUndoBulkIcon');
+  const sub   = document.getElementById('settingsUndoBulkSub');
+  const icon  = document.getElementById('settingsUndoBulkIcon');
   if (!btn) return;
+  // Always enabled — falls back to Firestore batch detection if no localStorage record
+  if (title) { title.textContent = 'Undo Last Bulk Upload'; title.style.color = 'var(--danger)'; }
+  if (icon) icon.style.color = 'var(--danger)';
+  btn.disabled = false; btn.style.opacity = '';
+  btn.style.borderColor = 'color-mix(in srgb,var(--danger) 30%,var(--border))';
   let data;
   try { data = JSON.parse(localStorage.getItem('lastBulkUpload') || 'null'); } catch(e) { data = null; }
   const elapsed = data ? Date.now() - data.timestamp : Infinity;
-  const active = data && elapsed <= 30 * 60 * 1000;
-  if (data && !active) localStorage.removeItem('lastBulkUpload');
-  if (active) {
+  if (data && elapsed <= 30 * 60 * 1000) {
     const n = data.bookIds.length;
     const mins = Math.ceil((30 * 60 * 1000 - elapsed) / 60000);
-    if (title) { title.textContent = 'Undo Last Bulk Upload'; title.style.color = 'var(--danger)'; }
-    if (sub) sub.textContent = `${n} book${n !== 1 ? 's' : ''} added · ${mins} min left to undo`;
-    if (icon) icon.style.color = 'var(--danger)';
-    btn.disabled = false; btn.style.opacity = '';
-    btn.style.borderColor = 'color-mix(in srgb,var(--danger) 30%,var(--border))';
+    if (sub) sub.textContent = `${n} book${n !== 1 ? 's' : ''} added · ${mins} min left`;
   } else {
-    if (title) { title.textContent = 'Undo Last Bulk Upload'; title.style.color = ''; }
-    if (sub) sub.textContent = 'No recent upload to undo';
-    if (icon) icon.style.color = '';
-    btn.disabled = true; btn.style.opacity = '0.4';
-    btn.style.borderColor = '';
+    if (sub) sub.textContent = 'Find & remove last import batch';
   }
   refreshIcons();
 }
@@ -8466,49 +8461,116 @@ function _renderBulkUndoBanner() {
   </div>`;
 }
 
+async function _cleanGlobalAfterUndo(globalIds) {
+  for (const gid of globalIds) {
+    try {
+      const gref = doc(db, 'globalLibrary', gid);
+      const snap = await getDoc(gref);
+      if (!snap.exists()) continue;
+      const pop = snap.data().popularity || 0;
+      if (pop <= 1) {
+        await deleteDoc(gref);
+        globalBookCache = globalBookCache.filter(b => b.id !== gid);
+      } else {
+        await updateDoc(gref, { popularity: increment(-1) });
+        const cached = globalBookCache.find(b => b.id === gid);
+        if (cached) cached.popularity = Math.max(0, (cached.popularity || 1) - 1);
+      }
+    } catch(e) {}
+  }
+}
+
+async function _detectLastImportBatch() {
+  // Load up to 300 books newest-first, find the cluster added closest together
+  const q = query(userBooksCol(), orderBy('addedAt', 'desc'), limit(300));
+  const snap = await getDocs(q);
+  if (snap.empty) return null;
+  const docs = snap.docs;
+  // Most recent book sets the anchor; include all added within 10 minutes of it
+  const latestMs = docs[0].data().addedAt?.toMillis?.() || Date.now();
+  const windowMs = 10 * 60 * 1000;
+  const batch = docs.filter(d => {
+    const t = d.data().addedAt?.toMillis?.();
+    return t && Math.abs(latestMs - t) <= windowMs;
+  });
+  if (batch.length < 2) return null; // single book ≠ bulk import
+  return {
+    bookIds: batch.map(d => d.id),
+    globalIds: batch.map(d => createGlobalBookId(d.data().title || '', d.data().author || '')),
+    timestamp: latestMs,
+    fromFirestore: true
+  };
+}
+
+let _pendingUndoBatch = null;
+
 window.undoLastBulkUpload = async () => {
   let data;
   try { data = JSON.parse(localStorage.getItem('lastBulkUpload') || 'null'); } catch(e) { data = null; }
-  if (!data) return;
-  const btn = document.getElementById('undoBulkBtn');
-  if (btn) { btn.disabled = true; btn.textContent = 'Undoing…'; }
-  const elapsed = Date.now() - data.timestamp;
-  const within20 = elapsed < 20 * 60 * 1000;
-  try {
-    // Remove from personal library
-    await Promise.all(data.bookIds.map(id =>
-      deleteDoc(doc(db, 'users', currentUser.uid, 'books', id)).catch(() => {})
-    ));
-    // If within 20 min, also clean global library
-    if (within20 && data.globalIds?.length) {
-      for (const gid of data.globalIds) {
-        try {
-          const gref = doc(db, 'globalLibrary', gid);
-          const snap = await getDoc(gref);
-          if (!snap.exists()) continue;
-          const pop = snap.data().popularity || 0;
-          if (pop <= 1) {
-            await deleteDoc(gref);
-            globalBookCache = globalBookCache.filter(b => b.id !== gid);
-          } else {
-            await updateDoc(gref, { popularity: increment(-1) });
-            const cached = globalBookCache.find(b => b.id === gid);
-            if (cached) cached.popularity = Math.max(0, (cached.popularity || 1) - 1);
-          }
-        } catch(e) {}
-      }
+
+  // If we have a pending confirmed batch (from the preview step), execute it
+  if (_pendingUndoBatch) {
+    const batch = _pendingUndoBatch;
+    _pendingUndoBatch = null;
+    const settingsBtn = document.getElementById('settingsUndoBulkBtn');
+    if (settingsBtn) { settingsBtn.disabled = true; }
+    try {
+      await Promise.all(batch.bookIds.map(id =>
+        deleteDoc(doc(db, 'users', currentUser.uid, 'books', id)).catch(() => {})
+      ));
+      await _cleanGlobalAfterUndo(batch.globalIds);
+      localStorage.removeItem('lastBulkUpload');
+      await loadBooks();
+      closeSettings();
+      const n = batch.bookIds.length;
+      showStatus(`Undone — ${n} book${n !== 1 ? 's' : ''} removed.`, 'success');
+      setTimeout(hideStatus, 4000);
+    } catch(e) {
+      showStatus('Undo failed: ' + e.message, 'error');
+      if (settingsBtn) settingsBtn.disabled = false;
     }
-    localStorage.removeItem('lastBulkUpload');
-    await loadBooks();
-    closeBulkAdd();
+    return;
+  }
+
+  // If localStorage record exists and is recent, use it directly
+  if (data && (Date.now() - data.timestamp) <= 30 * 60 * 1000) {
+    _pendingUndoBatch = data;
     const n = data.bookIds.length;
-    showStatus(`Undone — ${n} book${n !== 1 ? 's' : ''} removed.`, 'success');
-    setTimeout(hideStatus, 4000);
+    _showUndoConfirm(n, data.timestamp, false);
+    return;
+  }
+
+  // Fallback: detect batch from Firestore (handles imports before this feature existed)
+  const sub = document.getElementById('settingsUndoBulkSub');
+  if (sub) sub.textContent = 'Searching…';
+  const settingsBtn = document.getElementById('settingsUndoBulkBtn');
+  if (settingsBtn) settingsBtn.disabled = true;
+  try {
+    const batch = await _detectLastImportBatch();
+    if (settingsBtn) settingsBtn.disabled = false;
+    if (!batch) {
+      if (sub) sub.textContent = 'No import batch found';
+      return;
+    }
+    _pendingUndoBatch = batch;
+    _showUndoConfirm(batch.bookIds.length, batch.timestamp, true);
   } catch(e) {
-    if (btn) { btn.disabled = false; btn.textContent = '↩ Undo'; }
-    showStatus('Undo failed: ' + e.message, 'error');
+    if (settingsBtn) settingsBtn.disabled = false;
+    if (sub) sub.textContent = 'Find & remove last import batch';
+    showStatus('Search failed: ' + e.message, 'error');
   }
 };
+
+function _showUndoConfirm(count, timestamp, fromFirestore) {
+  const dateStr = new Date(timestamp).toLocaleString([], { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
+  const msg = fromFirestore
+    ? `Found ${count} books added around ${dateStr} — looks like a bulk import. Remove all ${count} books (and clean the global library)?`
+    : `Remove the ${count} books added at ${dateStr}? This also cleans the global library.`;
+  const el = document.getElementById('settingsUndoBulkSub');
+  if (el) el.textContent = `${count} books found — tap again to confirm`;
+  if (!confirm(msg)) { _pendingUndoBatch = null; _renderSettingsUndoItem(); }
+  else undoLastBulkUpload();
+}
 
 // ── MODAL HELPERS ─────────────────────────────────────────────────────────────
 let _scrollLockDepth = 0;
