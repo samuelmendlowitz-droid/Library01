@@ -2828,15 +2828,31 @@ function _renderIconColorSection() {
       <div style="font-size:11px;color:var(--text3);margin:12px 0 5px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Premium Icons</div>
       <div style="width:100%;overflow-x:auto;padding-bottom:4px;"><div id="goldIconGrid" style="display:grid;grid-template-rows:repeat(3,42px);grid-auto-flow:column;grid-auto-columns:42px;gap:6px;width:max-content;">${iconSwatches}</div></div>`;
   } else {
+    const mockBgSwatches = ICON_BG_COLORS.slice(0, 10).map(c =>
+      `<div style="width:26px;height:26px;border-radius:6px;background:${c};border:2px solid var(--border);flex-shrink:0;"></div>`
+    ).join('');
+    const mockFgSwatches = ICON_FG_COLORS.slice(0, 10).map(c =>
+      `<div style="width:26px;height:26px;border-radius:6px;background:${c};border:2px solid var(--border);flex-shrink:0;"></div>`
+    ).join('');
+    const mockIconCells = PREMIUM_ICON_DEFS.slice(0, 9).map(def =>
+      `<div style="width:42px;height:42px;border-radius:8px;background:var(--surface2);display:flex;align-items:center;justify-content:center;"><svg viewBox="0 0 24 24" width="22" height="22" style="color:var(--text2);overflow:visible;">${def.i}</svg></div>`
+    ).join('');
     el.innerHTML = `
-      <div style="margin-top:12px;padding:10px 12px;background:var(--surface2);border-radius:var(--radius-sm);display:flex;align-items:center;gap:10px;">
-        <i data-lucide="lock" style="width:14px;height:14px;color:var(--text3);flex-shrink:0;"></i>
-        <div>
-          <div style="font-size:12px;font-weight:600;color:var(--text2);">Color is auto-assigned</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:2px;"><span onclick="closeSettings();openPremiumModal();" style="color:var(--accent);cursor:pointer;font-weight:600;">Upgrade to Premium</span> to choose your color &amp; unlock SVG icons</div>
+      <div style="position:relative;margin-top:12px;border-radius:10px;overflow:hidden;">
+        <div style="filter:blur(3px);opacity:0.38;pointer-events:none;user-select:none;padding:2px 0 6px;">
+          <div style="font-size:11px;color:var(--text3);margin:0 0 5px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Background Color</div>
+          <div style="display:flex;flex-wrap:wrap;gap:5px;">${mockBgSwatches}</div>
+          <div style="font-size:11px;color:var(--text3);margin:10px 0 5px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Icon Color</div>
+          <div style="display:flex;flex-wrap:wrap;gap:5px;">${mockFgSwatches}</div>
+          <div style="font-size:11px;color:var(--text3);margin:10px 0 5px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Premium Icons</div>
+          <div style="display:grid;grid-template-columns:repeat(3,42px);gap:6px;">${mockIconCells}</div>
+        </div>
+        <div onclick="closeSettings();openPremiumModal();" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;">
+          <svg viewBox="0 0 24 24" width="30" height="30" style="color:var(--accent);filter:drop-shadow(0 2px 6px rgba(0,0,0,0.5));"><path d="M2 20h20M4 20V13l4 3 4-8 4 8 4-3v7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+          <div style="font-size:14px;font-weight:700;color:var(--text);text-shadow:0 1px 4px rgba(0,0,0,0.6);">More options</div>
+          <div style="font-size:11px;font-weight:600;color:var(--accent);text-shadow:0 1px 4px rgba(0,0,0,0.6);">Upgrade to Premium →</div>
         </div>
       </div>`;
-    refreshIcons();
   }
 }
 
