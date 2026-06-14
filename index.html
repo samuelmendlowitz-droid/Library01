@@ -6275,16 +6275,67 @@ function _buildHlRow(cat, catInfo, items, isActive, isClub) {
   return `<div class="hl-row"><span class="hl-row-label">${catInfo.label}</span><div style="flex:1;display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-width:0;">${chips}${inputHtml}</div>${addBtn}</div>`;
 }
 
+function _searchGlobalBooks(q) {
+  const ql = q.toLowerCase();
+  const seen = new Set();
+  const results = [];
+  // Global library first (sorted by popularity from preload)
+  for (const b of globalBookCache) {
+    if (results.length >= 5) break;
+    if (!b.title || seen.has(b.title) || b._localOnly) continue;
+    if (!ql || (b.title||'').toLowerCase().includes(ql) || (b.author||'').toLowerCase().includes(ql)) {
+      seen.add(b.title);
+      results.push({ title: b.title, author: b.author || '' });
+    }
+  }
+  // Personal library fills any remaining slots
+  for (const b of (books || [])) {
+    if (results.length >= 5) break;
+    if (!b.title || seen.has(b.title) || b.location === 'Wishlist') continue;
+    if (!ql || (b.title||'').toLowerCase().includes(ql) || (b.author||'').toLowerCase().includes(ql)) {
+      seen.add(b.title);
+      results.push({ title: b.title, author: b.author || '' });
+    }
+  }
+  return results;
+}
+
 function _hlUpdateAc(cat, val) {
   const acEl = document.getElementById('hl-ac-' + cat);
   if (!acEl) return;
+  const inputEl = document.getElementById('hl-input-' + cat);
   const existing = new Set(_myHighlights[cat]||[]);
-  const q = val.toLowerCase();
-  const matches = _hlAcSources(cat).filter(s => !existing.has(s) && s.toLowerCase().includes(q)).slice(0, 5);
-  _hlAcResults[cat] = matches;
-  if (!matches.length) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
-  acEl.style.display = '';
-  acEl.innerHTML = matches.map((m,i) => `<div class="hl-ac-item" onmousedown="event.preventDefault()" onclick="addHlChip('${cat}',${i})">${esc(m)}</div>`).join('');
+  const applyFixed = () => {
+    if (inputEl) {
+      const r = inputEl.getBoundingClientRect();
+      acEl.style.position = 'fixed';
+      acEl.style.top = (r.bottom + 2) + 'px';
+      acEl.style.left = r.left + 'px';
+      acEl.style.width = Math.max(180, r.width) + 'px';
+      acEl.style.zIndex = '9999';
+    }
+  };
+  if (cat === 'books') {
+    const bookResults = _searchGlobalBooks(val).filter(b => !existing.has(b.title));
+    _hlAcResults[cat] = bookResults.map(b => b.title);
+    if (!bookResults.length) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
+    applyFixed();
+    acEl.style.display = '';
+    acEl.innerHTML = bookResults.map((b,i) =>
+      `<div class="hl-ac-item" onmousedown="event.preventDefault()" onclick="addHlChip('books',${i})">`
+      + `<span style="font-weight:500">${esc(b.title)}</span>`
+      + (b.author ? `<span style="color:var(--text3);font-size:11px;margin-left:4px">· ${esc(b.author)}</span>` : '')
+      + `</div>`
+    ).join('');
+  } else {
+    const q = val.toLowerCase();
+    const matches = _hlAcSources(cat).filter(s => !existing.has(s) && s.toLowerCase().includes(q)).slice(0, 5);
+    _hlAcResults[cat] = matches;
+    if (!matches.length) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
+    applyFixed();
+    acEl.style.display = '';
+    acEl.innerHTML = matches.map((m,i) => `<div class="hl-ac-item" onmousedown="event.preventDefault()" onclick="addHlChip('${cat}',${i})">${esc(m)}</div>`).join('');
+  }
 }
 
 function _clubHlUpdateAc(cat, val) {
@@ -6292,21 +6343,37 @@ function _clubHlUpdateAc(cat, val) {
   if (!acEl) return;
   const inputEl = document.getElementById('chl-input-' + cat);
   const existing = new Set(_clubSubjects[cat]||[]);
-  const q = val.toLowerCase();
-  const matches = _clubHlAcSources(cat).filter(s => !existing.has(s) && s.toLowerCase().includes(q)).slice(0, 5);
-  _clubHlAcResults[cat] = matches;
-  if (!matches.length) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
-  // Use fixed positioning so the dropdown is never clipped by overflow:auto ancestors
-  if (inputEl) {
-    const r = inputEl.getBoundingClientRect();
-    acEl.style.position = 'fixed';
-    acEl.style.top = (r.bottom + 2) + 'px';
-    acEl.style.left = r.left + 'px';
-    acEl.style.width = Math.max(180, r.width) + 'px';
-    acEl.style.zIndex = '9999';
+  const applyFixed = () => {
+    if (inputEl) {
+      const r = inputEl.getBoundingClientRect();
+      acEl.style.position = 'fixed';
+      acEl.style.top = (r.bottom + 2) + 'px';
+      acEl.style.left = r.left + 'px';
+      acEl.style.width = Math.max(180, r.width) + 'px';
+      acEl.style.zIndex = '9999';
+    }
+  };
+  if (cat === 'books') {
+    const bookResults = _searchGlobalBooks(val).filter(b => !existing.has(b.title));
+    _clubHlAcResults[cat] = bookResults.map(b => b.title);
+    if (!bookResults.length) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
+    applyFixed();
+    acEl.style.display = '';
+    acEl.innerHTML = bookResults.map((b,i) =>
+      `<div class="hl-ac-item" onmousedown="event.preventDefault()" onclick="addClubHlChip('books',${i})">`
+      + `<span style="font-weight:500">${esc(b.title)}</span>`
+      + (b.author ? `<span style="color:var(--text3);font-size:11px;margin-left:4px">· ${esc(b.author)}</span>` : '')
+      + `</div>`
+    ).join('');
+  } else {
+    const q = val.toLowerCase();
+    const matches = _clubHlAcSources(cat).filter(s => !existing.has(s) && s.toLowerCase().includes(q)).slice(0, 5);
+    _clubHlAcResults[cat] = matches;
+    if (!matches.length) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
+    applyFixed();
+    acEl.style.display = '';
+    acEl.innerHTML = matches.map((m,i) => `<div class="hl-ac-item" onmousedown="event.preventDefault()" onclick="addClubHlChip('${cat}',${i})">${esc(m)}</div>`).join('');
   }
-  acEl.style.display = '';
-  acEl.innerHTML = matches.map((m,i) => `<div class="hl-ac-item" onmousedown="event.preventDefault()" onclick="addClubHlChip('${cat}',${i})">${esc(m)}</div>`).join('');
 }
 
 function _renderHlEditor() {
