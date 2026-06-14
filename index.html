@@ -1604,16 +1604,10 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
       </div>
       <div id="chatFilterPanel" class="filter-panel" style="display:none;padding:10px 16px 12px">
         <div class="filter-section-label">Read Status</div>
-        <div class="filter-row" style="margin-bottom:12px">
+        <div class="filter-row">
           <button class="filter-btn active" id="cfilt-read-all" onclick="setChatReadFilter('all')">All</button>
           <button class="filter-btn" id="cfilt-read-unread" onclick="setChatReadFilter('unread')">Unread</button>
           <button class="filter-btn" id="cfilt-read-read" onclick="setChatReadFilter('read')">Read</button>
-        </div>
-        <div class="filter-section-label">Type</div>
-        <div class="filter-row">
-          <button class="filter-btn active" id="cfilt-type-all" onclick="setChatTypeFilter('all')">All</button>
-          <button class="filter-btn" id="cfilt-type-friends" onclick="setChatTypeFilter('friends')">Friends</button>
-          <button class="filter-btn" id="cfilt-type-clubs" onclick="setChatTypeFilter('clubs')">Clubs</button>
         </div>
       </div>
       <div id="comm-chats-list" class="friends-list"></div>
@@ -9493,7 +9487,6 @@ let discoverMode = 'friends';
 let clubSearchTimer = null;
 let chatFilterOpen = false;
 let chatReadFilter = 'all';
-let chatTypeFilter = 'all';
 let createClubEmoji = '📚', createClubColor = '#2d2520';
 let createClubPrivacy = 'public';
 let editClubPrivacy = 'public';
@@ -9583,16 +9576,12 @@ function renderChatList(friendsFiltered, clubsFiltered) {
   if (!el) return;
   const clubs = clubsFiltered !== undefined ? clubsFiltered : clubsList;
 
-  // Build items, respecting type filter
   let all = [];
-  if (chatTypeFilter !== 'clubs') {
-    all.push(...friendsFiltered.map(f => ({
-      _type: 'friend', id: f.id, displayName: f.displayName, username: f.username,
-      ts: chatMsgTimestamp(f.id)
-    })));
-  }
-  if (chatTypeFilter !== 'friends') {
-    all.push(...clubs.map(c => {
+  all.push(...friendsFiltered.map(f => ({
+    _type: 'friend', id: f.id, displayName: f.displayName, username: f.username,
+    ts: chatMsgTimestamp(f.id)
+  })));
+  all.push(...clubs.map(c => {
       const rawSubj = c.subjects || {};
       const subj = (!Array.isArray(rawSubj) && typeof rawSubj === 'object') ? rawSubj : {};
       return {
@@ -9815,11 +9804,6 @@ window.setChatReadFilter = (val) => {
   renderChats();
 };
 
-window.setChatTypeFilter = (val) => {
-  chatTypeFilter = val;
-  ['all','friends','clubs'].forEach(v => document.getElementById('cfilt-type-' + v)?.classList.toggle('active', v === val));
-  renderChats();
-};
 
 function renderMyFriends() { renderChats(); renderFriendsList(); }
 
