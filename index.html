@@ -6217,21 +6217,33 @@ const _HL_CATS = [
 const _HL_MAX = 3;
 
 function _hlAcSources(cat) {
+  const userTitles   = books.filter(b=>b.title  && b.location!=='Wishlist').map(b=>b.title);
+  const userAuthors  = books.filter(b=>b.author && b.location!=='Wishlist').map(b=>b.author);
+  const userSeries   = books.filter(b=>b.series && b.location!=='Wishlist').map(b=>b.series);
+  const globalTitles  = globalBookCache.filter(b=>b.title  && !b._localOnly).map(b=>b.title);
+  const globalAuthors = globalBookCache.filter(b=>b.author && !b._localOnly).map(b=>b.author);
+  const globalSeries  = globalBookCache.filter(b=>b.series && !b._localOnly).map(b=>b.series);
   switch(cat) {
-    case 'books':   return [...new Set(globalBookCache.filter(b=>b.title).map(b=>b.title))].sort();
-    case 'authors': return [...new Set(globalBookCache.filter(b=>b.author).map(b=>b.author))].sort();
+    case 'books':   return [...new Set([...userTitles,  ...globalTitles ])].sort();
+    case 'authors': return [...new Set([...userAuthors, ...globalAuthors])].sort();
     case 'genres':  return [...orderedGenres];
-    case 'series':  return [...new Set(globalBookCache.filter(b=>b.series).map(b=>b.series))].sort();
+    case 'series':  return [...new Set([...userSeries,  ...globalSeries ])].sort();
     default: return [];
   }
 }
 
 function _clubHlAcSources(cat) {
+  const userTitles   = books.filter(b=>b.title  && b.location!=='Wishlist').map(b=>b.title);
+  const userAuthors  = books.filter(b=>b.author && b.location!=='Wishlist').map(b=>b.author);
+  const userSeries   = books.filter(b=>b.series && b.location!=='Wishlist').map(b=>b.series);
+  const globalTitles  = globalBookCache.filter(b=>b.title  && !b._localOnly).map(b=>b.title);
+  const globalAuthors = globalBookCache.filter(b=>b.author && !b._localOnly).map(b=>b.author);
+  const globalSeries  = globalBookCache.filter(b=>b.series && !b._localOnly).map(b=>b.series);
   switch(cat) {
-    case 'books':   return [...new Set(globalBookCache.filter(b=>b.title).map(b=>b.title))].sort().slice(0,200);
-    case 'authors': return [...new Set(globalBookCache.filter(b=>b.author).map(b=>b.author))].sort().slice(0,200);
+    case 'books':   return [...new Set([...userTitles,  ...globalTitles ])].sort().slice(0,200);
+    case 'authors': return [...new Set([...userAuthors, ...globalAuthors])].sort().slice(0,200);
     case 'genres':  return [...orderedGenres];
-    case 'series':  return [...new Set(globalBookCache.filter(b=>b.series).map(b=>b.series))].sort().slice(0,200);
+    case 'series':  return [...new Set([...userSeries,  ...globalSeries ])].sort().slice(0,200);
     default: return [];
   }
 }
