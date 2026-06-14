@@ -2451,6 +2451,15 @@ Output only the CSV — no explanation needed.</div>
           <div class="smi-text"><div class="smi-title">Export Library</div><div class="smi-sub">Download your personal library as a CSV</div></div>
           <span class="smi-arrow"><i data-lucide="chevron-right"></i></span>
         </button>
+        <div id="settingsUndoBulkItem" style="display:none;">
+          <button class="settings-menu-item" onclick="undoLastBulkUpload()" style="border-color:color-mix(in srgb,var(--danger) 30%,var(--border))">
+            <span class="smi-icon" style="color:var(--danger)"><i data-lucide="rotate-ccw"></i></span>
+            <div class="smi-text">
+              <div class="smi-title" style="color:var(--danger)">Undo Last Bulk Upload</div>
+              <div class="smi-sub" id="settingsUndoBulkSub">Remove books added in last import</div>
+            </div>
+          </button>
+        </div>
         <div id="ownerWipeSection" style="display:none;">
           <button class="settings-menu-item" onclick="closeSettings();runLibraryCleanup()">
             <span class="smi-icon"><i data-lucide="sparkles"></i></span>
@@ -8406,6 +8415,22 @@ window.handleCsvUpload = async e => {
   setTimeout(hideStatus, 5000);
 };
 
+function _renderSettingsUndoItem() {
+  const el = document.getElementById('settingsUndoBulkItem');
+  if (!el) return;
+  let data;
+  try { data = JSON.parse(localStorage.getItem('lastBulkUpload') || 'null'); } catch(e) { data = null; }
+  if (!data) { el.style.display = 'none'; return; }
+  const elapsed = Date.now() - data.timestamp;
+  if (elapsed > 30 * 60 * 1000) { localStorage.removeItem('lastBulkUpload'); el.style.display = 'none'; return; }
+  const n = data.bookIds.length;
+  const mins = Math.ceil((30 * 60 * 1000 - elapsed) / 60000);
+  const sub = document.getElementById('settingsUndoBulkSub');
+  if (sub) sub.textContent = `${n} book${n !== 1 ? 's' : ''} added · ${mins} min left`;
+  el.style.display = '';
+  refreshIcons();
+}
+
 function _renderBulkUndoBanner() {
   const el = document.getElementById('bulkUndoBanner');
   if (!el) return;
@@ -9051,6 +9076,7 @@ window.openSettingsSection = (section) => {
   document.getElementById('settingsBackBtn').style.display = '';
   const titles = { manage: 'Genres & Locations', borrowers: 'Borrower Log', importexport: 'Import / Export', account: 'Profile Settings', appearance: 'Appearance' };
   document.getElementById('settingsTitle').textContent = titles[section] || 'Settings';
+  if (section === 'importexport') _renderSettingsUndoItem();
   if (section === 'borrowers') {
     borrowerLogTab = 'all';
     document.querySelectorAll('.log-tab').forEach(t => t.classList.remove('active'));
