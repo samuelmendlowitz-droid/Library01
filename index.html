@@ -1587,20 +1587,20 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
   <button class="fab" id="fabAdd" onclick="openAddModal()" style="display:none"><i data-lucide="plus"></i></button>
   <div id="page-community" style="display:none">
     <div class="community-tabs">
-      <button class="ctab active" id="ctab-chats" onclick="setCommunityTab('chats')">Chats</button>
+      <button class="ctab active" id="ctab-all" onclick="setCommunityTab('all')">All</button>
+      <button class="ctab" id="ctab-friends" onclick="setCommunityTab('friends')">Friends</button>
+      <button class="ctab" id="ctab-clubs" onclick="setCommunityTab('clubs')">Clubs</button>
       <button class="ctab" id="ctab-requests" onclick="setCommunityTab('requests')" style="position:relative">Requests<span class="req-badge" id="reqBadge" style="display:none">0</span></button>
-      <button class="ctab" id="ctab-discover" onclick="setCommunityTab('discover')">Discover</button>
     </div>
 
-    <!-- Chats -->
-    <div id="comm-chats">
+    <!-- All: chats sorted by last message -->
+    <div id="comm-all">
       <div style="padding:12px 16px 4px;display:flex;gap:8px;align-items:center">
         <div class="search-wrap" style="flex:1">
           <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input class="search-input" id="chatSearch" placeholder="Search chats…" oninput="renderChats()">
         </div>
         <button class="ctrl-btn" id="chatFilterBtn" onclick="toggleChatFilter()" title="Filter"><i data-lucide="sliders-horizontal"></i></button>
-        <button class="btn-add-collection" onclick="openCreateClubModal()" style="flex-shrink:0;white-space:nowrap">+ Club</button>
       </div>
       <div id="chatFilterPanel" class="filter-panel" style="display:none;padding:10px 16px 12px">
         <div class="filter-section-label">Read Status</div>
@@ -1619,7 +1619,50 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
       <div id="comm-chats-list" class="friends-list"></div>
     </div>
 
-    <!-- Requests -->
+    <!-- Friends: all accepted friends -->
+    <div id="comm-friends" style="display:none">
+      <div style="padding:12px 16px 4px;display:flex;gap:8px;align-items:center">
+        <div class="search-wrap" style="flex:1">
+          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="search-input" id="friendsListSearch" placeholder="Search friends…" oninput="renderFriendsList()">
+        </div>
+        <button class="btn-add-collection" id="findPeopleBtn" onclick="toggleFindPeoplePanel()" style="flex-shrink:0;white-space:nowrap">Find People</button>
+      </div>
+      <div id="findPeoplePanel" style="display:none;padding:4px 16px 10px;border-bottom:1px solid var(--border);">
+        <div class="search-wrap">
+          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="search-input" id="friendSearchInput" placeholder="Search by username…" oninput="debounceFriendSearch(this.value)">
+        </div>
+        <div class="find-results" id="findResults">
+          <div style="padding:12px 0;color:var(--text3);font-size:13px;text-align:center">Type at least 3 characters</div>
+        </div>
+      </div>
+      <div id="comm-friends-list" class="friends-list"></div>
+    </div>
+
+    <!-- Clubs: all clubs the user is part of -->
+    <div id="comm-clubs" style="display:none">
+      <div style="padding:12px 16px 4px;display:flex;gap:8px;align-items:center">
+        <div class="search-wrap" style="flex:1">
+          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="search-input" id="clubsListSearch" placeholder="Search clubs…" oninput="renderClubsList()">
+        </div>
+        <button class="btn-add-collection" onclick="openCreateClubModal()" style="flex-shrink:0;white-space:nowrap">+ Club</button>
+        <button class="btn-add-collection" id="findClubsBtn" onclick="toggleFindClubsPanel()" style="flex-shrink:0;white-space:nowrap">Find</button>
+      </div>
+      <div id="findClubsPanel" style="display:none;padding:4px 16px 10px;border-bottom:1px solid var(--border);">
+        <div class="search-wrap">
+          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="search-input" id="clubSearchInput" placeholder="Search clubs by name or keywords…" oninput="debounceClubSearch(this.value)">
+        </div>
+        <div class="find-results" id="findClubResults">
+          <div style="padding:12px 0;color:var(--text3);font-size:13px;text-align:center">Type at least 3 characters</div>
+        </div>
+      </div>
+      <div id="comm-clubs-list" class="friends-list"></div>
+    </div>
+
+    <!-- Requests: friend and club requests (sent and received) -->
     <div id="comm-requests" style="display:none">
       <div class="friends-nav" style="padding:12px 16px 4px">
         <button class="fnav-btn active" id="rqfilt-all" onclick="setRequestFilter('all')">All</button>
@@ -1627,31 +1670,6 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
         <button class="fnav-btn" id="rqfilt-sent" onclick="setRequestFilter('sent')">Sent</button>
       </div>
       <div id="comm-requests-list" class="friends-list"></div>
-    </div>
-
-    <!-- Discover -->
-    <div id="comm-discover" style="display:none">
-      <div style="padding:12px 16px 4px">
-        <div class="friends-nav" style="margin-bottom:10px">
-          <button class="fnav-btn active" id="disc-btn-friends" onclick="setDiscoverMode('friends')">People</button>
-          <button class="fnav-btn" id="disc-btn-clubs" onclick="setDiscoverMode('clubs')">Clubs</button>
-        </div>
-        <div id="disc-friends-search">
-          <div class="search-wrap">
-            <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input class="search-input" id="friendSearchInput" placeholder="Search by username…" oninput="debounceFriendSearch(this.value)">
-          </div>
-        </div>
-        <div id="disc-clubs-search" style="display:none">
-          <div class="search-wrap">
-            <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input class="search-input" id="clubSearchInput" placeholder="Search clubs by name or keywords…" oninput="debounceClubSearch(this.value)">
-          </div>
-        </div>
-      </div>
-      <div class="find-results" id="findResults">
-        <div style="padding:16px;color:var(--text3);font-size:13px;text-align:center">Type at least 3 characters</div>
-      </div>
     </div>
   </div>
 </div>
@@ -9485,16 +9503,18 @@ const profileCache = {};
 let _communityLoaded = false;
 
 function initCommunityPage() {
-  communitySubtab = 'chats';
+  communitySubtab = 'all';
   chatFilterOpen = false;
   const fp = document.getElementById('chatFilterPanel');
   if (fp) fp.style.display = 'none';
   document.getElementById('chatFilterBtn')?.classList.remove('active');
-  ['chats','requests','discover'].forEach(t => {
-    document.getElementById('ctab-' + t)?.classList.toggle('active', t === 'chats');
+  ['all','friends','clubs','requests'].forEach(t => {
+    document.getElementById('ctab-' + t)?.classList.toggle('active', t === 'all');
     const el = document.getElementById('comm-' + t);
-    if (el) el.style.display = t === 'chats' ? '' : 'none';
+    if (el) el.style.display = t === 'all' ? '' : 'none';
   });
+  document.getElementById('findPeoplePanel') && (document.getElementById('findPeoplePanel').style.display = 'none');
+  document.getElementById('findClubsPanel') && (document.getElementById('findClubsPanel').style.display = 'none');
   if (_communityLoaded) { renderChats(); return; }
   loadFriends().then(async () => {
     await loadFriendProfiles();
@@ -9509,25 +9529,23 @@ function initCommunityPage() {
 
 window.setCommunityTab = (tab) => {
   communitySubtab = tab;
-  ['chats','requests','discover'].forEach(t => {
+  ['all','friends','clubs','requests'].forEach(t => {
     document.getElementById('ctab-' + t)?.classList.toggle('active', t === tab);
     const el = document.getElementById('comm-' + t);
     if (el) el.style.display = t === tab ? '' : 'none';
   });
-  if (tab === 'chats') renderChats();
+  document.getElementById('findPeoplePanel') && (document.getElementById('findPeoplePanel').style.display = 'none');
+  document.getElementById('findClubsPanel') && (document.getElementById('findClubsPanel').style.display = 'none');
+  if (tab === 'all') renderChats();
+  else if (tab === 'friends') renderFriendsList();
+  else if (tab === 'clubs') renderClubsList();
   else if (tab === 'requests') renderRequests();
-  else if (tab === 'discover') {
-    const si = document.getElementById('friendSearchInput');
-    if (si) si.value = '';
-    const fr = document.getElementById('findResults');
-    if (fr) fr.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px;text-align:center">Type at least 3 characters</div>';
-  }
 };
 
 // Compat shim — notification clicks still call this
 window.setFriendsView = (view) => {
   if (view === 'requests') setCommunityTab('requests');
-  else setCommunityTab('chats');
+  else setCommunityTab('all');
 };
 
 // ── RENDER CHATS ──────────────────────────────────────────────────────────────
@@ -9543,6 +9561,7 @@ async function loadLastChatMessages() {
     } catch(_) {}
   }));
   renderChats();
+  renderFriendsList();
 }
 
 function _chatMsgMs(msg) {
@@ -9656,11 +9675,11 @@ function renderChatList(friendsFiltered, clubsFiltered) {
   refreshIcons();
 }
 
-// Delegated handler for chat-list card taps.
+// Delegated handler for community list card taps.
 // touchstart captures card data before any async re-render can replace the element.
 let _chatTapPending = null;
 document.addEventListener('touchstart', e => {
-  const card = e.target.closest('#comm-chats [data-chat-action]');
+  const card = e.target.closest('#page-community [data-chat-action]');
   _chatTapPending = card ? { action: card.dataset.chatAction, uid: card.dataset.uid, dn: card.dataset.dn, clubId: card.dataset.clubId } : null;
 }, { passive: true });
 document.addEventListener('touchmove', () => { _chatTapPending = null; }, { passive: true });
@@ -9669,10 +9688,10 @@ document.addEventListener('click', e => {
   _chatTapPending = null;
   if (!d) {
     const card = e.target.closest('[data-chat-action]');
-    if (!card || !document.getElementById('comm-chats-list')?.contains(card)) return;
+    if (!card || !document.getElementById('page-community')?.contains(card)) return;
     d = { action: card.dataset.chatAction, uid: card.dataset.uid, dn: card.dataset.dn, clubId: card.dataset.clubId };
   }
-  if (!d.action) return;
+  if (!d?.action) return;
   if (d.action === 'friend') openFriendDetails(d.uid, d.dn);
   else if (d.action === 'club') openClubDetails(d.clubId);
 });
@@ -9689,6 +9708,98 @@ function renderChats() {
 }
 
 window.filterChats = () => renderChats();
+
+function renderFriendsList() {
+  const el = document.getElementById('comm-friends-list');
+  if (!el) return;
+  const q = (document.getElementById('friendsListSearch')?.value || '').toLowerCase().trim();
+  let friends = q
+    ? friendsList.filter(f => (f.displayName||'').toLowerCase().includes(q) || (f.username||'').toLowerCase().includes(q))
+    : friendsList;
+  // Sort: with messages first by recency, then no-message friends alphabetically
+  const withMsg  = friends.filter(f => chatMsgTimestamp(f.id) > 0).sort((a, b) => chatMsgTimestamp(b.id) - chatMsgTimestamp(a.id));
+  const noMsg    = friends.filter(f => chatMsgTimestamp(f.id) === 0).sort((a, b) => (a.displayName||a.username||'').localeCompare(b.displayName||b.username||''));
+  const sorted   = [...withMsg, ...noMsg];
+  if (!sorted.length) {
+    el.innerHTML = '<div class="empty" style="padding:40px 0"><div class="empty-icon"><i data-lucide="users"></i></div><div class="empty-title">No friends yet</div><div class="empty-sub">Tap Find People to add friends</div></div>';
+    refreshIcons(); return;
+  }
+  el.innerHTML = sorted.map(f => {
+    const lastMsg = chatLastMessages[f.id];
+    const fromMe  = lastMsg?.fromUid === currentUser?.uid;
+    let msgInner  = '';
+    if (lastMsg) {
+      if (lastMsg.type === 'friend_added') msgInner = esc('👋 You are now friends');
+      else if (lastMsg.type === 'book_ref') msgInner = esc('📖 ' + (lastMsg.bookTitle || 'Book'));
+      else if (lastMsg.type === 'borrow_request') msgInner = 'Borrow request';
+      else msgInner = esc(lastMsg.text || '');
+    }
+    const msgHtml = msgInner
+      ? '<div class="friend-last-msg' + (!fromMe ? ' from-them' : '') + '">' + msgInner + '</div>'
+      : '<div class="friend-last-msg" style="opacity:0.3;font-style:italic">No messages yet</div>';
+    return '<div class="friend-card" data-chat-action="friend" data-uid="' + esc(f.id) + '" data-dn="' + esc(f.displayName||f.username) + '" style="cursor:pointer;align-items:flex-start">'
+      + renderAvatarHtml(f.id, f.displayName, f.username)
+      + '<div class="friend-info" style="flex:0 0 auto;min-width:0;max-width:110px"><div class="friend-name">' + esc(f.displayName||f.username) + '</div>'
+      + '<div class="friend-username">@' + esc(f.username) + '</div></div>'
+      + msgHtml + '</div>';
+  }).join('');
+  refreshIcons();
+}
+
+function renderClubsList() {
+  const el = document.getElementById('comm-clubs-list');
+  if (!el) return;
+  const q = (document.getElementById('clubsListSearch')?.value || '').toLowerCase().trim();
+  let clubs = q ? clubsList.filter(c => (c.name||'').toLowerCase().includes(q)) : clubsList;
+  const withMsg = clubs.filter(c => clubMsgTimestamp(c.id) > 0).sort((a, b) => clubMsgTimestamp(b.id) - clubMsgTimestamp(a.id));
+  const noMsg   = clubs.filter(c => clubMsgTimestamp(c.id) === 0).sort((a, b) => (a.name||'').localeCompare(b.name||''));
+  const sorted  = [...withMsg, ...noMsg];
+  if (!sorted.length) {
+    el.innerHTML = '<div class="empty" style="padding:40px 0"><div class="empty-icon"><i data-lucide="users"></i></div><div class="empty-title">No clubs yet</div><div class="empty-sub">Tap + Club to create one or Find to discover clubs</div></div>';
+    refreshIcons(); return;
+  }
+  const _privIcon = { private: 'eye-off', public: 'lock', open: 'lock-open' };
+  el.innerHTML = sorted.map(c => {
+    const rawSubj = c.subjects || {};
+    const subj    = (!Array.isArray(rawSubj) && typeof rawSubj === 'object') ? rawSubj : {};
+    const allSubj = [...(subj.books||[]), ...(subj.authors||[]), ...(subj.genres||[]), ...(subj.series||[])].slice(0, 8);
+    const privIcon    = _privIcon[c.privacy||'public'] || 'lock';
+    const memberCount = (c.memberUids||[]).length;
+    return '<div class="friend-card" data-chat-action="club" data-club-id="' + esc(c.id) + '" style="cursor:pointer;align-items:center;gap:10px">'
+      + '<div class="club-avatar" style="background:' + esc(c.bgColor||'#2d2520') + ';flex-shrink:0">' + esc(c.emoji||'📚') + '</div>'
+      + '<div style="flex:1;min-width:0"><div class="friend-name">' + esc(c.name) + '</div>'
+      + '<div class="friend-username club-privacy-row"><i data-lucide="' + privIcon + '"></i>' + memberCount + ' member' + (memberCount !== 1 ? 's' : '') + '</div></div>'
+      + (allSubj.length ? '<div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end;max-width:45%;flex-shrink:0">' + allSubj.map(v => '<span class="club-subject-tag">' + esc(v) + '</span>').join('') + '</div>' : '')
+      + '</div>';
+  }).join('');
+  refreshIcons();
+}
+
+window.toggleFindPeoplePanel = () => {
+  const panel = document.getElementById('findPeoplePanel');
+  if (!panel) return;
+  const opening = panel.style.display === 'none';
+  panel.style.display = opening ? '' : 'none';
+  if (opening) {
+    const si = document.getElementById('friendSearchInput');
+    if (si) { si.value = ''; si.focus(); }
+    const fr = document.getElementById('findResults');
+    if (fr) fr.innerHTML = '<div style="padding:12px 0;color:var(--text3);font-size:13px;text-align:center">Type at least 3 characters</div>';
+  }
+};
+
+window.toggleFindClubsPanel = () => {
+  const panel = document.getElementById('findClubsPanel');
+  if (!panel) return;
+  const opening = panel.style.display === 'none';
+  panel.style.display = opening ? '' : 'none';
+  if (opening) {
+    const si = document.getElementById('clubSearchInput');
+    if (si) { si.value = ''; si.focus(); }
+    const fr = document.getElementById('findClubResults');
+    if (fr) fr.innerHTML = '<div style="padding:12px 0;color:var(--text3);font-size:13px;text-align:center">Type at least 3 characters</div>';
+  }
+};
 
 window.toggleChatFilter = () => {
   chatFilterOpen = !chatFilterOpen;
@@ -9709,7 +9820,7 @@ window.setChatTypeFilter = (val) => {
   renderChats();
 };
 
-function renderMyFriends() { renderChats(); } // alias used by removeFriendAndClose
+function renderMyFriends() { renderChats(); renderFriendsList(); }
 
 // ── CLUBS ─────────────────────────────────────────────────────────────────────
 async function loadClubs() {
@@ -9729,6 +9840,7 @@ async function loadLastClubMessages() {
     } catch(_) {}
   }));
   renderChats();
+  renderClubsList();
 }
 
 // ── RENDER REQUESTS ───────────────────────────────────────────────────────────
@@ -10828,18 +10940,6 @@ window.sendFriendRequestFromClub = async (uid, username) => {
 // ── CLUB DISCOVERY ────────────────────────────────────────────────────────────
 window.setDiscoverMode = (mode) => {
   discoverMode = mode;
-  document.getElementById('disc-btn-friends').classList.toggle('active', mode === 'friends');
-  document.getElementById('disc-btn-clubs').classList.toggle('active', mode === 'clubs');
-  document.getElementById('disc-friends-search').style.display = mode === 'friends' ? '' : 'none';
-  document.getElementById('disc-clubs-search').style.display = mode === 'clubs' ? '' : 'none';
-  document.getElementById('findResults').innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px;text-align:center">Type at least 3 characters</div>';
-  if (mode === 'clubs') {
-    const si = document.getElementById('clubSearchInput');
-    if (si) { si.value = ''; si.focus(); }
-  } else {
-    const si = document.getElementById('friendSearchInput');
-    if (si) { si.value = ''; si.focus(); }
-  }
 };
 
 window.debounceClubSearch = (val) => {
@@ -10849,7 +10949,7 @@ window.debounceClubSearch = (val) => {
 
 async function doSearchClubs(rawQuery) {
   const q = (rawQuery || '').trim().toLowerCase();
-  const el = document.getElementById('findResults');
+  const el = document.getElementById('findClubResults') || document.getElementById('findResults');
   if (!el) return;
   if (q.length < 3) { el.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px;text-align:center">Type at least 3 characters</div>'; return; }
   el.innerHTML = '<div style="padding:16px;color:var(--text3);font-size:13px;text-align:center">Searching…</div>';
