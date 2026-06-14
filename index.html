@@ -8571,7 +8571,8 @@ function _renderAccountPremiumSection() {
 function _renderAdminStripeSection() {
   const el = document.getElementById('adminStripeSection');
   if (!el || !currentUser) return;
-  el.style.display = currentUser.email === 'samuelmendlowitz@gmail.com' ? 'block' : 'none';
+  const adminEmails = ['samuelmendlowitz@gmail.com', 'miriamslibrarian@gmail.com'];
+  el.style.display = adminEmails.includes(currentUser.email?.toLowerCase()) ? 'block' : 'none';
 }
 
 window.adminSaveStripeId = async () => {
