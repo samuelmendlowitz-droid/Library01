@@ -8542,6 +8542,7 @@ window.setPage = (page) => {
   // Main content area (global is now routed through discover's tab)
   const showMain = ['mylibrary','wishlist'].includes(page);
   document.getElementById('bookList').style.display = showMain ? '' : 'none';
+  document.getElementById('shelfView').style.display = 'none'; // renderBooks() re-shows if needed
   document.getElementById('listHeader').style.display = showMain ? '' : 'none';
   document.getElementById('library-ad').style.display = page === 'mylibrary' ? '' : 'none';
   document.getElementById('statusBar').style.display = showMain ? '' : 'none';
