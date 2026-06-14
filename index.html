@@ -2451,12 +2451,12 @@ Output only the CSV — no explanation needed.</div>
           <div class="smi-text"><div class="smi-title">Export Library</div><div class="smi-sub">Download your personal library as a CSV</div></div>
           <span class="smi-arrow"><i data-lucide="chevron-right"></i></span>
         </button>
-        <div id="settingsUndoBulkItem" style="display:none;">
-          <button class="settings-menu-item" onclick="undoLastBulkUpload()" style="border-color:color-mix(in srgb,var(--danger) 30%,var(--border))">
-            <span class="smi-icon" style="color:var(--danger)"><i data-lucide="rotate-ccw"></i></span>
+        <div id="settingsUndoBulkItem">
+          <button id="settingsUndoBulkBtn" class="settings-menu-item" onclick="undoLastBulkUpload()">
+            <span class="smi-icon" id="settingsUndoBulkIcon"><i data-lucide="rotate-ccw"></i></span>
             <div class="smi-text">
-              <div class="smi-title" style="color:var(--danger)">Undo Last Bulk Upload</div>
-              <div class="smi-sub" id="settingsUndoBulkSub">Remove books added in last import</div>
+              <div class="smi-title" id="settingsUndoBulkTitle">Undo Last Bulk Upload</div>
+              <div class="smi-sub" id="settingsUndoBulkSub">No recent upload to undo</div>
             </div>
           </button>
         </div>
@@ -8416,18 +8416,31 @@ window.handleCsvUpload = async e => {
 };
 
 function _renderSettingsUndoItem() {
-  const el = document.getElementById('settingsUndoBulkItem');
-  if (!el) return;
+  const btn  = document.getElementById('settingsUndoBulkBtn');
+  const title = document.getElementById('settingsUndoBulkTitle');
+  const sub  = document.getElementById('settingsUndoBulkSub');
+  const icon = document.getElementById('settingsUndoBulkIcon');
+  if (!btn) return;
   let data;
   try { data = JSON.parse(localStorage.getItem('lastBulkUpload') || 'null'); } catch(e) { data = null; }
-  if (!data) { el.style.display = 'none'; return; }
-  const elapsed = Date.now() - data.timestamp;
-  if (elapsed > 30 * 60 * 1000) { localStorage.removeItem('lastBulkUpload'); el.style.display = 'none'; return; }
-  const n = data.bookIds.length;
-  const mins = Math.ceil((30 * 60 * 1000 - elapsed) / 60000);
-  const sub = document.getElementById('settingsUndoBulkSub');
-  if (sub) sub.textContent = `${n} book${n !== 1 ? 's' : ''} added · ${mins} min left`;
-  el.style.display = '';
+  const elapsed = data ? Date.now() - data.timestamp : Infinity;
+  const active = data && elapsed <= 30 * 60 * 1000;
+  if (data && !active) localStorage.removeItem('lastBulkUpload');
+  if (active) {
+    const n = data.bookIds.length;
+    const mins = Math.ceil((30 * 60 * 1000 - elapsed) / 60000);
+    if (title) { title.textContent = 'Undo Last Bulk Upload'; title.style.color = 'var(--danger)'; }
+    if (sub) sub.textContent = `${n} book${n !== 1 ? 's' : ''} added · ${mins} min left to undo`;
+    if (icon) icon.style.color = 'var(--danger)';
+    btn.disabled = false; btn.style.opacity = '';
+    btn.style.borderColor = 'color-mix(in srgb,var(--danger) 30%,var(--border))';
+  } else {
+    if (title) { title.textContent = 'Undo Last Bulk Upload'; title.style.color = ''; }
+    if (sub) sub.textContent = 'No recent upload to undo';
+    if (icon) icon.style.color = '';
+    btn.disabled = true; btn.style.opacity = '0.4';
+    btn.style.borderColor = '';
+  }
   refreshIcons();
 }
 
