@@ -6279,7 +6279,6 @@ function _searchGlobalBooks(q) {
   const ql = q.toLowerCase();
   const seen = new Set();
   const results = [];
-  // Global library first (sorted by popularity from preload)
   for (const b of globalBookCache) {
     if (results.length >= 5) break;
     if (!b.title || seen.has(b.title) || b._localOnly) continue;
@@ -6288,7 +6287,6 @@ function _searchGlobalBooks(q) {
       results.push({ title: b.title, author: b.author || '' });
     }
   }
-  // Personal library fills any remaining slots
   for (const b of (books || [])) {
     if (results.length >= 5) break;
     if (!b.title || seen.has(b.title) || b.location === 'Wishlist') continue;
@@ -6300,6 +6298,20 @@ function _searchGlobalBooks(q) {
   return results;
 }
 
+// Both .settings-sheet and .modal.full-sheet have CSS transform which makes them
+// the containing block for position:fixed children. We must subtract the
+// container's getBoundingClientRect() offset so the dropdown lands under the input.
+function _positionAcDropdown(acEl, inputEl) {
+  const r = inputEl.getBoundingClientRect();
+  const container = inputEl.closest('.settings-sheet, .modal.full-sheet');
+  if (!container) return;
+  const cr = container.getBoundingClientRect();
+  acEl.style.position = 'fixed';
+  acEl.style.top = (r.bottom - cr.top + 2) + 'px';
+  acEl.style.left = (r.left - cr.left) + 'px';
+  acEl.style.width = Math.max(180, r.width) + 'px';
+}
+
 function _hlUpdateAc(cat, val) {
   const acEl = document.getElementById('hl-ac-' + cat);
   if (!acEl) return;
@@ -6308,7 +6320,6 @@ function _hlUpdateAc(cat, val) {
     const bookResults = _searchGlobalBooks(val).filter(b => !existing.has(b.title));
     _hlAcResults[cat] = bookResults.map(b => b.title);
     if (!bookResults.length) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
-    acEl.style.display = '';
     acEl.innerHTML = bookResults.map((b,i) =>
       `<div class="hl-ac-item" onmousedown="event.preventDefault()" onclick="addHlChip('books',${i})">`
       + `<span style="font-weight:500">${esc(b.title)}</span>`
@@ -6319,9 +6330,11 @@ function _hlUpdateAc(cat, val) {
     const matches = _hlAcSources(cat).filter(s => !existing.has(s) && s.toLowerCase().includes(q)).slice(0, 5);
     _hlAcResults[cat] = matches;
     if (!matches.length) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
-    acEl.style.display = '';
     acEl.innerHTML = matches.map((m,i) => `<div class="hl-ac-item" onmousedown="event.preventDefault()" onclick="addHlChip('${cat}',${i})">${esc(m)}</div>`).join('');
   }
+  acEl.style.display = '';
+  const inputEl = document.getElementById('hl-input-' + cat);
+  if (inputEl) _positionAcDropdown(acEl, inputEl);
 }
 
 function _clubHlUpdateAc(cat, val) {
@@ -6332,7 +6345,6 @@ function _clubHlUpdateAc(cat, val) {
     const bookResults = _searchGlobalBooks(val).filter(b => !existing.has(b.title));
     _clubHlAcResults[cat] = bookResults.map(b => b.title);
     if (!bookResults.length) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
-    acEl.style.display = '';
     acEl.innerHTML = bookResults.map((b,i) =>
       `<div class="hl-ac-item" onmousedown="event.preventDefault()" onclick="addClubHlChip('books',${i})">`
       + `<span style="font-weight:500">${esc(b.title)}</span>`
@@ -6343,9 +6355,11 @@ function _clubHlUpdateAc(cat, val) {
     const matches = _clubHlAcSources(cat).filter(s => !existing.has(s) && s.toLowerCase().includes(q)).slice(0, 5);
     _clubHlAcResults[cat] = matches;
     if (!matches.length) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
-    acEl.style.display = '';
     acEl.innerHTML = matches.map((m,i) => `<div class="hl-ac-item" onmousedown="event.preventDefault()" onclick="addClubHlChip('${cat}',${i})">${esc(m)}</div>`).join('');
   }
+  acEl.style.display = '';
+  const inputEl = document.getElementById('chl-input-' + cat);
+  if (inputEl) _positionAcDropdown(acEl, inputEl);
 }
 
 function _renderHlEditor() {
@@ -6355,7 +6369,7 @@ function _renderHlEditor() {
   refreshIcons();
   if (_hlActiveInput) {
     const inp = document.getElementById('hl-input-' + _hlActiveInput);
-    if (inp) { inp.focus(); _hlUpdateAc(_hlActiveInput, ''); }
+    if (inp) { inp.focus(); setTimeout(() => _hlUpdateAc(_hlActiveInput, inp.value || ''), 0); }
   }
 }
 
@@ -6366,7 +6380,7 @@ function _renderClubSubjectsEditor() {
   refreshIcons();
   if (_clubHlActive) {
     const inp = document.getElementById('chl-input-' + _clubHlActive);
-    if (inp) { inp.focus(); _clubHlUpdateAc(_clubHlActive, ''); }
+    if (inp) { inp.focus(); setTimeout(() => _clubHlUpdateAc(_clubHlActive, inp.value || ''), 0); }
   }
 }
 
