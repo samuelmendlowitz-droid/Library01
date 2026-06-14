@@ -2462,9 +2462,9 @@ All columns other than Author, Title, Series and Genres should be left empty or 
           <label class="form-label">Your Icon</label>
           <div style="display:flex;align-items:flex-start;gap:16px">
             <div id="userAvatarPreview" class="friend-avatar" style="width:52px;height:52px;font-size:24px;flex-shrink:0;border-radius:14px;"></div>
-            <div style="flex:1">
+            <div style="flex:1;min-width:0;overflow:hidden">
               <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Character or Emoji</div>
-              <input class="avatar-char-input" id="userIconCharInput" maxlength="2" placeholder="A" oninput="previewUserIcon()">
+              <input class="avatar-char-input" id="userIconCharInput" maxlength="2" placeholder="A" oninput="onUserIconInput()">
               <div id="iconColorSection"></div>
               <button id="saveUserIconBtn" onclick="saveUserIcon()" style="margin-top:14px;padding:8px 18px;background:var(--accent);color:var(--bg);border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Save Icon</button>
             </div>
@@ -2693,8 +2693,13 @@ async function loadSettings() {
         borrowerLog = [...data.borrowLog].sort((a, b) => (b.sortKey || 0) - (a.sortKey || 0));
       if (data.customFirstName) customFirstName = data.customFirstName;
       if (data.username) userUsername = data.username;
-      if (data.iconChar) { userIconChar = data.iconChar; profileCache[currentUser.uid] = { iconChar: data.iconChar, iconColor: data.iconColor || '' }; }
+      if (data.iconChar !== undefined || data.iconColor !== undefined || data.iconSvgIdx !== undefined) {
+        profileCache[currentUser.uid] = { iconChar: data.iconChar || '', iconColor: data.iconColor || '', iconFgColor: data.iconFgColor || '#ffffff', iconSvgIdx: data.iconSvgIdx ?? -1 };
+      }
+      if (data.iconChar) userIconChar = data.iconChar;
       if (data.iconColor) userIconColor = data.iconColor;
+      if (data.iconFgColor) userIconFgColor = data.iconFgColor;
+      if (data.iconSvgIdx != null) userIconSvgIdx = data.iconSvgIdx;
       _isPremium = !!data.isPremium;
     }
   } catch(e) {}
@@ -2731,23 +2736,64 @@ window.saveCustomFirstName = async () => {
   showStatus('Name updated.', 'success');
 };
 
-const PREMIUM_GOLD_ICONS = [
-  // Stars & celestial
-  '★','☆','✦','✧','✩','✪','✫','✬','✭','✮','✯','✰','⭐','🌟','🌙',
-  // Royal / classic
-  '⚜','♛','♕','♞','♝','♦','◆','◈','❖','🏆','💎','👑',
-  // Ornamental
-  '✿','❀','❁','✾','✽','✼','✻','❃','❋','✶','✵','✴','✷','✸','✹',
-  // Literary / writing
-  '✒','✍','📖','📜','❧','⁂','※','☞',
-  // Nature / animals
-  '🌹','🌸','🌺','🌻','☽','🦋','🐉','🦁','🦅','🌿','🍃','🌊',
-  // Magic / adventure
-  '⚡','🔮','🗝','⚔','🔭','⚓','🏰','🌋',
-  // Symbols
-  '☯','♾','∞','Ω','☩','✠','☀','❤','☮','⚛',
+const ICON_BG_COLORS = [
+  '#0d0d0d','#0f1a2e','#0f1a14','#1a0f14','#1a140f','#0a1a1a','#1a0a0a','#16001a','#001a16','#1a1600',
+  '#3d1f1f','#1f3d5c','#1f4a30','#4a1f3d','#4a3d1f','#1f2a4a','#3a1a4a','#1a4a4a','#4a4a1a','#2a3a1a',
+  '#f5e8d3','#d3e8f5','#d3f5e8','#f5d3e8','#e8d3f5','#f5f5d3','#d3f5f5','#f5d3d3','#f5f0eb','#ffffff',
 ];
-const GOLD_ICON_COLOR = '#8B6030';
+const ICON_FG_COLORS = [
+  '#ffffff','#f5f0eb','#ffd700','#c9a96e','#e8c585','#aed6e8','#a8e6bc','#e8a8c0','#c8a8e8','#b8d4b8',
+  '#0d0d0d','#1a1229','#0f3420','#3d1a1a','#1a1a3d','#3d3d0a','#003d3d','#3d003d','#2a1a00','#1a2a3d',
+];
+const PREMIUM_ICON_DEFS = [
+  {n:'Star Filled',   i:'<polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" fill="currentColor"/>'},
+  {n:'Star',          i:'<polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'},
+  {n:'Moon',          i:'<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>'},
+  {n:'Sun',           i:'<circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2" fill="none"/><line x1="12" y1="1" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="21" x2="12" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="1" y1="12" x2="3" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="21" y1="12" x2="23" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'},
+  {n:'Lightning',     i:'<polygon points="13,2 3,14 12,14 11,22 21,10 12,10" fill="currentColor"/>'},
+  {n:'Snowflake',     i:'<line x1="12" y1="2" x2="12" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="2" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="19.07" y1="4.93" x2="4.93" y2="19.07" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'},
+  {n:'Sparkle',       i:'<path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5z" fill="currentColor"/><path d="M5 4l.75 2.25L8 7l-2.25.75L5 10l-.75-2.25L2 7l2.25-.75z" fill="currentColor"/><path d="M19 14l.75 2.25L22 17l-2.25.75L19 20l-.75-2.25L16 17l2.25-.75z" fill="currentColor"/>'},
+  {n:'Crown',         i:'<path d="M2 20h20M4 20V13l4 3 4-8 4 8 4-3v7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>'},
+  {n:'Diamond',       i:'<polygon points="12,2 22,9 12,22 2,9" stroke="currentColor" stroke-width="2" stroke-linejoin="round" fill="none"/>'},
+  {n:'Shield',        i:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>'},
+  {n:'Key',           i:'<circle cx="7.5" cy="15.5" r="5.5" stroke="currentColor" stroke-width="2" fill="none"/><path d="M21 2l-9.6 9.6M15.5 7.5l3 3M19 4l2 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'},
+  {n:'Anchor',        i:'<circle cx="12" cy="5" r="3" stroke="currentColor" stroke-width="2" fill="none"/><line x1="12" y1="8" x2="12" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 15l7 7 7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>'},
+  {n:'Sword',         i:'<path d="M14.5 17.5L3 6V3h3l11.5 11.5M16.5 15.5l5 5M22 21l-3-3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>'},
+  {n:'Compass',       i:'<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none"/><polygon points="16.24,7.76 14.12,14.12 7.76,16.24 9.88,9.88" stroke="currentColor" stroke-width="1.5" fill="currentColor"/>'},
+  {n:'Book',          i:'<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>'},
+  {n:'Feather',       i:'<path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/><line x1="16" y1="8" x2="2" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="17.5" y1="15" x2="9" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'},
+  {n:'Pen',           i:'<path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>'},
+  {n:'Eye',           i:'<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2" fill="none"/>'},
+  {n:'Scroll',        i:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/><polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>'},
+  {n:'Search',        i:'<circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2" fill="none"/><line x1="21" y1="21" x2="16.65" y2="16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'},
+  {n:'Globe',         i:'<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none"/><line x1="2" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="2"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" stroke="currentColor" stroke-width="2" fill="none"/>'},
+  {n:'Lock',          i:'<rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke="currentColor" stroke-width="2" fill="none"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>'},
+  {n:'Clock',         i:'<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none"/><polyline points="12,6 12,12 16,14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>'},
+  {n:'Hourglass',     i:'<path d="M5 22h14M5 2h14M17 22L7 12l10-10M7 22l10-10L7 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>'},
+  {n:'Flame',         i:'<path d="M12 3C9.5 6.5 7 10 7 14a5 5 0 0 0 10 0C17 10 14.5 6.5 12 3z" fill="currentColor"/>'},
+  {n:'Leaf',          i:'<path d="M17 8C8 10 5.9 16.17 3.82 22M9 22C11 17 14 15 19.5 3.5c-5 0-10 2.5-11.5 8.5 0 4 2.5 7 7 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>'},
+  {n:'Mountain',      i:'<polygon points="3,20 12,4 21,20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>'},
+  {n:'Wave',          i:'<path d="M2 12c1.5-3 3-4.5 6-4.5s4.5 3 7.5 3 4.5-1.5 6-4.5M2 19c1.5-3 3-4.5 6-4.5s4.5 3 7.5 3 4.5-1.5 6-4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>'},
+  {n:'Tree',          i:'<line x1="12" y1="22" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 12L6 4h12zM12 15L7 9h10z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>'},
+  {n:'Trident',       i:'<path d="M7 11V7L6 5L7 3L8 5L7 7M12 11V6L11 4L12 2L13 4L12 6M17 11V7L16 5L17 3L18 5L17 7M7 11h10M12 11v11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>'},
+  {n:'Star of David', i:'<polygon points="12,2 22,19 2,19" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" fill="none"/><polygon points="12,22 2,5 22,5" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" fill="none"/>'},
+  {n:'Dollar',        i:'<line x1="12" y1="2" x2="12" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>'},
+  {n:'Heart',         i:'<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>'},
+  {n:'Heart Pulse',   i:'<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" stroke="currentColor" stroke-width="2" fill="none"/><polyline points="4,13 6.5,13 8,10 10,15.5 12,11.5 14,15.5 16,10 17.5,13 20,13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/>'},
+  {n:'Hat',           i:'<path d="M7 13V10a5 5 0 0 1 10 0v3M9.5 6a2.5 2.5 0 0 1 5 0M7 13h10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/><ellipse cx="12" cy="15.5" rx="10" ry="2.5" stroke="currentColor" stroke-width="2" fill="none"/>'},
+  {n:'Mushroom',      i:'<path d="M4 12.5C4 8.36 7.58 5 12 5s8 3.36 8 7.5M4 12.5C5 15.5 8.2 17 12 17s7-1.5 8-4.5M9 17l-1 5h8l-1-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>'},
+  {n:'Infinity',      i:'<path d="M12 12c-2-2.5-4-4-6-4a4 4 0 0 0 0 8c2 0 4-1.5 6-4zm0 0c2 2.5 4 4 6 4a4 4 0 0 0 0-8c-2 0-4 1.5-6 4z" stroke="currentColor" stroke-width="2" fill="none"/>'},
+  {n:'Cross',         i:'<line x1="12" y1="2" x2="12" y2="22" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="4" y1="9" x2="20" y2="9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>'},
+  {n:'Yin Yang',      i:'<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none"/><path d="M12 2a10 10 0 0 1 0 20A5 5 0 0 1 12 12 5 5 0 0 0 12 2z" fill="currentColor"/><circle cx="12" cy="7" r="1.5" fill="currentColor"/><circle cx="12" cy="17" r="1.5" stroke="currentColor" stroke-width="1.5" fill="none"/>'},
+  {n:'Hexagon',       i:'<polygon points="12,2 20.5,7 20.5,17 12,22 3.5,17 3.5,7" stroke="currentColor" stroke-width="2" stroke-linejoin="round" fill="none"/>'},
+  {n:'Omega',         i:'<path d="M5 21h14M5 21l4-5a5 5 0 1 1 6 0l4 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>'},
+  {n:'Butterfly',     i:'<path d="M12 12C9 8 4 6 4 10c0 3 4 4 8 2zM12 12c3-4 8-6 8-2 0 3-4 4-8 2zM12 12c-3 4-8 6-8 2 0-3 4-2 8 0zM12 12c3 4 8 6 8 2 0-3-4-2-8 0zM12 12v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/>'},
+  {n:'Owl',           i:'<path d="M12 3C9 3 6 5 6 8v2c0 3 2.5 5.5 6 7 3.5-1.5 6-4 6-7V8c0-3-3-5-6-5z" stroke="currentColor" stroke-width="2" fill="none"/><circle cx="9.5" cy="8.5" r="1.5" fill="currentColor"/><circle cx="14.5" cy="8.5" r="1.5" fill="currentColor"/><path d="M10 12h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'},
+  {n:'Wand',          i:'<line x1="3" y1="21" x2="21" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M21 3l-2 2M3 21l2-2M15 9l2-2M9 15l-2 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="21" cy="3" r="2" fill="currentColor"/>'},
+  {n:'Crystal Ball',  i:'<circle cx="12" cy="11" r="8" stroke="currentColor" stroke-width="2" fill="none"/><path d="M8 13c1 2 4 3 7 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/><path d="M14 9c-1-1.5-3-2-5-1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/><line x1="6" y1="20" x2="18" y2="20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'},
+  {n:'Potion',        i:'<path d="M9 3h6M10 3v4l-4 8a4 4 0 0 0 4 6h4a4 4 0 0 0 4-6l-4-8V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/><line x1="6.5" y1="13" x2="17.5" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'},
+  {n:'Torch',         i:'<line x1="12" y1="13" x2="12" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="9" y1="22" x2="15" y2="22" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10 8c0-2 1-5 2-7 1 2 2 5 2 7-1 1.5-3 1.5-4 0z" fill="currentColor"/><path d="M9 10a4 4 0 0 0 6 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/>'},
+];
 
 function _seedIconColor(uid) {
   let h = 17;
@@ -2759,24 +2805,35 @@ function _renderIconColorSection() {
   const el = document.getElementById('iconColorSection');
   if (!el) return;
   if (_isPremiumUser()) {
-    const colorSwatches = AVATAR_COLORS.map(c =>
-      `<div class="club-color-swatch${userIconColor === c ? ' selected' : ''}" data-color="${c}" style="background:${c};width:32px;height:32px;border-radius:8px;cursor:pointer;" onclick="pickUserColor('${c}')"></div>`
-    ).join('');
-    const goldIconSwatches = PREMIUM_GOLD_ICONS.map((ic, i) =>
-      `<div data-gidx="${i}" onclick="pickGoldIcon(${i})" style="width:38px;height:38px;border-radius:8px;background:#2a1f0e;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;border:2px solid ${userIconChar === ic ? '#C9A96E' : 'transparent'};transition:border-color 0.15s;flex-shrink:0;">${ic}</div>`
-    ).join('');
+    const iconSwatches = PREMIUM_ICON_DEFS.map((def, i) => {
+      const sel = userIconSvgIdx === i;
+      const bg = sel ? (userIconColor || '#1a1a2e') : 'var(--surface2)';
+      const fg = sel ? (userIconFgColor || '#ffffff') : 'var(--text2)';
+      const border = sel ? 'var(--accent)' : 'transparent';
+      return `<div data-gidx="${i}" onclick="pickGoldIcon(${i})" title="${def.n}" style="width:42px;height:42px;border-radius:8px;background:${bg};display:flex;align-items:center;justify-content:center;cursor:pointer;border:2px solid ${border};transition:border-color 0.15s,background 0.15s;flex-shrink:0;"><svg viewBox="0 0 24 24" width="22" height="22" style="color:${fg};overflow:visible;">${def.i}</svg></div>`;
+    }).join('');
+    const bgSwatches = ICON_BG_COLORS.map(c => {
+      const sel = userIconColor === c;
+      return `<div data-bg="${c}" onclick="pickIconBgColor('${c}')" style="width:26px;height:26px;border-radius:6px;cursor:pointer;background:${c};border:2px solid ${sel?'var(--accent)':'var(--border)'};flex-shrink:0;box-sizing:border-box;"></div>`;
+    }).join('');
+    const fgSwatches = ICON_FG_COLORS.map(c => {
+      const sel = userIconFgColor === c;
+      return `<div data-fg="${c}" onclick="pickIconFgColor('${c}')" style="width:26px;height:26px;border-radius:6px;cursor:pointer;background:${c};border:2px solid ${sel?'var(--accent)':'var(--border)'};flex-shrink:0;box-sizing:border-box;"></div>`;
+    }).join('');
     el.innerHTML = `
-      <div style="font-size:11px;color:var(--text3);margin:12px 0 6px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Color</div>
-      <div class="club-color-row" id="userColorRow" style="gap:8px">${colorSwatches}</div>
-      <div style="font-size:11px;color:var(--text3);margin:14px 0 6px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Premium Icons</div>
-      <div id="goldIconGrid" style="display:grid;grid-template-rows:repeat(3,38px);grid-auto-flow:column;grid-auto-columns:38px;gap:6px;overflow-x:auto;padding-bottom:6px;">${goldIconSwatches}</div>`;
+      <div style="font-size:11px;color:var(--text3);margin:12px 0 5px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Background Color</div>
+      <div style="width:100%;overflow-x:auto;padding-bottom:3px;"><div style="display:grid;grid-template-rows:repeat(3,26px);grid-auto-flow:column;grid-auto-columns:26px;gap:5px;width:max-content;">${bgSwatches}</div></div>
+      <div style="font-size:11px;color:var(--text3);margin:12px 0 5px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Icon Color</div>
+      <div style="width:100%;overflow-x:auto;padding-bottom:3px;"><div style="display:grid;grid-template-rows:repeat(2,26px);grid-auto-flow:column;grid-auto-columns:26px;gap:5px;width:max-content;">${fgSwatches}</div></div>
+      <div style="font-size:11px;color:var(--text3);margin:12px 0 5px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Premium Icons</div>
+      <div style="width:100%;overflow-x:auto;padding-bottom:4px;"><div id="goldIconGrid" style="display:grid;grid-template-rows:repeat(3,42px);grid-auto-flow:column;grid-auto-columns:42px;gap:6px;width:max-content;">${iconSwatches}</div></div>`;
   } else {
     el.innerHTML = `
       <div style="margin-top:12px;padding:10px 12px;background:var(--surface2);border-radius:var(--radius-sm);display:flex;align-items:center;gap:10px;">
         <i data-lucide="lock" style="width:14px;height:14px;color:var(--text3);flex-shrink:0;"></i>
         <div>
           <div style="font-size:12px;font-weight:600;color:var(--text2);">Color is auto-assigned</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:2px;"><span onclick="closeSettings();openPremiumModal();" style="color:var(--accent);cursor:pointer;font-weight:600;">Upgrade to Premium</span> to choose your color &amp; unlock gold icons</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px;"><span onclick="closeSettings();openPremiumModal();" style="color:var(--accent);cursor:pointer;font-weight:600;">Upgrade to Premium</span> to choose your color &amp; unlock SVG icons</div>
         </div>
       </div>`;
     refreshIcons();
@@ -2785,37 +2842,77 @@ function _renderIconColorSection() {
 
 function renderUserAvatarSection() {
   const input = document.getElementById('userIconCharInput');
-  if (input) input.value = userIconChar || '';
+  if (input) input.value = userIconSvgIdx >= 0 ? '' : (userIconChar || '');
   _renderIconColorSection();
   previewUserIcon();
 }
 
-window.previewUserIcon = () => {
-  const input = document.getElementById('userIconCharInput');
-  const char = (input?.value || userIconChar || (currentUser?.displayName || '?')[0]).slice(0,2) || '?';
-  const el = document.getElementById('userAvatarPreview');
-  if (!el) return;
-  el.textContent = char;
-  const color = userIconColor || (_isPremiumUser() ? '' : _seedIconColor(currentUser?.uid || ''));
-  if (color) { el.style.background = color; el.style.color = '#fff'; el.style.borderColor = color; }
-  else { el.style.background = ''; el.style.color = ''; el.style.borderColor = ''; }
+window.onUserIconInput = () => {
+  if (userIconSvgIdx >= 0) {
+    userIconSvgIdx = -1;
+    document.querySelectorAll('#goldIconGrid [data-gidx]').forEach(d => {
+      d.style.borderColor = 'transparent';
+      d.style.background = 'var(--surface2)';
+      const s = d.querySelector('svg');
+      if (s) s.style.color = 'var(--text2)';
+    });
+  }
+  previewUserIcon();
 };
 
-window.pickUserColor = (color) => {
+window.previewUserIcon = () => {
+  const el = document.getElementById('userAvatarPreview');
+  if (!el) return;
+  const bg = userIconColor || (_isPremiumUser() ? '' : _seedIconColor(currentUser?.uid || ''));
+  el.style.background = bg || '';
+  el.style.borderColor = bg || '';
+  if (userIconSvgIdx >= 0 && PREMIUM_ICON_DEFS[userIconSvgIdx]) {
+    const fg = userIconFgColor || '#ffffff';
+    el.innerHTML = `<svg viewBox="0 0 24 24" width="28" height="28" style="color:${fg};overflow:visible;">${PREMIUM_ICON_DEFS[userIconSvgIdx].i}</svg>`;
+    el.style.color = '';
+  } else {
+    const input = document.getElementById('userIconCharInput');
+    const char = (input?.value || userIconChar || (currentUser?.displayName || '?')[0]).slice(0,2) || '?';
+    el.textContent = char;
+    el.style.color = bg ? '#fff' : '';
+  }
+};
+
+window.pickIconBgColor = (color) => {
   userIconColor = color;
-  document.querySelectorAll('#userColorRow .club-color-swatch').forEach(s => {
-    s.classList.toggle('selected', s.dataset.color === color);
+  document.querySelectorAll('#iconColorSection [data-bg]').forEach(s => {
+    s.style.borderColor = s.dataset.bg === color ? 'var(--accent)' : 'var(--border)';
   });
+  if (userIconSvgIdx >= 0) {
+    const sel = document.querySelector(`#goldIconGrid [data-gidx="${userIconSvgIdx}"]`);
+    if (sel) sel.style.background = color || '#1a1a2e';
+  }
+  previewUserIcon();
+};
+
+window.pickIconFgColor = (color) => {
+  userIconFgColor = color;
+  document.querySelectorAll('#iconColorSection [data-fg]').forEach(s => {
+    s.style.borderColor = s.dataset.fg === color ? 'var(--accent)' : 'var(--border)';
+  });
+  if (userIconSvgIdx >= 0) {
+    const sel = document.querySelector(`#goldIconGrid [data-gidx="${userIconSvgIdx}"] svg`);
+    if (sel) sel.style.color = color;
+  }
   previewUserIcon();
 };
 
 window.pickGoldIcon = (idx) => {
-  const icon = PREMIUM_GOLD_ICONS[idx];
+  userIconSvgIdx = idx;
   const input = document.getElementById('userIconCharInput');
-  if (input) input.value = icon;
-  userIconChar = icon;
+  if (input) input.value = '';
+  userIconChar = '';
   document.querySelectorAll('#goldIconGrid [data-gidx]').forEach(d => {
-    d.style.borderColor = parseInt(d.dataset.gidx) === idx ? '#C9A96E' : 'transparent';
+    const sel = parseInt(d.dataset.gidx) === idx;
+    d.style.borderColor = sel ? 'var(--accent)' : 'transparent';
+    d.style.background = sel ? (userIconColor || '#1a1a2e') : 'var(--surface2)';
+    const s = d.querySelector('svg');
+    if (s) s.style.color = sel ? (userIconFgColor || '#ffffff') : 'var(--text2)';
   });
   previewUserIcon();
 };
@@ -2823,14 +2920,20 @@ window.pickGoldIcon = (idx) => {
 window.saveUserIcon = async () => {
   const btn = document.getElementById('saveUserIconBtn');
   const done = _flashSaveBtn(btn, 'Save Icon');
-  const input = document.getElementById('userIconCharInput');
-  const char = (input?.value || '').trim() || (currentUser?.displayName || '?')[0].toUpperCase();
-  userIconChar = char;
-  // Free users get a deterministic color — they can't choose
-  if (!_isPremiumUser()) userIconColor = _seedIconColor(currentUser.uid);
-  profileCache[currentUser.uid] = { iconChar: char, iconColor: userIconColor };
+  let char, saveData;
+  if (userIconSvgIdx >= 0) {
+    char = '';
+    saveData = { iconChar: '', iconColor: userIconColor || '', iconFgColor: userIconFgColor || '#ffffff', iconSvgIdx: userIconSvgIdx };
+  } else {
+    const input = document.getElementById('userIconCharInput');
+    char = (input?.value || '').trim() || (currentUser?.displayName || '?')[0].toUpperCase();
+    userIconChar = char;
+    if (!_isPremiumUser()) userIconColor = _seedIconColor(currentUser.uid);
+    saveData = { iconChar: char, iconColor: userIconColor || '', iconFgColor: userIconFgColor || '#ffffff', iconSvgIdx: -1 };
+  }
+  profileCache[currentUser.uid] = { iconChar: char, iconColor: userIconColor, iconFgColor: userIconFgColor, iconSvgIdx: userIconSvgIdx };
   try {
-    await setDoc(userSettingsDoc(), { iconChar: char, iconColor: userIconColor }, { merge: true });
+    await setDoc(userSettingsDoc(), saveData, { merge: true });
     done(true);
     renderChats();
   } catch(e) { done(false); showStatus('Error: ' + e.message, 'error'); }
@@ -9317,8 +9420,15 @@ async function loadFriends() {
 // ── AVATAR HELPERS ────────────────────────────────────────────────────────────
 function renderAvatarHtml(uid, displayName, username) {
   const p = profileCache[uid] || {};
+  const bg = p.iconColor || '';
+  const svgIdx = typeof p.iconSvgIdx === 'number' ? p.iconSvgIdx : -1;
+  if (svgIdx >= 0 && PREMIUM_ICON_DEFS[svgIdx]) {
+    const fg = p.iconFgColor || '#ffffff';
+    const def = PREMIUM_ICON_DEFS[svgIdx];
+    const bgStyle = bg ? 'background:' + bg + ';border-color:' + bg + ';' : '';
+    return '<div class="friend-avatar"' + (bgStyle ? ' style="' + bgStyle + '"' : '') + '><svg viewBox="0 0 24 24" width="20" height="20" style="color:' + fg + ';overflow:visible;">' + def.i + '</svg></div>';
+  }
   const char = p.iconChar || (displayName || username || '?')[0].toUpperCase();
-  const bg = p.iconColor;
   const style = bg ? 'background:' + bg + ';color:#fff;border-color:' + bg + ';' : '';
   return '<div class="friend-avatar"' + (style ? ' style="' + style + '"' : '') + '>' + esc(char) + '</div>';
 }
@@ -9330,7 +9440,7 @@ async function loadFriendProfiles() {
       const snap = await getDoc(doc(db, 'users', f.id, 'meta', 'settings'));
       if (snap.exists()) {
         const d = snap.data();
-        if (d.iconChar || d.iconColor) profileCache[f.id] = { iconChar: d.iconChar || '', iconColor: d.iconColor || '' };
+        if (d.iconChar || d.iconColor || d.iconSvgIdx != null) profileCache[f.id] = { iconChar: d.iconChar || '', iconColor: d.iconColor || '', iconFgColor: d.iconFgColor || '#ffffff', iconSvgIdx: d.iconSvgIdx ?? -1 };
       }
     } catch(_) {}
   }));
@@ -9354,7 +9464,7 @@ let createClubPrivacy = 'public';
 let editClubPrivacy = 'public';
 const CLUB_COLORS = ['#2d2520','#1e2d3a','#1a2e24','#2e1e28','#261e2e','#1e1e1e','#2a2206','#1a2a2a','#1e1a2a','#2a1a1e'];
 const AVATAR_COLORS = ['#8B3A3A','#2F5F9A','#2A7A50','#7A3A8B','#8B6030','#2A7070','#6B3A70','#8B5A30','#2A3A7A','#5A3A2A'];
-let userIconChar = '', userIconColor = '';
+let userIconChar = '', userIconColor = '', userIconFgColor = '#ffffff', userIconSvgIdx = -1;
 const profileCache = {};
 let _communityLoaded = false;
 
