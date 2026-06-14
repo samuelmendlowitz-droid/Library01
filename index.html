@@ -2516,6 +2516,7 @@ All columns other than Author, Title, Series and Genres should be left empty or 
             <textarea class="form-input" id="hl-about-me" rows="2" maxlength="200" placeholder="A short bio…" style="resize:none;" oninput="document.getElementById('hl-about-count').textContent=(200-this.value.length)+' left'"></textarea>
             <div id="hl-about-count" style="font-size:11px;color:var(--text3);margin-top:2px;text-align:right;">200 left</div>
           </div>
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);font-weight:600;margin-bottom:6px;margin-top:4px;">My Top Three</div>
           <div id="hl-section"></div>
           <button id="saveHighlightsBtn" onclick="saveHighlights()" style="margin-top:12px;padding:9px 18px;background:var(--accent);color:var(--bg);border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;">Save Profile</button>
         </div>
@@ -6213,7 +6214,7 @@ const _HL_CATS = [
   { key:'genres',  label:'Genres',  icon:'tag',       placeholder:'Search genres…'  },
   { key:'series',  label:'Series',  icon:'layers',    placeholder:'Search series…'  },
 ];
-const _HL_MAX = 5;
+const _HL_MAX = 3;
 
 function _hlAcSources(cat) {
   switch(cat) {
@@ -9571,6 +9572,28 @@ function clubMsgTimestamp(cid) {
   return _chatMsgMs(clubLastMessages[cid]);
 }
 
+function _clubTopicsHtml(subjects) {
+  const rawSubj = subjects || {};
+  const subj = (!Array.isArray(rawSubj) && typeof rawSubj === 'object') ? rawSubj : {};
+  const cols = [
+    { label: 'Books',   items: (subj.books   || []).slice(0,3) },
+    { label: 'Authors', items: (subj.authors || []).slice(0,3) },
+    { label: 'Genres',  items: (subj.genres  || []).slice(0,3) },
+    { label: 'Series',  items: (subj.series  || []).slice(0,3) },
+  ];
+  if (!cols.some(c => c.items.length > 0)) return '';
+  return '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px 8px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">'
+    + cols.map(col =>
+        '<div style="min-width:0">'
+        + '<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--accent);margin-bottom:3px">' + col.label + '</div>'
+        + (col.items.length
+            ? col.items.map(v => '<div style="font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.5">' + esc(v) + '</div>').join('')
+            : '<div style="font-size:11px;color:var(--text3)">—</div>')
+        + '</div>'
+      ).join('')
+    + '</div>';
+}
+
 function renderChatList(friendsFiltered, clubsFiltered) {
   const el = document.getElementById('comm-chats-list');
   if (!el) return;
@@ -9640,24 +9663,19 @@ function renderChatList(friendsFiltered, clubsFiltered) {
         + '</div>';
     } else {
       const privIcon = _privIcon[item.privacy] || 'lock';
-      const allSubjects = [
-        ...item.subjects.books.map(v => esc(v)),
-        ...item.subjects.authors.map(v => esc(v)),
-        ...item.subjects.genres.map(v => esc(v)),
-        ...item.subjects.series.map(v => esc(v))
-      ].slice(0, 8);
       const clubLastMsg = clubLastMessages[item.id];
       const clubFromMe = clubLastMsg?.fromUid === currentUser?.uid;
-      const clubNotifOn = localStorage.getItem('clubnotif_on_' + item.id) === 'true'; // OFF by default
+      const clubNotifOn = localStorage.getItem('clubnotif_on_' + item.id) === 'true';
       const clubLastReadMs = parseInt(localStorage.getItem('chat_read_' + item.id) || '0');
       const clubUnread = clubNotifOn && clubLastMsg && !clubFromMe && _chatMsgMs(clubLastMsg) > clubLastReadMs;
-      return '<div class="friend-card' + (clubUnread ? ' chat-unread' : '') + '" data-chat-action="club" data-club-id="' + esc(item.id) + '" style="cursor:pointer;align-items:center;gap:10px">'
+      return '<div class="friend-card' + (clubUnread ? ' chat-unread' : '') + '" data-chat-action="club" data-club-id="' + esc(item.id) + '" style="cursor:pointer;flex-direction:column;align-items:stretch;gap:0">'
+        + '<div style="display:flex;align-items:center;gap:10px">'
         + '<div class="club-avatar" style="background:' + esc(item.bgColor) + ';flex-shrink:0">' + esc(item.emoji) + '</div>'
         + '<div style="flex:1;min-width:0">'
         + '<div class="friend-name">' + esc(item.name) + '</div>'
         + '<div class="friend-username club-privacy-row"><i data-lucide="' + privIcon + '"></i>' + item.memberCount + ' member' + (item.memberCount !== 1 ? 's' : '') + '</div>'
-        + '</div>'
-        + (allSubjects.length ? '<div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end;max-width:45%;flex-shrink:0">' + allSubjects.map(v => '<span class="club-subject-tag">' + v + '</span>').join('') + '</div>' : '')
+        + '</div></div>'
+        + _clubTopicsHtml(item.subjects)
         + '</div>';
     }
   }).join('');
@@ -9749,16 +9767,15 @@ function renderClubsList() {
   }
   const _privIcon = { private: 'eye-off', public: 'lock', open: 'lock-open' };
   el.innerHTML = sorted.map(c => {
-    const rawSubj = c.subjects || {};
-    const subj    = (!Array.isArray(rawSubj) && typeof rawSubj === 'object') ? rawSubj : {};
-    const allSubj = [...(subj.books||[]), ...(subj.authors||[]), ...(subj.genres||[]), ...(subj.series||[])].slice(0, 8);
     const privIcon    = _privIcon[c.privacy||'public'] || 'lock';
     const memberCount = (c.memberUids||[]).length;
-    return '<div class="friend-card" data-chat-action="club" data-club-id="' + esc(c.id) + '" style="cursor:pointer;align-items:center;gap:10px">'
+    return '<div class="friend-card" data-chat-action="club" data-club-id="' + esc(c.id) + '" style="cursor:pointer;flex-direction:column;align-items:stretch;gap:0">'
+      + '<div style="display:flex;align-items:center;gap:10px">'
       + '<div class="club-avatar" style="background:' + esc(c.bgColor||'#2d2520') + ';flex-shrink:0">' + esc(c.emoji||'📚') + '</div>'
       + '<div style="flex:1;min-width:0"><div class="friend-name">' + esc(c.name) + '</div>'
       + '<div class="friend-username club-privacy-row"><i data-lucide="' + privIcon + '"></i>' + memberCount + ' member' + (memberCount !== 1 ? 's' : '') + '</div></div>'
-      + (allSubj.length ? '<div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end;max-width:45%;flex-shrink:0">' + allSubj.map(v => '<span class="club-subject-tag">' + esc(v) + '</span>').join('') + '</div>' : '')
+      + '</div>'
+      + _clubTopicsHtml(c.subjects)
       + '</div>';
   }).join('');
   refreshIcons();
@@ -10740,7 +10757,7 @@ async function renderClubSettingsContent() {
       + privOpts.map(o => '<button class="privacy-opt' + (editClubPrivacy === o.val ? ' active' : '') + '" data-val="' + o.val + '" onclick="setClubPrivacy(\'' + o.val + '\',\'editClubPrivacyRow\')">'
         + '<span class="priv-icon">' + o.icon + '</span><span class="priv-label">' + o.label + '</span><span class="priv-desc">' + o.desc + '</span></button>').join('')
       + '</div></div>'
-      + '<div class="form-group" style="margin-bottom:16px"><label class="form-label">Subjects <span style="color:var(--text3);font-weight:400;font-size:11px;">(up to 10 per category — shown on About tab)</span></label>'
+      + '<div class="form-group" style="margin-bottom:16px"><label class="form-label">Topics <span style="color:var(--text3);font-weight:400;font-size:11px;">(up to 3 per category)</span></label>'
       + '<div id="club-subjects-editor"></div>'
       + '</div>'
       + '<button class="btn-submit" style="width:100%;margin-bottom:20px" onclick="saveClubEdit()">Save Changes</button>'
