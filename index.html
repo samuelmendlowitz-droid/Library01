@@ -311,6 +311,8 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .sort-options { display: flex; flex-wrap: wrap; gap: 8px; padding: 2px 0 4px; }
 .sort-option { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface2); color: var(--text2); font-size: 12px; font-family: 'DM Sans', sans-serif; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all 0.15s; }
 .sort-option.active { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 600; }
+.sort-section-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px; margin: 8px 0 6px; font-weight: 500; }
+.sort-section-label:first-child { margin-top: 2px; }
 .coming-soon { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 50vh; gap: 14px; }
 .coming-soon-icon { width: 52px; height: 52px; color: var(--text3); }
 .coming-soon-title { font-family: 'Playfair Display', serif; font-size: 24px; color: var(--text2); }
@@ -2672,6 +2674,7 @@ let _discoverGenresListSort   = 'count-desc';
 let currentSort = 'popularity-desc';
 let _personalSort = 'title-asc';
 let _globalSort   = 'popularity-desc';
+let _personalGroupBy = localStorage.getItem('personalGroupBy') || 'location'; // 'location' | 'genre' | 'author'
 let _appTheme = localStorage.getItem('appTheme') || 'dark-blue';
 let currentBookView = localStorage.getItem('bookView') || 'shelf'; // 'card' | 'book' | 'shelf'
 let filterPanelOpen = false;
@@ -4398,6 +4401,24 @@ function renderShelfView(list, isGlobal) {
     shelves = Object.entries(byAuthor)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([author, ab]) => ({ label: author, rawLoc: author, books: ab }));
+  } else if (_personalGroupBy === 'genre') {
+    const byGenre = {};
+    list.forEach(b => {
+      const key = (b.genres && b.genres.length ? b.genres[0] : 'Uncategorized').trim();
+      if (!byGenre[key]) byGenre[key] = [];
+      byGenre[key].push(b);
+    });
+    shelves = Object.keys(byGenre).sort((a, b) => a.localeCompare(b))
+      .map(g => ({ label: g, rawLoc: g, books: byGenre[g] }));
+  } else if (_personalGroupBy === 'author') {
+    const byAuthor = {};
+    list.forEach(b => {
+      const key = (b.author || 'Unknown').trim();
+      if (!byAuthor[key]) byAuthor[key] = [];
+      byAuthor[key].push(b);
+    });
+    shelves = Object.keys(byAuthor).sort((a, b) => a.localeCompare(b))
+      .map(a => ({ label: a, rawLoc: a, books: byAuthor[a] }));
   } else {
     const byLoc = {};
     list.forEach(b => { const loc = b.location || 'Other'; if (!byLoc[loc]) byLoc[loc] = []; byLoc[loc].push(b); });
@@ -4424,7 +4445,7 @@ function renderShelfView(list, isGlobal) {
   }).join('');
 
   refreshIcons();
-  const dndActive = !isGlobal && currentPage !== 'wishlist';
+  const dndActive = !isGlobal && currentPage !== 'wishlist' && _personalGroupBy === 'location';
   root.classList.toggle('shelf-dnd-mode', dndActive);
   if (dndActive) _initShelfDnd();
 }
@@ -8901,9 +8922,20 @@ function buildSortOptions() {
     {val:'genre-custom',label:'Genre (Custom)'},
     {val:'added-desc', label:'Recently Added'},
   ];
-  document.getElementById('sortOptions').innerHTML = opts.map(o =>
+  const isPersonal = currentPage !== 'global' && currentPage !== 'wishlist';
+  let html = '';
+  if (isPersonal) {
+    const groupOpts = [{val:'location',label:'Location'},{val:'genre',label:'Genre'},{val:'author',label:'Author'}];
+    html += '<div class="sort-section-label">Group shelves by</div>';
+    html += '<div class="sort-options">' + groupOpts.map(o =>
+      '<button class="sort-option' + (_personalGroupBy === o.val ? ' active' : '') + '" onclick="setGroupBy(\'' + o.val + '\')">' + o.label + '</button>'
+    ).join('') + '</div>';
+    html += '<div class="sort-section-label">Sort within shelf</div>';
+  }
+  html += '<div class="sort-options" id="sortOptions">' + opts.map(o =>
     '<button class="sort-option' + (currentSort === o.val ? ' active' : '') + '" onclick="setSort(\'' + o.val + '\')">' + o.label + '</button>'
-  ).join('');
+  ).join('') + '</div>';
+  document.getElementById('sortPanel').innerHTML = html;
 }
 
 window.setSort = (sort) => {
@@ -8916,6 +8948,15 @@ window.setSort = (sort) => {
   updateHeaderSpacer();
   if (currentPage === 'global') applyGlobalFilters();
   else applyFilters();
+};
+
+window.setGroupBy = (groupBy) => {
+  _personalGroupBy = groupBy;
+  localStorage.setItem('personalGroupBy', groupBy);
+  // Rebuild sort panel to reflect new active state, keep panel open
+  buildSortOptions();
+  document.getElementById('sortPanel').style.display = '';
+  applyFilters();
 };
 
 window.cycleBookView = () => {
