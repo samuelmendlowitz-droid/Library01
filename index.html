@@ -6218,20 +6218,20 @@ const _HL_MAX = 3;
 
 function _hlAcSources(cat) {
   switch(cat) {
-    case 'books':   return [...new Set(globalBookCache.filter(b=>b.title&&!b._localOnly).map(b=>b.title))].sort();
-    case 'authors': return [...new Set(globalBookCache.filter(b=>b.author&&!b._localOnly).map(b=>b.author))].sort();
+    case 'books':   return [...new Set(globalBookCache.filter(b=>b.title).map(b=>b.title))].sort();
+    case 'authors': return [...new Set(globalBookCache.filter(b=>b.author).map(b=>b.author))].sort();
     case 'genres':  return [...orderedGenres];
-    case 'series':  return [...new Set(globalBookCache.filter(b=>b.series&&!b._localOnly).map(b=>b.series))].sort();
+    case 'series':  return [...new Set(globalBookCache.filter(b=>b.series).map(b=>b.series))].sort();
     default: return [];
   }
 }
 
 function _clubHlAcSources(cat) {
   switch(cat) {
-    case 'books':   return [...new Set(globalBookCache.filter(b=>b.title&&!b._localOnly).map(b=>b.title))].sort().slice(0,200);
-    case 'authors': return [...new Set(globalBookCache.filter(b=>b.author&&!b._localOnly).map(b=>b.author))].sort().slice(0,200);
+    case 'books':   return [...new Set(globalBookCache.filter(b=>b.title).map(b=>b.title))].sort().slice(0,200);
+    case 'authors': return [...new Set(globalBookCache.filter(b=>b.author).map(b=>b.author))].sort().slice(0,200);
     case 'genres':  return [...orderedGenres];
-    case 'series':  return [...new Set(globalBookCache.filter(b=>b.series&&!b._localOnly).map(b=>b.series))].sort().slice(0,200);
+    case 'series':  return [...new Set(globalBookCache.filter(b=>b.series).map(b=>b.series))].sort().slice(0,200);
     default: return [];
   }
 }
