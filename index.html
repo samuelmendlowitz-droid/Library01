@@ -6290,11 +6290,21 @@ function _hlUpdateAc(cat, val) {
 function _clubHlUpdateAc(cat, val) {
   const acEl = document.getElementById('chl-ac-' + cat);
   if (!acEl) return;
+  const inputEl = document.getElementById('chl-input-' + cat);
   const existing = new Set(_clubSubjects[cat]||[]);
   const q = val.toLowerCase();
   const matches = _clubHlAcSources(cat).filter(s => !existing.has(s) && s.toLowerCase().includes(q)).slice(0, 5);
   _clubHlAcResults[cat] = matches;
   if (!matches.length) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
+  // Use fixed positioning so the dropdown is never clipped by overflow:auto ancestors
+  if (inputEl) {
+    const r = inputEl.getBoundingClientRect();
+    acEl.style.position = 'fixed';
+    acEl.style.top = (r.bottom + 2) + 'px';
+    acEl.style.left = r.left + 'px';
+    acEl.style.width = Math.max(180, r.width) + 'px';
+    acEl.style.zIndex = '9999';
+  }
   acEl.style.display = '';
   acEl.innerHTML = matches.map((m,i) => `<div class="hl-ac-item" onmousedown="event.preventDefault()" onclick="addClubHlChip('${cat}',${i})">${esc(m)}</div>`).join('');
 }
