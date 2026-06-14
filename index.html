@@ -2731,7 +2731,22 @@ window.saveCustomFirstName = async () => {
   showStatus('Name updated.', 'success');
 };
 
-const PREMIUM_GOLD_ICONS = ['⚜','★','♛','✿','☽','♦','✦','⁂','✒','❧','✺','❈'];
+const PREMIUM_GOLD_ICONS = [
+  // Stars & celestial
+  '★','☆','✦','✧','✩','✪','✫','✬','✭','✮','✯','✰','⭐','🌟','🌙',
+  // Royal / classic
+  '⚜','♛','♕','♞','♝','♦','◆','◈','❖','🏆','💎','👑',
+  // Ornamental
+  '✿','❀','❁','✾','✽','✼','✻','❃','❋','✶','✵','✴','✷','✸','✹',
+  // Literary / writing
+  '✒','✍','📖','📜','❧','⁂','※','☞',
+  // Nature / animals
+  '🌹','🌸','🌺','🌻','☽','🦋','🐉','🦁','🦅','🌿','🍃','🌊',
+  // Magic / adventure
+  '⚡','🔮','🗝','⚔','🔭','⚓','🏰','🌋',
+  // Symbols
+  '☯','♾','∞','Ω','☩','✠','☀','❤','☮','⚛',
+];
 const GOLD_ICON_COLOR = '#8B6030';
 
 function _seedIconColor(uid) {
@@ -2747,14 +2762,14 @@ function _renderIconColorSection() {
     const colorSwatches = AVATAR_COLORS.map(c =>
       `<div class="club-color-swatch${userIconColor === c ? ' selected' : ''}" data-color="${c}" style="background:${c};width:32px;height:32px;border-radius:8px;cursor:pointer;" onclick="pickUserColor('${c}')"></div>`
     ).join('');
-    const goldIconSwatches = PREMIUM_GOLD_ICONS.map(ic =>
-      `<div onclick="pickGoldIcon('${ic}')" style="width:36px;height:36px;border-radius:8px;background:#2a1f0e;display:flex;align-items:center;justify-content:center;font-size:19px;cursor:pointer;border:2px solid ${userIconChar === ic ? '#C9A96E' : 'transparent'};transition:border-color 0.15s;">${ic}</div>`
+    const goldIconSwatches = PREMIUM_GOLD_ICONS.map((ic, i) =>
+      `<div data-gidx="${i}" onclick="pickGoldIcon(${i})" style="width:38px;height:38px;border-radius:8px;background:#2a1f0e;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;border:2px solid ${userIconChar === ic ? '#C9A96E' : 'transparent'};transition:border-color 0.15s;flex-shrink:0;">${ic}</div>`
     ).join('');
     el.innerHTML = `
       <div style="font-size:11px;color:var(--text3);margin:12px 0 6px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Color</div>
       <div class="club-color-row" id="userColorRow" style="gap:8px">${colorSwatches}</div>
-      <div style="font-size:11px;color:var(--text3);margin:14px 0 6px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Gold Icons</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;" id="goldIconRow">${goldIconSwatches}</div>`;
+      <div style="font-size:11px;color:var(--text3);margin:14px 0 6px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em">Premium Icons</div>
+      <div id="goldIconGrid" style="display:grid;grid-template-rows:repeat(3,38px);grid-auto-flow:column;grid-auto-columns:38px;gap:6px;overflow-x:auto;padding-bottom:6px;">${goldIconSwatches}</div>`;
   } else {
     el.innerHTML = `
       <div style="margin-top:12px;padding:10px 12px;background:var(--surface2);border-radius:var(--radius-sm);display:flex;align-items:center;gap:10px;">
@@ -2788,25 +2803,20 @@ window.previewUserIcon = () => {
 
 window.pickUserColor = (color) => {
   userIconColor = color;
-  // Clear gold icon selection
-  document.querySelectorAll('#goldIconRow > div').forEach(d => d.style.borderColor = 'transparent');
   document.querySelectorAll('#userColorRow .club-color-swatch').forEach(s => {
     s.classList.toggle('selected', s.dataset.color === color);
   });
   previewUserIcon();
 };
 
-window.pickGoldIcon = (icon) => {
+window.pickGoldIcon = (idx) => {
+  const icon = PREMIUM_GOLD_ICONS[idx];
   const input = document.getElementById('userIconCharInput');
   if (input) input.value = icon;
   userIconChar = icon;
-  userIconColor = GOLD_ICON_COLOR;
-  // Update gold icon borders
-  document.querySelectorAll('#goldIconRow > div').forEach(d => {
-    d.style.borderColor = d.textContent === icon ? '#C9A96E' : 'transparent';
+  document.querySelectorAll('#goldIconGrid [data-gidx]').forEach(d => {
+    d.style.borderColor = parseInt(d.dataset.gidx) === idx ? '#C9A96E' : 'transparent';
   });
-  // Clear color swatch selection
-  document.querySelectorAll('#userColorRow .club-color-swatch').forEach(s => s.classList.remove('selected'));
   previewUserIcon();
 };
 
