@@ -1237,6 +1237,19 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
   font-size: 11px; color: var(--text3);
   font-style: italic; margin-top: 10px; line-height: 1.5;
 }
+.bulk-undo-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface2));
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+  border-radius: var(--radius); padding: 10px 14px; margin-bottom: 4px;
+}
+.bulk-undo-info { font-size: 13px; color: var(--text2); line-height: 1.4; }
+.btn-undo-bulk {
+  flex-shrink: 0; padding: 6px 14px; border-radius: var(--radius);
+  background: var(--surface3); border: 1px solid var(--border);
+  color: var(--text1); font-size: 13px; cursor: pointer; white-space: nowrap;
+}
+.btn-undo-bulk:active { opacity: 0.7; }
 .bulk-ai-logos {
   display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;
 }
@@ -2279,6 +2292,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
       </div>
     </div>
     <div class="bulk-body">
+      <div id="bulkUndoBanner" style="display:none"></div>
 
       <!-- Step 1 -->
       <div class="bulk-step">
@@ -3691,7 +3705,7 @@ async function loadBooks() {
 }
 
 async function saveBook(data, { skipGlobalSync = false, backgroundSync = false } = {}) {
-  await addDoc(userBooksCol(), { ...data, addedAt: serverTimestamp() });
+  const ref = await addDoc(userBooksCol(), { ...data, addedAt: serverTimestamp() });
 
   // Always update local autocomplete cache immediately
   const globalId = createGlobalBookId(data.title || '', data.author || '');
@@ -3722,6 +3736,7 @@ async function saveBook(data, { skipGlobalSync = false, backgroundSync = false }
     if (backgroundSync) _doSync().catch(() => {}); // fire and forget – don't block UI
     else await _doSync();
   }
+  return ref;
 }
 
 async function updateBook(id, data) {
@@ -8223,9 +8238,9 @@ window.openBulkAdd = () => {
   statusEl.style.display = 'none';
   const fileInput = document.getElementById('csvFileInputBulk');
   if (fileInput) fileInput.value = '';
-  // Reset copy button state
   const copyBtn = document.getElementById('copyPromptBtn');
   if (copyBtn) { copyBtn.classList.remove('success-flash'); copyBtn.innerHTML = '<i data-lucide="clipboard"></i> Copy Prompt'; refreshIcons(); }
+  _renderBulkUndoBanner();
   document.getElementById('bulkOverlay').classList.add('open');
   _lockBodyScroll();
 };
@@ -8337,6 +8352,26 @@ function _parseBooksFromCSV(text) {
   return books_out;
 }
 
+async function _runCsvImport(text) {
+  const bookIds = [], globalIds = [];
+  let added = 0, skipped = 0, errors = 0;
+  for (const row of _parseBooksFromCSV(text)) {
+    const { title, author, read, genres, loc, series, seriesNumber, rating } = row;
+    const dup = books.find(b => b.title.toLowerCase() === title.toLowerCase());
+    if (dup) { skipped++; continue; }
+    try {
+      const ref = await saveBook({ title, author, series, seriesNumber, genres, location: loc, read, rating: rating || 0, checkoutDate: '', borrowedBy: '' });
+      if (ref) { bookIds.push(ref.id); globalIds.push(createGlobalBookId(title, author)); }
+      added++;
+      books.push({ id: ref ? ref.id : 'temp_' + added, title, author, series, seriesNumber, genres, location: loc, read, rating: rating || 0 });
+    } catch(err) { errors++; }
+  }
+  if (added > 0) {
+    localStorage.setItem('lastBulkUpload', JSON.stringify({ timestamp: Date.now(), bookIds, globalIds }));
+  }
+  return { added, skipped, errors };
+}
+
 window.handleBulkCsvUpload = async e => {
   const file = e.target.files[0];
   if (!file) return;
@@ -8344,17 +8379,7 @@ window.handleBulkCsvUpload = async e => {
   const statusEl = document.getElementById('bulkCsvStatus');
   statusEl.style.display = 'block';
   statusEl.textContent = 'Processing…';
-  let added = 0, skipped = 0, errors = 0;
-  for (const row of _parseBooksFromCSV(text)) {
-    const { title, author, read, genres, loc, series, seriesNumber, rating } = row;
-    const dup = books.find(b => b.title.toLowerCase() === title.toLowerCase());
-    if (dup) { skipped++; continue; }
-    try {
-      await saveBook({ title, author, series, seriesNumber, genres, location: loc, read, rating: rating || 0, checkoutDate: '', borrowedBy: '' });
-      added++;
-      books.push({ id: 'temp_' + added, title, author, series, seriesNumber, genres, location: loc, read, rating: rating || 0 });
-    } catch(err) { errors++; }
-  }
+  const { added, skipped, errors } = await _runCsvImport(text);
   await loadBooks();
   closeBulkAdd();
   let msg = 'Added ' + added + ' book' + (added !== 1 ? 's' : '');
@@ -8371,17 +8396,7 @@ window.handleCsvUpload = async e => {
   const statusEl = document.getElementById('csvStatus');
   statusEl.style.display = 'block';
   statusEl.textContent = 'Processing…';
-  let added = 0, skipped = 0, errors = 0;
-  for (const row of _parseBooksFromCSV(text)) {
-    const { title, author, read, genres, loc, series, seriesNumber, rating } = row;
-    const dup = books.find(b => b.title.toLowerCase() === title.toLowerCase());
-    if (dup) { skipped++; continue; }
-    try {
-      await saveBook({ title, author, series, seriesNumber, genres, location: loc, read, rating: rating || 0, checkoutDate: '', borrowedBy: '' });
-      added++;
-      books.push({ id: 'temp_' + added, title, author, series, seriesNumber, genres, location: loc, read, rating: rating || 0 });
-    } catch(err) { errors++; }
-  }
+  const { added, skipped, errors } = await _runCsvImport(text);
   await loadBooks();
   closeModal('csvModal');
   let msg = 'Added ' + added + ' book' + (added !== 1 ? 's' : '');
@@ -8389,6 +8404,72 @@ window.handleCsvUpload = async e => {
   if (errors)  msg += ', ' + errors + ' error' + (errors !== 1 ? 's' : '');
   showStatus(msg, 'success');
   setTimeout(hideStatus, 5000);
+};
+
+function _renderBulkUndoBanner() {
+  const el = document.getElementById('bulkUndoBanner');
+  if (!el) return;
+  let data;
+  try { data = JSON.parse(localStorage.getItem('lastBulkUpload') || 'null'); } catch(e) { data = null; }
+  if (!data) { el.style.display = 'none'; return; }
+  const elapsed = Date.now() - data.timestamp;
+  const remaining = 30 * 60 * 1000 - elapsed;
+  if (remaining <= 0) { localStorage.removeItem('lastBulkUpload'); el.style.display = 'none'; return; }
+  const mins = Math.ceil(remaining / 60000);
+  const within20 = elapsed < 20 * 60 * 1000;
+  const n = data.bookIds.length;
+  el.style.display = '';
+  el.innerHTML = `<div class="bulk-undo-banner">
+    <div class="bulk-undo-info">
+      <strong>Last upload:</strong> ${n} book${n !== 1 ? 's' : ''} added${within20 ? ' · also removes from global library' : ''}
+      <span style="color:var(--text3);font-size:11px;margin-left:4px">(${mins} min left to undo)</span>
+    </div>
+    <button id="undoBulkBtn" class="btn-undo-bulk" onclick="undoLastBulkUpload()">↩ Undo</button>
+  </div>`;
+}
+
+window.undoLastBulkUpload = async () => {
+  let data;
+  try { data = JSON.parse(localStorage.getItem('lastBulkUpload') || 'null'); } catch(e) { data = null; }
+  if (!data) return;
+  const btn = document.getElementById('undoBulkBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Undoing…'; }
+  const elapsed = Date.now() - data.timestamp;
+  const within20 = elapsed < 20 * 60 * 1000;
+  try {
+    // Remove from personal library
+    await Promise.all(data.bookIds.map(id =>
+      deleteDoc(doc(db, 'users', currentUser.uid, 'books', id)).catch(() => {})
+    ));
+    // If within 20 min, also clean global library
+    if (within20 && data.globalIds?.length) {
+      for (const gid of data.globalIds) {
+        try {
+          const gref = doc(db, 'globalLibrary', gid);
+          const snap = await getDoc(gref);
+          if (!snap.exists()) continue;
+          const pop = snap.data().popularity || 0;
+          if (pop <= 1) {
+            await deleteDoc(gref);
+            globalBookCache = globalBookCache.filter(b => b.id !== gid);
+          } else {
+            await updateDoc(gref, { popularity: increment(-1) });
+            const cached = globalBookCache.find(b => b.id === gid);
+            if (cached) cached.popularity = Math.max(0, (cached.popularity || 1) - 1);
+          }
+        } catch(e) {}
+      }
+    }
+    localStorage.removeItem('lastBulkUpload');
+    await loadBooks();
+    closeBulkAdd();
+    const n = data.bookIds.length;
+    showStatus(`Undone — ${n} book${n !== 1 ? 's' : ''} removed.`, 'success');
+    setTimeout(hideStatus, 4000);
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.textContent = '↩ Undo'; }
+    showStatus('Undo failed: ' + e.message, 'error');
+  }
 };
 
 // ── MODAL HELPERS ─────────────────────────────────────────────────────────────
