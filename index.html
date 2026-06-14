@@ -264,7 +264,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .chat-bubble.mine { background: var(--accent); color: var(--bg); border-bottom-right-radius: 4px; }
 .chat-bubble.theirs { background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
 .chat-time { font-size: 10px; color: var(--text3); margin-top: 3px; padding: 0 4px; }
-.chat-book-card { border-radius: var(--radius-sm); padding: 10px 12px; max-width: 240px; }
+.chat-book-card { border-radius: var(--radius-sm); padding: 10px 12px; max-width: 240px; cursor: pointer; }
 .chat-book-card.mine { background: rgba(201,169,110,0.15); border: 1px solid rgba(201,169,110,0.3); }
 .chat-book-card.theirs { background: var(--surface3); border: 1px solid var(--border); }
 .chat-book-title { font-size: 13px; font-family: 'Playfair Display', serif; color: var(--text); font-weight: 700; line-height: 1.3; }
@@ -287,6 +287,18 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .book-picker-search { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 12px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text); outline: none; width: 100%; box-sizing: border-box; }
 .book-picker-item { padding: 8px 10px; border-radius: var(--radius-sm); cursor: pointer; display: flex; flex-direction: column; gap: 2px; }
 .book-picker-item:active { background: var(--surface2); }
+.book-picker-tabs { display: flex; gap: 4px; margin-bottom: 6px; flex-shrink: 0; }
+.bpt { flex: 1; padding: 4px 6px; border-radius: 12px; border: 1px solid var(--border); background: transparent; color: var(--text3); font-size: 11px; font-family: 'DM Sans', sans-serif; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+.bpt.active { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+.chat-ref-card { border-radius: var(--radius-sm); padding: 10px 12px; max-width: 240px; }
+.chat-ref-card.mine { background: rgba(201,169,110,0.15); border: 1px solid rgba(201,169,110,0.3); }
+.chat-ref-card.theirs { background: var(--surface3); border: 1px solid var(--border); }
+.chat-ref-header { font-size: 10px; color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 3px; }
+.chat-ref-name { font-size: 14px; font-family: 'Playfair Display', serif; color: var(--text); font-weight: 700; margin-bottom: 7px; line-height: 1.3; }
+.chat-ref-book-list { display: flex; flex-direction: column; gap: 2px; max-height: 160px; overflow-y: auto; }
+.chat-ref-book-row { display: flex; align-items: flex-start; gap: 5px; padding: 5px 7px; border-radius: 8px; cursor: pointer; transition: background 0.1s; }
+.chat-ref-book-row:active { background: var(--surface2); }
+.chat-ref-book-num { font-size: 10px; color: var(--text3); min-width: 18px; flex-shrink: 0; padding-top: 2px; }
 .header-nav { display: flex; gap: 0; margin-top: 10px; overflow: hidden; }
 .hnav-btn { flex: 1 1 0; min-width: 0; text-align: center; padding: 7px 2px; white-space: nowrap; overflow: hidden; border: none; border-bottom: 2px solid transparent; background: none; color: var(--text3); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; -webkit-tap-highlight-color: transparent; }
 .hnav-btn.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
@@ -1762,6 +1774,11 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
     <div id="fdet-chat" class="chat-body" style="display:none">
       <div class="chat-messages" id="chatMessages"></div>
       <div id="bookPicker" class="book-picker" style="display:none">
+        <div class="book-picker-tabs">
+          <button class="bpt active" id="bpt-book" onclick="setPickerTab('book')">Book</button>
+          <button class="bpt" id="bpt-series" onclick="setPickerTab('series')">Series</button>
+          <button class="bpt" id="bpt-author" onclick="setPickerTab('author')">Author</button>
+        </div>
         <input class="book-picker-search" id="bookPickerSearch" placeholder="Search your books…" oninput="filterBookPicker(this.value)">
         <div id="bookPickerList" style="margin-top:6px"></div>
       </div>
@@ -1883,6 +1900,11 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
     <div id="club-tab-chat" class="chat-body">
       <div class="chat-messages" id="clubChatMessages"></div>
       <div id="clubBookPicker" class="book-picker" style="display:none">
+        <div class="book-picker-tabs">
+          <button class="bpt active" id="cbpt-book" onclick="setClubPickerTab('book')">Book</button>
+          <button class="bpt" id="cbpt-series" onclick="setClubPickerTab('series')">Series</button>
+          <button class="bpt" id="cbpt-author" onclick="setClubPickerTab('author')">Author</button>
+        </div>
         <input class="book-picker-search" id="clubBookPickerSearch" placeholder="Search your books…" oninput="filterClubBookPicker(this.value)">
         <div id="clubBookPickerList" style="margin-top:6px"></div>
       </div>
@@ -2705,6 +2727,7 @@ let friendLibBooks = [], flibSort = 'title-asc', flibView = 'card';
 const pendingBorrowRequests = {}; // key: "ownerUid:bookId" → Firestore message docId
 let flibGenreFilters = [], flibTopFilter = 'all', flibFilterOpen = false, flibSortOpen = false;
 let chatListener = null, bookPickerOpen = false;
+let _bookPickerTab = 'book', _clubBookPickerTab = 'book';
 let friendSearchTimer = null;
 let notifications = [], unreadNotifCount = 0;
 let checkoutTargetId = null;
@@ -10639,6 +10662,8 @@ function renderChatMessages(msgs) {
         + '<div class="chat-time">' + ts + '</div>'
         + '</div>';
     }
+    if (m.type === 'series_ref') return _chatSeriesCardHtml(m, side, mine, ts, null);
+    if (m.type === 'author_ref') return _chatAuthorCardHtml(m, side, mine, ts, null);
     if (m.type === 'book_ref') {
       const gbId = createGlobalBookId(m.bookTitle||'', m.bookAuthor||'');
       const gb = globalBookCache.find(x => x.id === gbId);
@@ -10647,10 +10672,10 @@ function renderChatMessages(msgs) {
       const genrePills = bookGenres.slice(0,3).map(g => '<span class="tag genre">' + _genreIconHtml(g, 'tag-icon') + esc(g) + '</span>').join('');
       const seriesStr = m.bookSeries ? '<span class="tag series">' + esc(m.bookSeries) + (m.bookSeriesNumber ? ' #'+m.bookSeriesNumber : '') + '</span>' : '';
       const alreadyWishlisted = books.some(b => b.location === 'Wishlist' && (b.title||'').toLowerCase() === (m.bookTitle||'').toLowerCase());
-      const starBtn = '<button class="wishlist-star-btn' + (alreadyWishlisted ? ' in-wishlist' : '') + '" title="' + (alreadyWishlisted ? 'In wishlist' : 'Add to wishlist') + '" onclick="addToWishlist(\'' + jsStr(m.bookTitle||'') + '\',\'' + jsStr(m.bookAuthor||'') + '\',' + JSON.stringify(bookGenres) + ',\'' + jsStr(m.bookSeries||'') + '\',\'' + jsStr(m.bookSeriesNumber||'') + '\',this)">★</button>';
+      const starBtn = '<button class="wishlist-star-btn' + (alreadyWishlisted ? ' in-wishlist' : '') + '" title="' + (alreadyWishlisted ? 'In wishlist' : 'Add to wishlist') + '" onclick="event.stopPropagation();addToWishlist(\'' + jsStr(m.bookTitle||'') + '\',\'' + jsStr(m.bookAuthor||'') + '\',' + JSON.stringify(bookGenres) + ',\'' + jsStr(m.bookSeries||'') + '\',\'' + jsStr(m.bookSeriesNumber||'') + '\',this)">★</button>';
       return '<div class="chat-wrap ' + side + '">'
         + (!mine ? '<div class="chat-sender">' + esc(m.displayName||m.fromUsername) + '</div>' : '')
-        + '<div class="chat-book-card ' + side + '">'
+        + '<div class="chat-book-card ' + side + '" onclick="openGlobalBookInfo(\'' + jsStr(gbId) + '\')">'
         + (m.text ? '<div style="font-size:13px;color:var(--text2);margin-bottom:6px;font-style:italic">' + esc(m.text) + '</div>' : '')
         + '<div class="chat-book-title">' + esc(m.bookTitle||'') + '</div>'
         + (m.bookAuthor ? '<div class="chat-book-author">' + esc(m.bookAuthor) + '</div>' : '')
@@ -10698,7 +10723,33 @@ window.toggleBookPicker = () => {
   const el = document.getElementById('bookPicker');
   if (!el) return;
   el.style.display = bookPickerOpen ? '' : 'none';
-  if (bookPickerOpen) { filterBookPicker(''); document.getElementById('bookPickerSearch').focus(); }
+  if (bookPickerOpen) { _bookPickerTab = 'book'; _syncPickerTabs('bpt'); filterBookPicker(''); document.getElementById('bookPickerSearch').focus(); }
+};
+
+function _syncPickerTabs(prefix) {
+  const tab = prefix === 'bpt' ? _bookPickerTab : _clubBookPickerTab;
+  ['book','series','author'].forEach(t => {
+    const b = document.getElementById(prefix + '-' + t);
+    if (b) b.classList.toggle('active', t === tab);
+  });
+  const searchId = prefix === 'bpt' ? 'bookPickerSearch' : 'clubBookPickerSearch';
+  const search = document.getElementById(searchId);
+  if (search) {
+    search.placeholder = tab === 'series' ? 'Search series…' : tab === 'author' ? 'Search authors…' : 'Search your books…';
+    search.value = '';
+  }
+}
+
+window.setPickerTab = (tab) => {
+  _bookPickerTab = tab;
+  _syncPickerTabs('bpt');
+  filterBookPicker('');
+};
+
+window.setClubPickerTab = (tab) => {
+  _clubBookPickerTab = tab;
+  _syncPickerTabs('cbpt');
+  filterClubBookPicker('');
 };
 
 function closeBookPicker() {
@@ -10709,11 +10760,13 @@ function closeBookPicker() {
 
 window.filterBookPicker = (q) => {
   const lower = (q||'').toLowerCase().trim();
+  const el = document.getElementById('bookPickerList');
+  if (!el) return;
+  if (_bookPickerTab === 'series') { _renderPickerSeries(lower, el, 'sendSeriesRef'); return; }
+  if (_bookPickerTab === 'author') { _renderPickerAuthors(lower, el, 'sendAuthorRef'); return; }
   const list = books.filter(b => b.location !== 'Wishlist' &&
     (!lower || (b.title||'').toLowerCase().includes(lower) || (b.author||'').toLowerCase().includes(lower))
   ).slice(0, 20);
-  const el = document.getElementById('bookPickerList');
-  if (!el) return;
   if (!list.length) { el.innerHTML = '<div style="padding:8px;color:var(--text3);font-size:13px">No books found</div>'; return; }
   el.innerHTML = list.map(b =>
     '<div class="book-picker-item" onclick="sendBookRef(\'' + jsStr(b.id) + '\',\'' + jsStr(b.title||'') + '\',\'' + jsStr(b.author||'') + '\',' + JSON.stringify(b.genres||[]) + ',\'' + jsStr(b.series||'') + '\',\'' + jsStr(b.seriesNumber||'') + '\')">'
@@ -10722,6 +10775,44 @@ window.filterBookPicker = (q) => {
     + '</div>'
   ).join('');
 };
+
+function _renderPickerSeries(lower, el, sendFn) {
+  const seen = new Set();
+  const list = [];
+  for (const b of [...books, ...globalBookCache]) {
+    if (!b.series) continue;
+    const key = b.series.toLowerCase();
+    if (seen.has(key)) continue;
+    if (!lower || key.includes(lower)) { seen.add(key); list.push(b.series); }
+    if (list.length >= 20) break;
+  }
+  if (!list.length) { el.innerHTML = '<div style="padding:8px;color:var(--text3);font-size:13px">No series found</div>'; return; }
+  el.innerHTML = list.map(s =>
+    '<div class="book-picker-item" onclick="' + sendFn + '(\'' + jsStr(s) + '\')">'
+    + '<div style="font-size:13px;font-weight:600;color:var(--text)">' + esc(s) + '</div>'
+    + '<div style="font-size:11px;color:var(--text3)">Series</div>'
+    + '</div>'
+  ).join('');
+}
+
+function _renderPickerAuthors(lower, el, sendFn) {
+  const seen = new Set();
+  const list = [];
+  for (const b of [...books, ...globalBookCache]) {
+    if (!b.author) continue;
+    const key = (b.author||'').toLowerCase();
+    if (seen.has(key)) continue;
+    if (!lower || key.includes(lower)) { seen.add(key); list.push(b.author); }
+    if (list.length >= 20) break;
+  }
+  if (!list.length) { el.innerHTML = '<div style="padding:8px;color:var(--text3);font-size:13px">No authors found</div>'; return; }
+  el.innerHTML = list.map(a =>
+    '<div class="book-picker-item" onclick="' + sendFn + '(\'' + jsStr(a) + '\')">'
+    + '<div style="font-size:13px;font-weight:600;color:var(--text)">' + esc(a) + '</div>'
+    + '<div style="font-size:11px;color:var(--text3)">Author</div>'
+    + '</div>'
+  ).join('');
+}
 
 window.sendBookRef = async (bookId, bookTitle, bookAuthor, bookGenres, bookSeries, bookSeriesNumber) => {
   if (!friendDetailsUid) return;
@@ -10937,6 +11028,8 @@ function renderClubMessages(msgs) {
     const likeBtn = '<button class="like-btn' + (iLiked?' liked':'') + '" onclick="toggleClubMsgLike(\'' + jsStr(m.id) + '\',event)">'
       + _heartSvg() + (likeCount > 0 ? '<span class="like-count">' + likeCount + '</span>' : '') + '</button>';
     const footer = '<div class="chat-msg-footer">' + likeBtn + '<div class="chat-time">' + ts + '</div></div>';
+    if (m.type === 'series_ref') return _chatSeriesCardHtml(m, side, mine, ts, footer);
+    if (m.type === 'author_ref') return _chatAuthorCardHtml(m, side, mine, ts, footer);
     if (m.type === 'book_ref') {
       const gbId = createGlobalBookId(m.bookTitle||'', m.bookAuthor||'');
       const gb = globalBookCache.find(x => x.id === gbId);
@@ -10945,9 +11038,9 @@ function renderClubMessages(msgs) {
       const genrePills = bookGenres.slice(0,3).map(g => '<span class="tag genre">' + _genreIconHtml(g, 'tag-icon') + esc(g) + '</span>').join('');
       const seriesStr = m.bookSeries ? '<span class="tag series">' + esc(m.bookSeries) + (m.bookSeriesNumber ? ' #'+m.bookSeriesNumber : '') + '</span>' : '';
       const alreadyWishlisted = books.some(b => b.location === 'Wishlist' && (b.title||'').toLowerCase() === (m.bookTitle||'').toLowerCase());
-      const starBtn = '<button class="wishlist-star-btn' + (alreadyWishlisted ? ' in-wishlist' : '') + '" onclick="addToWishlist(\'' + jsStr(m.bookTitle||'') + '\',\'' + jsStr(m.bookAuthor||'') + '\',' + JSON.stringify(bookGenres) + ',\'' + jsStr(m.bookSeries||'') + '\',\'' + jsStr(m.bookSeriesNumber||'') + '\',this)">★</button>';
+      const starBtn = '<button class="wishlist-star-btn' + (alreadyWishlisted ? ' in-wishlist' : '') + '" onclick="event.stopPropagation();addToWishlist(\'' + jsStr(m.bookTitle||'') + '\',\'' + jsStr(m.bookAuthor||'') + '\',' + JSON.stringify(bookGenres) + ',\'' + jsStr(m.bookSeries||'') + '\',\'' + jsStr(m.bookSeriesNumber||'') + '\',this)">★</button>';
       return '<div class="chat-wrap ' + side + '">' + senderLine
-        + '<div class="chat-book-card ' + side + '">'
+        + '<div class="chat-book-card ' + side + '" onclick="openGlobalBookInfo(\'' + jsStr(gbId) + '\')">'
         + (m.text ? '<div style="font-size:13px;color:var(--text2);margin-bottom:6px;font-style:italic">' + esc(m.text) + '</div>' : '')
         + '<div class="chat-book-title">' + esc(m.bookTitle||'') + '</div>'
         + (m.bookAuthor ? '<div class="chat-book-author">' + esc(m.bookAuthor) + '</div>' : '')
@@ -11006,7 +11099,7 @@ window.toggleClubBookPicker = () => {
   const el = document.getElementById('clubBookPicker');
   if (!el) return;
   el.style.display = clubBookPickerOpen ? '' : 'none';
-  if (clubBookPickerOpen) { filterClubBookPicker(''); document.getElementById('clubBookPickerSearch').focus(); }
+  if (clubBookPickerOpen) { _clubBookPickerTab = 'book'; _syncPickerTabs('cbpt'); filterClubBookPicker(''); document.getElementById('clubBookPickerSearch').focus(); }
 };
 
 function closeClubBookPicker() {
@@ -11017,11 +11110,13 @@ function closeClubBookPicker() {
 
 window.filterClubBookPicker = (q) => {
   const lower = (q||'').toLowerCase().trim();
+  const el = document.getElementById('clubBookPickerList');
+  if (!el) return;
+  if (_clubBookPickerTab === 'series') { _renderPickerSeries(lower, el, 'sendClubSeriesRef'); return; }
+  if (_clubBookPickerTab === 'author') { _renderPickerAuthors(lower, el, 'sendClubAuthorRef'); return; }
   const list = books.filter(b => b.location !== 'Wishlist' &&
     (!lower || (b.title||'').toLowerCase().includes(lower) || (b.author||'').toLowerCase().includes(lower))
   ).slice(0, 20);
-  const el = document.getElementById('clubBookPickerList');
-  if (!el) return;
   if (!list.length) { el.innerHTML = '<div style="padding:8px;color:var(--text3);font-size:13px">No books found</div>'; return; }
   el.innerHTML = list.map(b =>
     '<div class="book-picker-item" onclick="sendClubBookRef(\'' + jsStr(b.id) + '\',\'' + jsStr(b.title||'') + '\',\'' + jsStr(b.author||'') + '\',' + JSON.stringify(b.genres||[]) + ',\'' + jsStr(b.series||'') + '\',\'' + jsStr(b.seriesNumber||'') + '\')">'
@@ -11047,6 +11142,121 @@ window.sendClubBookRef = async (bookId, bookTitle, bookAuthor, bookGenres, bookS
     });
   } catch(e) { showStatus('Failed: ' + e.message, 'error'); }
 };
+
+window.sendSeriesRef = async (seriesName) => {
+  if (!friendDetailsUid) return;
+  closeBookPicker();
+  try {
+    await addDoc(chatColRef(currentUser.uid, friendDetailsUid), {
+      type: 'series_ref', seriesName,
+      fromUid: currentUser.uid, fromUsername: userUsername,
+      displayName: currentUser.displayName || userUsername,
+      createdAt: serverTimestamp()
+    });
+    await addDoc(notifsCol(friendDetailsUid), {
+      type: 'chat_message', fromUid: currentUser.uid, fromUsername: userUsername,
+      displayName: currentUser.displayName || userUsername,
+      text: '📚 Shared a series: ' + seriesName, read: false, createdAt: serverTimestamp()
+    });
+  } catch(e) { showStatus('Failed: ' + e.message, 'error'); }
+};
+
+window.sendAuthorRef = async (authorName) => {
+  if (!friendDetailsUid) return;
+  closeBookPicker();
+  try {
+    await addDoc(chatColRef(currentUser.uid, friendDetailsUid), {
+      type: 'author_ref', authorName,
+      fromUid: currentUser.uid, fromUsername: userUsername,
+      displayName: currentUser.displayName || userUsername,
+      createdAt: serverTimestamp()
+    });
+    await addDoc(notifsCol(friendDetailsUid), {
+      type: 'chat_message', fromUid: currentUser.uid, fromUsername: userUsername,
+      displayName: currentUser.displayName || userUsername,
+      text: '✍️ Shared an author: ' + authorName, read: false, createdAt: serverTimestamp()
+    });
+  } catch(e) { showStatus('Failed: ' + e.message, 'error'); }
+};
+
+window.sendClubSeriesRef = async (seriesName) => {
+  if (!currentClubId) return;
+  closeClubBookPicker();
+  try {
+    await addDoc(clubMsgCol(currentClubId), {
+      type: 'series_ref', seriesName,
+      fromUid: currentUser.uid, fromUsername: userUsername,
+      displayName: currentUser.displayName || userUsername,
+      createdAt: serverTimestamp()
+    });
+  } catch(e) { showStatus('Failed: ' + e.message, 'error'); }
+};
+
+window.sendClubAuthorRef = async (authorName) => {
+  if (!currentClubId) return;
+  closeClubBookPicker();
+  try {
+    await addDoc(clubMsgCol(currentClubId), {
+      type: 'author_ref', authorName,
+      fromUid: currentUser.uid, fromUsername: userUsername,
+      displayName: currentUser.displayName || userUsername,
+      createdAt: serverTimestamp()
+    });
+  } catch(e) { showStatus('Failed: ' + e.message, 'error'); }
+};
+
+function _chatSeriesCardHtml(m, side, mine, ts, footerHtml) {
+  const senderLine = mine ? '' : '<div class="chat-sender">' + esc(m.displayName||m.fromUsername||'') + '</div>';
+  const sn = (m.seriesName||'').toLowerCase();
+  const seen = new Set();
+  const seriesBooks = [...books, ...globalBookCache].filter(b => {
+    if ((b.series||'').toLowerCase() !== sn) return false;
+    if (seen.has((b.title||'').toLowerCase())) return false;
+    seen.add((b.title||'').toLowerCase()); return true;
+  }).sort((a, b) => (Number(a.seriesNumber)||999) - (Number(b.seriesNumber)||999));
+  const bookRows = seriesBooks.map(b => {
+    const gbId = createGlobalBookId(b.title||'', b.author||'');
+    return '<div class="chat-ref-book-row" onclick="openGlobalBookInfo(\'' + jsStr(gbId) + '\')">'
+      + '<span class="chat-ref-book-num">' + (b.seriesNumber ? '#' + b.seriesNumber : '') + '</span>'
+      + '<div><div class="chat-book-title">' + esc(b.title||'') + '</div>'
+      + (b.author ? '<div class="chat-book-author">' + esc(b.author) + '</div>' : '')
+      + '</div></div>';
+  }).join('');
+  return '<div class="chat-wrap ' + side + '">' + senderLine
+    + '<div class="chat-ref-card ' + side + '">'
+    + '<div class="chat-ref-header">📚 Series</div>'
+    + '<div class="chat-ref-name">' + esc(m.seriesName||'') + '</div>'
+    + '<div class="chat-ref-book-list">' + (bookRows || '<div style="color:var(--text3);font-size:12px;padding:4px 0">No books found in library</div>') + '</div>'
+    + '</div>'
+    + (footerHtml || '<div class="chat-time">' + ts + '</div>')
+    + '</div>';
+}
+
+function _chatAuthorCardHtml(m, side, mine, ts, footerHtml) {
+  const senderLine = mine ? '' : '<div class="chat-sender">' + esc(m.displayName||m.fromUsername||'') + '</div>';
+  const an = (m.authorName||'').toLowerCase();
+  const seen = new Set();
+  const authorBooks = [...books, ...globalBookCache].filter(b => {
+    if ((b.author||'').toLowerCase() !== an) return false;
+    const tk = (b.title||'').toLowerCase();
+    if (seen.has(tk)) return false;
+    seen.add(tk); return true;
+  }).sort((a, b) => (a.title||'').localeCompare(b.title||''));
+  const bookRows = authorBooks.map(b => {
+    const gbId = createGlobalBookId(b.title||'', b.author||'');
+    return '<div class="chat-ref-book-row" onclick="openGlobalBookInfo(\'' + jsStr(gbId) + '\')">'
+      + '<div class="chat-book-title">' + esc(b.title||'') + '</div>'
+      + '</div>';
+  }).join('');
+  return '<div class="chat-wrap ' + side + '">' + senderLine
+    + '<div class="chat-ref-card ' + side + '">'
+    + '<div class="chat-ref-header">✍️ Author</div>'
+    + '<div class="chat-ref-name">' + esc(m.authorName||'') + '</div>'
+    + '<div class="chat-ref-book-list">' + (bookRows || '<div style="color:var(--text3);font-size:12px;padding:4px 0">No books found in library</div>') + '</div>'
+    + '</div>'
+    + (footerHtml || '<div class="chat-time">' + ts + '</div>')
+    + '</div>';
+}
 
 // ── CLUB SETTINGS ─────────────────────────────────────────────────────────────
 async function renderClubSettingsContent() {
