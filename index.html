@@ -6300,101 +6300,90 @@ function _searchGlobalBooks(q) {
   return results;
 }
 
+function _acPortalShow(inputEl, htmlItems) {
+  let portal = document.getElementById('hl-ac-portal');
+  if (!portal) {
+    portal = document.createElement('div');
+    portal.id = 'hl-ac-portal';
+    portal.style.cssText = 'position:fixed;inset:0;z-index:10000;pointer-events:none;';
+    document.body.appendChild(portal);
+  }
+  const r = inputEl.getBoundingClientRect();
+  portal.innerHTML = '<div class="hl-ac" style="position:fixed;display:block;pointer-events:auto;top:'
+    + (r.bottom + 2) + 'px;left:' + r.left + 'px;width:' + Math.max(180, r.width) + 'px;">'
+    + htmlItems + '</div>';
+}
+
+function _acPortalHide() {
+  const p = document.getElementById('hl-ac-portal');
+  if (p) p.innerHTML = '';
+}
+
 function _hlUpdateAc(cat, val) {
-  const acEl = document.getElementById('hl-ac-' + cat);
-  if (!acEl) return;
   const inputEl = document.getElementById('hl-input-' + cat);
   const existing = new Set(_myHighlights[cat]||[]);
-  const applyFixed = () => {
-    if (inputEl) {
-      const r = inputEl.getBoundingClientRect();
-      acEl.style.position = 'fixed';
-      acEl.style.top = (r.bottom + 2) + 'px';
-      acEl.style.left = r.left + 'px';
-      acEl.style.width = Math.max(180, r.width) + 'px';
-      acEl.style.zIndex = '9999';
-    }
-  };
   if (cat === 'books') {
     const bookResults = _searchGlobalBooks(val).filter(b => !existing.has(b.title));
     _hlAcResults[cat] = bookResults.map(b => b.title);
-    if (!bookResults.length) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
-    applyFixed();
-    acEl.style.display = '';
-    acEl.innerHTML = bookResults.map((b,i) =>
+    if (!bookResults.length || !inputEl) { _acPortalHide(); return; }
+    _acPortalShow(inputEl, bookResults.map((b,i) =>
       `<div class="hl-ac-item" onmousedown="event.preventDefault()" onclick="addHlChip('books',${i})">`
       + `<span style="font-weight:500">${esc(b.title)}</span>`
       + (b.author ? `<span style="color:var(--text3);font-size:11px;margin-left:4px">· ${esc(b.author)}</span>` : '')
-      + `</div>`
-    ).join('');
+      + `</div>`).join(''));
   } else {
     const q = val.toLowerCase();
     const matches = _hlAcSources(cat).filter(s => !existing.has(s) && s.toLowerCase().includes(q)).slice(0, 5);
     _hlAcResults[cat] = matches;
-    if (!matches.length) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
-    applyFixed();
-    acEl.style.display = '';
-    acEl.innerHTML = matches.map((m,i) => `<div class="hl-ac-item" onmousedown="event.preventDefault()" onclick="addHlChip('${cat}',${i})">${esc(m)}</div>`).join('');
+    if (!matches.length || !inputEl) { _acPortalHide(); return; }
+    _acPortalShow(inputEl, matches.map((m,i) =>
+      `<div class="hl-ac-item" onmousedown="event.preventDefault()" onclick="addHlChip('${cat}',${i})">${esc(m)}</div>`).join(''));
   }
 }
 
 function _clubHlUpdateAc(cat, val) {
-  const acEl = document.getElementById('chl-ac-' + cat);
-  if (!acEl) return;
   const inputEl = document.getElementById('chl-input-' + cat);
   const existing = new Set(_clubSubjects[cat]||[]);
-  const applyFixed = () => {
-    if (inputEl) {
-      const r = inputEl.getBoundingClientRect();
-      acEl.style.position = 'fixed';
-      acEl.style.top = (r.bottom + 2) + 'px';
-      acEl.style.left = r.left + 'px';
-      acEl.style.width = Math.max(180, r.width) + 'px';
-      acEl.style.zIndex = '9999';
-    }
-  };
   if (cat === 'books') {
     const bookResults = _searchGlobalBooks(val).filter(b => !existing.has(b.title));
     _clubHlAcResults[cat] = bookResults.map(b => b.title);
-    if (!bookResults.length) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
-    applyFixed();
-    acEl.style.display = '';
-    acEl.innerHTML = bookResults.map((b,i) =>
+    if (!bookResults.length || !inputEl) { _acPortalHide(); return; }
+    _acPortalShow(inputEl, bookResults.map((b,i) =>
       `<div class="hl-ac-item" onmousedown="event.preventDefault()" onclick="addClubHlChip('books',${i})">`
       + `<span style="font-weight:500">${esc(b.title)}</span>`
       + (b.author ? `<span style="color:var(--text3);font-size:11px;margin-left:4px">· ${esc(b.author)}</span>` : '')
-      + `</div>`
-    ).join('');
+      + `</div>`).join(''));
   } else {
     const q = val.toLowerCase();
     const matches = _clubHlAcSources(cat).filter(s => !existing.has(s) && s.toLowerCase().includes(q)).slice(0, 5);
     _clubHlAcResults[cat] = matches;
-    if (!matches.length) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
-    applyFixed();
-    acEl.style.display = '';
-    acEl.innerHTML = matches.map((m,i) => `<div class="hl-ac-item" onmousedown="event.preventDefault()" onclick="addClubHlChip('${cat}',${i})">${esc(m)}</div>`).join('');
+    if (!matches.length || !inputEl) { _acPortalHide(); return; }
+    _acPortalShow(inputEl, matches.map((m,i) =>
+      `<div class="hl-ac-item" onmousedown="event.preventDefault()" onclick="addClubHlChip('${cat}',${i})">${esc(m)}</div>`).join(''));
   }
 }
 
 function _renderHlEditor() {
+  _acPortalHide();
   const el = document.getElementById('hl-section');
   if (!el) return;
   el.innerHTML = _HL_CATS.map(c => _buildHlRow(c.key, c, _myHighlights[c.key]||[], _hlActiveInput === c.key, false)).join('');
   refreshIcons();
   if (_hlActiveInput) {
     const inp = document.getElementById('hl-input-' + _hlActiveInput);
-    if (inp) { inp.focus(); _hlUpdateAc(_hlActiveInput, ''); }
+    if (inp) { inp.focus(); setTimeout(() => _hlUpdateAc(_hlActiveInput, inp.value || ''), 0); }
   }
 }
 
 function _renderClubSubjectsEditor() {
+  _acPortalHide();
   const el = document.getElementById('club-subjects-editor');
   if (!el) return;
   el.innerHTML = _HL_CATS.map(c => _buildHlRow(c.key, c, _clubSubjects[c.key]||[], _clubHlActive === c.key, true)).join('');
   refreshIcons();
   if (_clubHlActive) {
     const inp = document.getElementById('chl-input-' + _clubHlActive);
-    if (inp) { inp.focus(); _clubHlUpdateAc(_clubHlActive, ''); }
+    if (inp) { inp.focus(); setTimeout(() => _clubHlUpdateAc(_clubHlActive, inp.value || ''), 0); }
   }
 }
 
