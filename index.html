@@ -2286,19 +2286,27 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
           <div class="bulk-step-num">1</div>
           <div class="bulk-step-title">Copy this prompt</div>
         </div>
-        <div class="bulk-prompt-box" id="bulkPromptBox">You are my personal librarian. I will give you a list of books (or a photo of my bookshelf) and I want you to output a CSV file with exactly these 8 columns in this order:
+        <div class="bulk-prompt-box" id="bulkPromptBox">You are my personal librarian. I'm going to give you books to add to my library. I may read them out to you using voice, or share a photo of my bookshelf — either works.
+
+As I give you books, keep a running list. For each book, look up the correct Author, Genres, Series name, and SeriesNumber. If anything is unclear — a title, an author name, spelling, whether something is a series — ask me to confirm before adding it.
+
+I can tell you the location for the books that follow by saying something like "this is Bookshelf 1" or "from here, Bookshelf 2". Apply that location to every book I give you after that point, until I change it.
+
+When you first receive this prompt, respond only with:
+"Okay! Whenever you're ready, start listing your books. When you want the CSV, just say 'give me the CSV'."
+
+When I say "give me the CSV", output a CSV file with exactly these 8 columns in this order, with a header row:
 
 1. Title
 2. Author
 3. Read (TRUE or FALSE — use FALSE unless I say otherwise)
 4. Genres (separate multiple genres with semicolons, e.g. Fantasy;Adventure;Epic Fantasy)
-5. Location (leave blank)
-6. Series (the series name if the book belongs to one, otherwise leave blank)
+5. Location (whatever I set — leave blank if I never specified)
+6. Series (series name if the book belongs to one, otherwise leave blank)
 7. SeriesNumber (the book's number in the series, e.g. 1, 2, 3 — leave blank if not in a series)
 8. Rating (leave as 0)
 
-For every book, look up the correct Author, Genres, Series, and SeriesNumber.
-Output only the CSV with a header row — no explanation needed.</div>
+Output only the CSV — no explanation needed.</div>
         <button class="btn-bulk-action" id="copyPromptBtn" onclick="copyBulkPrompt()">
           <i data-lucide="clipboard"></i> Copy Prompt
         </button>
