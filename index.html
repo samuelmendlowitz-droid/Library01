@@ -2257,7 +2257,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
     <div class="modal-handle"></div>
     <button class="modal-close" onclick="closeModal('csvModal')"><i data-lucide="x"></i></button>
     <div class="modal-title"><i data-lucide="download"></i> Bulk Add from CSV</div>
-    <p style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6;">Upload a CSV file with columns: <strong style="color:var(--accent)">Title, Author, Read, Genres, Location, (blank), (blank), Series</strong></p>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6;">Upload a CSV file with columns: <strong style="color:var(--accent)">Title, Author, Read, Genres, Location, Series, SeriesNumber, Rating</strong></p>
     <div class="csv-drop" onclick="document.getElementById('csvFileInput').click()">
       <div class="csv-drop-icon"><i data-lucide="file-text"></i></div>
       <div class="csv-drop-label">Tap to select CSV file</div>
@@ -2302,8 +2302,9 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 The system I use to store my books is in the attached file.
 I will tell you a list of books, or give you a photo of my bookshelf and I want you to add those books to a csv file with the same columns, in the same order as the attached file.
 
-For every book I list, do a search to find the author, genres and series (if applicable) and add those into the sheet as well.
-All columns other than Author, Title, Series and Genres should be left empty or in their default state.</div>
+For every book I list, look up the correct Author, Genres, Series name, and SeriesNumber (the book's position in the series, e.g. 1, 2, 3) and fill those in.
+Separate multiple genres with semicolons (e.g. Fantasy;Adventure).
+Leave Read, Location, and Rating empty (use their default values from the format file).</div>
         <button class="btn-bulk-action" id="copyPromptBtn" onclick="copyBulkPrompt()">
           <i data-lucide="clipboard"></i> Copy Prompt
         </button>
@@ -8237,11 +8238,11 @@ window.closeBulkOnOverlay = e => {
 };
 
 window.downloadFormatFile = () => {
-  // Always generates the most up-to-date format matching the CSV parser:
-  // Columns: Title, Author, Read, Genres, Location, (blank), (blank), Series
-  const header = 'Title,Author,Read,Genres,Location,,,Series\n';
-  const example = '"The Great Gatsby","F. Scott Fitzgerald",FALSE,"Fiction,Classic",Bookshelf,,,\n';
-  const blob = new Blob([header, example], { type: 'text/csv' });
+  // Columns: Title, Author, Read, Genres (semicolons), Location, Series, SeriesNumber, Rating (1-5)
+  const header = 'Title,Author,Read,Genres,Location,Series,SeriesNumber,Rating\n';
+  const example = '"The Great Gatsby","F. Scott Fitzgerald",FALSE,"Fiction;Classic",Bookshelf,,,0\n';
+  const example2 = '"The Fellowship of the Ring","J.R.R. Tolkien",TRUE,"Fantasy;Adventure;Epic Fantasy",Bookshelf,"The Lord of the Rings",1,5\n';
+  const blob = new Blob([header, example, example2], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -8281,29 +8282,75 @@ window.copyBulkPrompt = async () => {
   }
 };
 
+function _parseCSVLine(line) {
+  const cols = [];
+  let i = 0;
+  while (i <= line.length) {
+    if (line[i] === '"') {
+      i++;
+      let field = '';
+      while (i < line.length) {
+        if (line[i] === '"' && line[i+1] === '"') { field += '"'; i += 2; }
+        else if (line[i] === '"') { i++; break; }
+        else field += line[i++];
+      }
+      cols.push(field);
+      if (line[i] === ',') i++;
+    } else {
+      let j = i;
+      while (j < line.length && line[j] !== ',') j++;
+      cols.push(line.slice(i, j).trim());
+      i = j + 1;
+    }
+    if (i > line.length) break;
+  }
+  return cols;
+}
+
+function _parseBooksFromCSV(text) {
+  const lines = text.trim().split('\n').filter(l => l.trim());
+  const books_out = [];
+  for (const line of lines) {
+    const cols = _parseCSVLine(line);
+    const title = cols[0]?.trim(), author = cols[1]?.trim();
+    if (!title || !author || title.toLowerCase() === 'title') continue;
+    const read   = (cols[2]||'').trim().toUpperCase() === 'TRUE';
+    // Genres: semicolons preferred; fall back to commas if no semicolons present
+    const genreRaw = cols[3] || '';
+    const genres = genreRaw
+      ? (genreRaw.includes(';') ? genreRaw.split(';') : genreRaw.split(','))
+          .map(g => g.trim()).filter(Boolean)
+      : [];
+    const loc    = cols[4]?.trim() || (orderedLocations[0] || 'Bookshelf');
+    // New format: col[5]=Series, col[6]=SeriesNumber, col[7]=Rating
+    // Old format: col[5]=blank, col[6]=blank, col[7]=Series
+    // Distinguish: col[7] is Rating if it's a number 0-5, otherwise it's legacy Series
+    const col7   = cols[7]?.trim() || '';
+    const col7isRating = col7 !== '' && !isNaN(parseInt(col7)) && parseInt(col7) >= 0 && parseInt(col7) <= 5;
+    const series = cols[5]?.trim() || (col7isRating ? '' : col7);
+    const seriesNumber = cols[6]?.trim() ? (isNaN(Number(cols[6])) ? cols[6].trim() : Number(cols[6])) : null;
+    const rating = col7isRating ? parseInt(col7) : 0;
+    books_out.push({ title, author, read, genres, loc, series, seriesNumber, rating });
+  }
+  return books_out;
+}
+
 window.handleBulkCsvUpload = async e => {
   const file = e.target.files[0];
   if (!file) return;
   const text = await file.text();
-  const lines = text.trim().split('\n').filter(l => l.trim());
   const statusEl = document.getElementById('bulkCsvStatus');
   statusEl.style.display = 'block';
   statusEl.textContent = 'Processing…';
   let added = 0, skipped = 0, errors = 0;
-  for (const line of lines) {
-    const cols = line.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
-    const title = cols[0], author = cols[1];
-    if (!title || !author || title.toLowerCase() === 'title') continue;
+  for (const row of _parseBooksFromCSV(text)) {
+    const { title, author, read, genres, loc, series, seriesNumber, rating } = row;
     const dup = books.find(b => b.title.toLowerCase() === title.toLowerCase());
     if (dup) { skipped++; continue; }
-    const read   = (cols[2]||'').toUpperCase() === 'TRUE';
-    const genres = cols[3] ? cols[3].split(',').map(g => g.trim()).filter(Boolean) : [];
-    const loc    = cols[4] || (orderedLocations[0] || 'Bookshelf');
-    const series = cols[7] || '';
     try {
-      await saveBook({ title, author, series, genres, location: loc, read, checkoutDate: '', borrowedBy: '' });
+      await saveBook({ title, author, series, seriesNumber, genres, location: loc, read, rating: rating || 0, checkoutDate: '', borrowedBy: '' });
       added++;
-      books.push({ id: 'temp_' + added, title, author, series, genres, location: loc, read });
+      books.push({ id: 'temp_' + added, title, author, series, seriesNumber, genres, location: loc, read, rating: rating || 0 });
     } catch(err) { errors++; }
   }
   await loadBooks();
@@ -8319,25 +8366,18 @@ window.handleCsvUpload = async e => {
   const file = e.target.files[0];
   if (!file) return;
   const text = await file.text();
-  const lines = text.trim().split('\n').filter(l => l.trim());
   const statusEl = document.getElementById('csvStatus');
   statusEl.style.display = 'block';
   statusEl.textContent = 'Processing…';
   let added = 0, skipped = 0, errors = 0;
-  for (const line of lines) {
-    const cols = line.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
-    const title = cols[0], author = cols[1];
-    if (!title || !author || title.toLowerCase() === 'title') continue;
+  for (const row of _parseBooksFromCSV(text)) {
+    const { title, author, read, genres, loc, series, seriesNumber, rating } = row;
     const dup = books.find(b => b.title.toLowerCase() === title.toLowerCase());
     if (dup) { skipped++; continue; }
-    const read   = (cols[2]||'').toUpperCase() === 'TRUE';
-    const genres = cols[3] ? cols[3].split(',').map(g => g.trim()).filter(Boolean) : [];
-    const loc    = cols[4] || (orderedLocations[0] || 'Bookshelf');
-    const series = cols[7] || '';
     try {
-      await saveBook({ title, author, series, genres, location: loc, read, checkoutDate: '', borrowedBy: '' });
+      await saveBook({ title, author, series, seriesNumber, genres, location: loc, read, rating: rating || 0, checkoutDate: '', borrowedBy: '' });
       added++;
-      books.push({ id: 'temp_' + added, title, author, series, genres, location: loc, read });
+      books.push({ id: 'temp_' + added, title, author, series, seriesNumber, genres, location: loc, read, rating: rating || 0 });
     } catch(err) { errors++; }
   }
   await loadBooks();
