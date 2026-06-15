@@ -2590,6 +2590,12 @@ Output only the CSV — no explanation needed.</div>
           </div>
           <div id="adminStripeMsg" style="font-size:12px;margin-top:8px;min-height:16px;"></div>
         </div>
+        <div id="adminReseedSection" style="display:none;margin-top:24px;padding-top:20px;border-top:1px solid var(--border);">
+          <div style="font-size:13px;color:var(--text2);margin-bottom:12px;font-weight:600;">Reseed Global Library</div>
+          <div style="font-size:12px;color:var(--text3);margin-bottom:10px;">Reads all users' personal libraries and rebuilds the global books/authors/series/genres collections. Run after wiping. Takes several minutes for large libraries.</div>
+          <button id="reseedBtn" onclick="reseedGlobalLibrary()" style="padding:9px 14px;background:var(--accent);color:var(--bg);border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;width:100%;margin-bottom:8px;">Reseed Global Library</button>
+          <div id="reseedProgress" style="font-size:12px;color:var(--text3);min-height:16px;"></div>
+        </div>
         <button class="btn-signout-settings" onclick="signOut()"><i data-lucide="log-out"></i> Sign Out</button>
       </div>
 
@@ -2633,7 +2639,7 @@ Output only the CSV — no explanation needed.</div>
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as fbSignOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { getFirestore, initializeFirestore, persistentLocalCache, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, getDocsFromCache, getDocsFromServer, query, where, limit, orderBy, startAfter, onSnapshot, serverTimestamp, increment, arrayUnion, arrayRemove, getCountFromServer, waitForPendingWrites, enableNetwork } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, initializeFirestore, persistentLocalCache, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, getDocsFromCache, getDocsFromServer, query, where, limit, orderBy, startAfter, onSnapshot, serverTimestamp, increment, arrayUnion, arrayRemove, getCountFromServer, waitForPendingWrites, enableNetwork, runTransaction } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 // ── CONFIG ───────────────────────────────────────────────────────────────────
 const firebaseConfig = {
@@ -2711,6 +2717,7 @@ let _reviewSort = 'newest';
 let _reviewFilter = null;
 let _reviewsData = [];
 let _reviewBookGlobalId = null;
+let _reviewBookCode = null;  // B-NNNN code for the currently open book's reviews
 let _rrBookId = null, _rrGbId = null, _rrStars = 0;
 let _myHighlights = { books: [], authors: [], genres: [], series: [] };
 let _clubAboutEditing = false;
@@ -3137,13 +3144,24 @@ window.wipeGlobalLibrary = async () => {
   const btn = document.getElementById('wipeConfirmBtn');
   btn.disabled = true; btn.textContent = 'Wiping…';
   try {
-    const snap = await getDocs(collection(db, 'globalLibrary'));
-    await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
+    // Wipe all new collections
+    const colNames = ['books', 'authors', 'series', 'genres', '_counters', '_userRegistry'];
+    let total = 0;
+    for (const col of colNames) {
+      const snap = await getDocs(collection(db, col));
+      await Promise.all(snap.docs.map(d => deleteDoc(d.ref)));
+      total += snap.size;
+    }
+    // Also wipe any remaining globalLibrary docs
+    const oldSnap = await getDocs(collection(db, 'globalLibrary'));
+    await Promise.all(oldSnap.docs.map(d => deleteDoc(d.ref)));
+    total += oldSnap.size;
     globalBookCache = [];
     syncUserBooksToCache();
+    localStorage.removeItem(_GLC_KEY);
     document.getElementById('wipeConfirmSection').style.display = 'none';
     document.querySelector('[onclick*="wipeConfirmSection"]').style.display = '';
-    showStatus('Global library wiped — ' + snap.size + ' books removed.', 'success');
+    showStatus('Global library wiped — ' + total + ' docs removed.', 'success');
     setTimeout(hideStatus, 3500);
   } catch(e) {
     showStatus('Wipe failed: ' + e.message, 'error');
@@ -3177,6 +3195,7 @@ onAuthStateChanged(auth, async user => {
     // Ensure customers/{uid} doc exists at login so the Stripe Extension can
     // find/create the Stripe customer when checkout is attempted.
     setDoc(doc(db, 'customers', user.uid), { email: user.email || '', name: user.displayName || '' }, { merge: true }).catch(() => {});
+    setDoc(doc(db, '_userRegistry', user.uid), { uid: user.uid, email: user.email || '' }, { merge: true }).catch(() => {});
   } else {
     currentUser = null;
     _isPremium = false;
@@ -3244,34 +3263,20 @@ function syncUserBooksToCache() {
 // Uses globalSynced flag on each book so each book is only ever checked once —
 // after the first pass, subsequent logins skip all books immediately.
 async function resyncPersonalBooksToGlobal() {
-  const unsynced = books.filter(b => b.title && b.author && !b.globalSynced && !isLikelyTestBook(b.title, b.author));
+  const unsynced = books.filter(b => b.title && b.author && !b.globalSynced && !isLikelyTestBook(b.title, b.author)
+    && b.location !== 'Wishlist' && b.location !== 'GlobalRead');
   if (!unsynced.length) return;
-
   for (const book of unsynced) {
     const globalId = createGlobalBookId(book.title, book.author);
     if (deletedGlobalIds.has(globalId)) continue;
     try {
-      // Check Firestore directly — more reliable than local 500-doc cache
-      const snap = await getDoc(doc(db, 'globalLibrary', globalId));
-      if (snap.exists()) {
-        // Already in global library — mark synced and backfill popularity if missing
-        await updateDoc(doc(db, 'users', currentUser.uid, 'books', book.id), { globalSynced: true });
-        book.globalSynced = true;
-        if (snap.data().popularity == null && book.location !== 'Wishlist') {
-          const score = 1 + (book.read ? 2 : 0);
-          await updateDoc(doc(db, 'globalLibrary', globalId), { popularity: score });
-          const cached = globalBookCache.find(g => g.id === globalId);
-          if (cached) { cached.popularity = score; cached._userPopularity = score; }
-        }
-      } else if (await validateWithGoogleBooks(book.title, book.author)) {
+      if (await validateWithGoogleBooks(book.title, book.author)) {
         await syncBookToGlobalLibrary(book);
         await updateDoc(doc(db, 'users', currentUser.uid, 'books', book.id), { globalSynced: true });
         book.globalSynced = true;
-        const idx = globalBookCache.findIndex(b => b.id === globalId);
-        if (idx >= 0) delete globalBookCache[idx]._localOnly;
       }
-    } catch(e) { /* continue on any error */ }
-    await new Promise(r => setTimeout(r, 1500)); // relaxed throttle — don't stress mobile
+    } catch(e) { /* continue */ }
+    await new Promise(r => setTimeout(r, 1500));
   }
   if (currentPage === 'global') applyGlobalFilters();
 }
@@ -3285,9 +3290,8 @@ function _maybeResyncToGlobal() {
   }
 }
 
-// Fetch each personal book's globalLibrary doc by ID so they appear in the
-// global library view regardless of alphabetical fetch position, and backfill
-// any missing popularity scores in Firestore.
+// Fetch each personal book's books doc by globalId so they appear in the
+// global library view regardless of alphabetical fetch position.
 async function ensurePersonalBooksInGlobalCache() {
   const toFetch = books.filter(b => {
     if (!b.title || !b.author || b.location === 'Wishlist' || b.location === 'GlobalRead') return false;
@@ -3297,32 +3301,25 @@ async function ensurePersonalBooksInGlobalCache() {
     return !cached || cached._localOnly;
   });
   if (!toFetch.length) return;
-
   let changed = false;
   for (const book of toFetch) {
     const globalId = createGlobalBookId(book.title, book.author);
     try {
-      const snap = await getDoc(doc(db, 'globalLibrary', globalId));
-      if (snap.exists()) {
-        const data = { id: globalId, ...snap.data() };
-        // Backfill popularity if the field has never been set
-        if (data.popularity == null) {
-          const score = 1 + (book.read ? 2 : 0);
-          await updateDoc(doc(db, 'globalLibrary', globalId), { popularity: score });
-          data.popularity = score;
-        }
+      const snap = await getDocs(query(collection(db, 'books'), where('globalId', '==', globalId), limit(1)));
+      if (!snap.empty) {
+        const d = snap.docs[0];
+        const data = d.data();
+        const entry = _fmtBook({ id: globalId, bookCode: d.id, title: data.title, author: data.author,
+          series: data.series||'', seriesNumber: data.seriesNumber||null,
+          genres: data.genreNames || [], normalizedTitle: data.normalizedTitle||'',
+          popularity: data.popularity||0, ratingTotal: data.ratingTotal||0, ratingCount: data.ratingCount||0 });
         const idx = globalBookCache.findIndex(g => g.id === globalId);
-        if (idx >= 0) globalBookCache[idx] = data;
-        else globalBookCache.push(data);
+        if (idx >= 0) globalBookCache[idx] = entry; else globalBookCache.push(entry);
         changed = true;
       }
-    } catch(e) { /* skip on error */ }
+    } catch(e) { /* skip */ }
   }
-
-  if (changed) {
-    syncUserBooksToCache();
-    if (currentPage === 'global') applyGlobalFilters();
-  }
+  if (changed) { syncUserBooksToCache(); if (currentPage === 'global') applyGlobalFilters(); }
 }
 
 // Cursor used for paginating Firestore global library fetches
@@ -3347,32 +3344,34 @@ function _loadGlobalCache() {
 async function _fetchGlobalFromFirestore() {
   try {
     const [popularSnap, alphaSnap, countSnap] = await Promise.all([
-      getDocs(query(collection(db, 'globalLibrary'),
-        where('popularity', '>', 0),
-        orderBy('popularity', 'desc'),
-        limit(300))),
-      getDocs(query(collection(db, 'globalLibrary'),
-        orderBy('normalizedTitle', 'asc'),
-        limit(GLOBAL_FETCH_PAGE))),
-      getCountFromServer(collection(db, 'globalLibrary'))
+      getDocs(query(collection(db, 'books'), where('popularity', '>', 0), orderBy('popularity', 'desc'), limit(300))),
+      getDocs(query(collection(db, 'books'), orderBy('normalizedTitle', 'asc'), limit(GLOBAL_FETCH_PAGE))),
+      getCountFromServer(collection(db, 'books'))
     ]);
-    const popularBooks = popularSnap.docs
-      .map(d => _fmtBook({ id: d.id, ...d.data() }))
-      .filter(b => !isLikelyTestBook(b.title, b.author));
-    const popularIds = new Set(popularBooks.map(b => b.id));
-    const alphaBooks = alphaSnap.docs
-      .map(d => _fmtBook({ id: d.id, ...d.data() }))
-      .filter(b => !isLikelyTestBook(b.title, b.author) && !popularIds.has(b.id));
+    const mapDoc = d => {
+      const data = d.data();
+      return _fmtBook({
+        id: data.globalId || d.id,
+        bookCode: d.id,
+        title: data.title || '', author: data.author || '',
+        series: data.series || '', seriesNumber: data.seriesNumber || null,
+        genres: data.genreNames || (data.genreEntries || []).map(g => g.name) || [],
+        normalizedTitle: data.normalizedTitle || '',
+        popularity: data.popularity || 0,
+        ratingTotal: data.ratingTotal || 0,
+        ratingCount: data.ratingCount || 0
+      });
+    };
+    const popularBooks = popularSnap.docs.map(mapDoc).filter(b => !isLikelyTestBook(b.title, b.author));
+    const popularIds   = new Set(popularBooks.map(b => b.id));
+    const alphaBooks   = alphaSnap.docs.map(mapDoc).filter(b => !isLikelyTestBook(b.title, b.author) && !popularIds.has(b.id));
     globalBookCache = [...popularBooks, ...alphaBooks];
-    _globalLibraryCursor = alphaSnap.docs.length === GLOBAL_FETCH_PAGE
-      ? alphaSnap.docs[alphaSnap.docs.length - 1] : null;
+    _globalLibraryCursor = alphaSnap.docs.length === GLOBAL_FETCH_PAGE ? alphaSnap.docs[alphaSnap.docs.length - 1] : null;
     _globalLibraryExhausted = alphaSnap.docs.length < GLOBAL_FETCH_PAGE;
     _globalLibraryTotalCount = countSnap.data().count;
     _saveGlobalCache(popularBooks, _globalLibraryTotalCount);
     if (currentPage === 'global') { syncUserBooksToCache(); applyGlobalFilters(); }
-  } catch(e) {
-    // globalLibrary inaccessible — autocomplete will use user's own books
-  }
+  } catch(e) { /* books collection inaccessible — autocomplete uses user's own books */ }
   _globalBooksPreloaded = true;
   _maybeResyncToGlobal();
 }
@@ -3395,11 +3394,25 @@ async function preloadGlobalBooks() {
 async function loadMoreGlobalBooks() {
   if (_globalLibraryExhausted || !_globalLibraryCursor) return;
   try {
-    const q = query(collection(db, 'globalLibrary'), orderBy('normalizedTitle', 'asc'),
+    const q = query(collection(db, 'books'), orderBy('normalizedTitle', 'asc'),
       startAfter(_globalLibraryCursor), limit(GLOBAL_FETCH_PAGE));
     const snap = await getDocs(q);
     const existingIds = new Set(globalBookCache.map(b => b.id));
-    const page = snap.docs.map(d => _fmtBook({ id: d.id, ...d.data() }))
+    const mapDoc = d => {
+      const data = d.data();
+      return _fmtBook({
+        id: data.globalId || d.id,
+        bookCode: d.id,
+        title: data.title || '', author: data.author || '',
+        series: data.series || '', seriesNumber: data.seriesNumber || null,
+        genres: data.genreNames || (data.genreEntries || []).map(g => g.name) || [],
+        normalizedTitle: data.normalizedTitle || '',
+        popularity: data.popularity || 0,
+        ratingTotal: data.ratingTotal || 0,
+        ratingCount: data.ratingCount || 0
+      });
+    };
+    const page = snap.docs.map(mapDoc)
       .filter(b => !isLikelyTestBook(b.title, b.author) && !existingIds.has(b.id));
     globalBookCache.push(...page);
     _globalLibraryCursor = snap.docs.length === GLOBAL_FETCH_PAGE ? snap.docs[snap.docs.length - 1] : null;
@@ -3616,6 +3629,186 @@ function createGlobalBookId(title = '', author = '') {
   return normalizeBookText(title) + '__' + normalizeBookText(author);
 }
 
+// ── NEW STRUCTURED GLOBAL LIBRARY ──────────────────────────────────────────
+
+// Normalize for cross-collection dedup
+function _glNorm(str, type) {
+  let s = (str || '').toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
+  if (type === 'book' || type === 'series') s = s.replace(/^(the |a )/, '');
+  if (type === 'genre') s = s.replace(/\b(the|a|and) /g, '').trim();
+  return s.replace(/\s+/g, '');
+}
+
+// Helper: _glRef(globalId) → Firestore doc ref for a book
+function _glRef(globalId) {
+  const entry = globalBookCache.find(x => x.id === globalId);
+  if (entry?.bookCode) return doc(db, 'books', entry.bookCode);
+  return doc(db, 'books', '_missing_' + (globalId || 'unknown'));
+}
+
+// Atomic code assignment via transaction
+async function _glNextCode(type) {
+  const counterRef = doc(db, '_counters', 'codes');
+  const fieldMap = { book: 'nextBook', author: 'nextAuthor', series: 'nextSeries', genre: 'nextGenre' };
+  const prefix   = { book: 'B', author: 'A', series: 'S', genre: 'G' };
+  return await runTransaction(db, async txn => {
+    const snap = await txn.get(counterRef);
+    const next = (snap.exists() ? (snap.data()[fieldMap[type]] || 1) : 1);
+    txn.set(counterRef, { [fieldMap[type]]: next + 1 }, { merge: true });
+    return prefix[type] + '-' + String(next).padStart(4, '0');
+  });
+}
+
+// Fuzzy match within a collection by normalized field (Levenshtein ≤ 2)
+async function _glFuzzyFind(colName, normField, normalized, limit2 = 20) {
+  if (!normalized) return [];
+  const prefix = normalized.slice(0, Math.min(3, normalized.length));
+  const snap = await getDocs(query(collection(db, colName),
+    where(normField, '>=', prefix), where(normField, '<=', prefix + ''), limit(limit2)));
+  return snap.docs
+    .filter(d => _editDist(d.data()[normField] || '', normalized) <= 2)
+    .map(d => ({ _docId: d.id, ...d.data() }));
+}
+
+// Find existing or create new author. Returns {authorCode, name}.
+async function _glFindOrCreateAuthor(name) {
+  if (!name) return { authorCode: null, name: '' };
+  const normalized = _glNorm(name, 'author');
+  const matches = await _glFuzzyFind('authors', 'normalized', normalized);
+  if (matches.length) {
+    const m = matches[0];
+    return { authorCode: m.authorCode || m._docId, name: m.name };
+  }
+  const authorCode = await _glNextCode('author');
+  await setDoc(doc(db, 'authors', authorCode), { authorCode, name, normalized, bookCodes: [] });
+  return { authorCode, name };
+}
+
+// Find existing or create new genre. Returns {genreCode, name}.
+async function _glFindOrCreateGenre(name) {
+  if (!name) return { genreCode: null, name: '' };
+  const normalized = _glNorm(name, 'genre');
+  const matches = await _glFuzzyFind('genres', 'normalized', normalized);
+  if (matches.length) {
+    const m = matches[0];
+    return { genreCode: m.genreCode || m._docId, name: m.name };
+  }
+  const genreCode = await _glNextCode('genre');
+  await setDoc(doc(db, 'genres', genreCode), { genreCode, name, normalized });
+  return { genreCode, name };
+}
+
+// Find existing or create new series. Returns {seriesCode, name}.
+async function _glFindOrCreateSeries(name, authorCode) {
+  if (!name) return { seriesCode: null, name: '' };
+  const normalized = _glNorm(name, 'series');
+  const matches = await _glFuzzyFind('series', 'normalized', normalized);
+  if (matches.length) {
+    const m = matches[0];
+    return { seriesCode: m.seriesCode || m._docId, name: m.name };
+  }
+  const seriesCode = await _glNextCode('series');
+  await setDoc(doc(db, 'series', seriesCode), { seriesCode, name, normalized, authorCode: authorCode || null, bookCodes: [] });
+  return { seriesCode, name };
+}
+
+// Main entry: find or create a book. Returns {bookCode, globalId} or null.
+// popularity: 1=owned, 2=owned+read
+async function _glFindOrCreateBook({ title, author, genres, series, seriesNumber, popularity = 1 }) {
+  if (!title || !author) return null;
+  const normTitle  = _glNorm(title, 'book');
+  const normAuthor = _glNorm(author, 'author');
+  const globalId   = normalizeBookText(title) + '__' + normalizeBookText(author);
+
+  // Fuzzy match on normalized title, then filter by normalized author
+  const titleMatches = await _glFuzzyFind('books', 'normalizedTitle', normTitle);
+  const match = titleMatches.find(m => _editDist(m.normalizedAuthor || '', normAuthor) <= 2);
+
+  if (match) {
+    // Existing book — update popularity and genre scores
+    const bookCode = match.bookCode || match._docId;
+    const updates = { popularity: increment(popularity) };
+    if (genres && genres.length) {
+      const existingEntries = match.genreEntries || [];
+      const scoreMap = {};
+      existingEntries.forEach(e => { scoreMap[e.code] = { ...e }; });
+      const newNames = [];
+      for (let i = 0; i < Math.min(genres.length, 3); i++) {
+        const gScore = i === 0 ? 3 : 1;
+        try {
+          const { genreCode, name: gName } = await _glFindOrCreateGenre(genres[i]);
+          if (genreCode) {
+            if (scoreMap[genreCode]) scoreMap[genreCode].score += gScore;
+            else scoreMap[genreCode] = { code: genreCode, name: gName, score: gScore };
+            if (!newNames.includes(gName)) newNames.push(gName);
+          }
+        } catch(e) { /* skip on error */ }
+      }
+      const updatedEntries = Object.values(scoreMap).sort((a,b) => b.score - a.score);
+      updates.genreEntries = updatedEntries;
+      updates.genreNames = updatedEntries.map(e => e.name);
+    }
+    await updateDoc(doc(db, 'books', bookCode), updates);
+    // Update cache entry
+    const cached = globalBookCache.find(x => x.id === globalId || x.bookCode === bookCode);
+    if (cached) cached.popularity = (cached.popularity || 0) + popularity;
+    return { bookCode, globalId: match.globalId || globalId };
+  }
+
+  // New book — create all linked records
+  const [{ authorCode, name: canonAuthor }, ...genreResults] = await Promise.all([
+    _glFindOrCreateAuthor(author),
+    ...((genres || []).slice(0, 3).map((g, i) => _glFindOrCreateGenre(g)))
+  ]);
+  const genreEntries = genreResults
+    .filter(r => r.genreCode)
+    .map((r, i) => ({ code: r.genreCode, name: r.name, score: i === 0 ? 3 : 1 }));
+  const genreNames = genreEntries.map(e => e.name);
+
+  const { seriesCode, name: canonSeries } = series
+    ? await _glFindOrCreateSeries(series, authorCode)
+    : { seriesCode: null, name: '' };
+
+  const bookCode = await _glNextCode('book');
+  const bookDoc = {
+    bookCode, globalId,
+    title: _fmtTitle ? _fmtTitle(title) : title,
+    normalizedTitle: normTitle,
+    author: _fmtAuthor ? _fmtAuthor(canonAuthor || author) : (canonAuthor || author),
+    normalizedAuthor: normAuthor,
+    authorCode: authorCode || null,
+    authorCodes: authorCode ? [authorCode] : [],
+    series: seriesCode ? (canonSeries || series || '') : '',
+    seriesCode: seriesCode || null,
+    seriesNumber: seriesNumber || null,
+    genreEntries,
+    genreNames,
+    popularity,
+    ratingTotal: 0, ratingCount: 0, avgRating: 0,
+    addedAt: serverTimestamp()
+  };
+  await setDoc(doc(db, 'books', bookCode), bookDoc);
+
+  // Back-link author and series
+  if (authorCode) {
+    updateDoc(doc(db, 'authors', authorCode), { bookCodes: arrayUnion(bookCode) }).catch(() => {});
+  }
+  if (seriesCode) {
+    updateDoc(doc(db, 'series', seriesCode), { bookCodes: arrayUnion(bookCode) }).catch(() => {});
+  }
+
+  // Add to local cache immediately
+  globalBookCache.push({
+    id: globalId, bookCode,
+    title: bookDoc.title, author: bookDoc.author,
+    series: bookDoc.series, seriesNumber: bookDoc.seriesNumber,
+    genres: genreNames, normalizedTitle: normTitle,
+    popularity, ratingTotal: 0, ratingCount: 0
+  });
+
+  return { bookCode, globalId };
+}
+
 function cleanGenreList(genres = []) {
   return [...new Set((genres || []).filter(Boolean))].slice(0, 3);
 }
@@ -3653,56 +3846,14 @@ async function validateWithGoogleBooks(title, author) {
 }
 
 async function syncBookToGlobalLibrary(bookData) {
+  const title  = (bookData.title  || '').trim();
+  const author = (bookData.author || '').trim();
+  if (!title || !author) return;
+  const genres = cleanGenreList ? cleanGenreList(bookData.genres || []) : (bookData.genres || []);
+  const popularity = 1 + (bookData.read ? 2 : 0);
   try {
-    const title = (bookData.title || '').trim();
-    const author = (bookData.author || '').trim();
-
-    if (!title || !author) return;
-
-    const genres = cleanGenreList(bookData.genres || []);
-    const globalId = createGlobalBookId(title, author);
-
-    const globalRef = doc(db, 'globalLibrary', globalId);
-    const existingSnap = await getDoc(globalRef);
-
-    let genreScores = {};
-    let existingGenres = [];
-
-    if (existingSnap.exists()) {
-      const existingData = existingSnap.data();
-      genreScores = existingData.genreScores || {};
-      existingGenres = existingData.genres || [];
-    }
-
-    genres.forEach((genre, index) => {
-      const weight = index === 0 ? 3 : 1;
-      genreScores[genre] = (genreScores[genre] || 0) + weight;
-    });
-
-    const rankedGenres = Object.entries(genreScores)
-      .sort((a, b) => b[1] - a[1])
-      .map(entry => entry[0]);
-
-    const mergedGenres = [...new Set([...existingGenres, ...genres, ...rankedGenres])];
-
-    await setDoc(globalRef, {
-      title,
-      normalizedTitle: normalizeBookText(title),
-      author,
-      normalizedAuthor: normalizeBookText(author),
-      series: (bookData.series || '').trim(),
-      genres: mergedGenres.slice(0, 20),
-      primaryGenre: rankedGenres[0] || genres[0] || '',
-      secondaryGenres: rankedGenres.slice(1, 3),
-      genreScores,
-      // +1 owned point only on first sync (new book entering global library)
-      ...(existingSnap.exists() ? {} : { popularity: increment(1) }),
-      updatedAt: serverTimestamp()
-    }, { merge: true });
-
-  } catch (e) {
-    console.error('Global library sync failed:', e);
-  }
+    await _glFindOrCreateBook({ title, author, genres, series: bookData.series, seriesNumber: bookData.seriesNumber, popularity });
+  } catch(e) { console.error('Global library sync failed:', e); }
 }
 
 
@@ -4878,7 +5029,8 @@ function renderGlobalBooks(list, append, totalCount) {
 window.deleteGlobalBook = async (bookId) => {
   if (!currentUser || currentUser.email !== 'samuelmendlowitz@gmail.com') return;
   try {
-    await deleteDoc(doc(db, 'globalLibrary', bookId));
+    const entry = globalBookCache.find(x => x.id === bookId);
+    if (entry?.bookCode) await deleteDoc(doc(db, 'books', entry.bookCode));
     deletedGlobalIds.add(bookId);
     globalBookCache = globalBookCache.filter(b => b.id !== bookId);
     syncUserBooksToCache();
@@ -4901,7 +5053,7 @@ window.toggleGlobalRead = async (globalId) => {
     const readDelta = personal.read ? 2 : -2;
     try {
       await updateBook(personal.id, { read: personal.read });
-      await updateDoc(doc(db, 'globalLibrary', globalId), { popularity: increment(readDelta) });
+      await updateDoc(_glRef(globalId), { popularity: increment(readDelta) });
       const cached = globalBookCache.find(b => b.id === globalId);
       if (cached) cached.popularity = (cached.popularity || 0) + readDelta;
     } catch(e) { personal.read = !personal.read; applyGlobalFilters(); }
@@ -4913,7 +5065,7 @@ window.toggleGlobalRead = async (globalId) => {
       title: gb.title||'', author: gb.author||'', series: gb.series||'', seriesNumber: gb.seriesNumber||null,
       genres: gb.genres||[], location: 'GlobalRead', read: true, checkoutDate: '', borrowedBy: ''
     }, { skipGlobalSync: true });
-    await updateDoc(doc(db, 'globalLibrary', globalId), { popularity: increment(3) });
+    await updateDoc(_glRef(globalId), { popularity: increment(3) });
     if (gb) gb.popularity = (gb.popularity || 0) + 3;
     await loadBooks();
     applyGlobalFilters();
@@ -5031,14 +5183,12 @@ function updateStarDisplay(val) {
 async function updateGlobalRating(title, author, oldRating, newRating) {
   try {
     const globalId = createGlobalBookId(title, author);
-    const globalRef = doc(db, 'globalLibrary', globalId);
     const ratingDelta = (newRating || 0) - (oldRating || 0);
-    const countDelta = (newRating ? 1 : 0) - (oldRating ? 1 : 0);
+    const countDelta  = (newRating ? 1 : 0) - (oldRating ? 1 : 0);
     if (ratingDelta === 0 && countDelta === 0) return;
-    await setDoc(globalRef, {
-      ratingTotal: increment(ratingDelta),
-      ratingCount: increment(countDelta)
-    }, { merge: true });
+    const ref = _glRef(globalId);
+    const newTotal = increment(ratingDelta), newCount = increment(countDelta);
+    await updateDoc(ref, { ratingTotal: newTotal, ratingCount: newCount });
     const cached = globalBookCache.find(b => b.id === globalId);
     if (cached) {
       cached.ratingTotal = (cached.ratingTotal || 0) + ratingDelta;
@@ -5301,7 +5451,7 @@ window.startLibraryCleanup = async (resume) => {
   if (!state.total) {
     document.getElementById('spellScanStatus').textContent = 'Counting books…';
     try {
-      const cnt = await getCountFromServer(collection(db, 'globalLibrary'));
+      const cnt = await getCountFromServer(collection(db, 'books'));
       state.total = cnt.data().count;
     } catch(e) { /* proceed without total */ }
   }
@@ -5312,7 +5462,7 @@ window.startLibraryCleanup = async (resume) => {
   let lastDoc = null;
   if (state.cursorId) {
     try {
-      const d = await getDoc(doc(db, 'globalLibrary', state.cursorId));
+      const d = await getDoc(doc(db, 'books', state.cursorId));
       if (d.exists()) lastDoc = d;
     } catch(e) { /* fall through to title cursor */ }
   }
@@ -5320,10 +5470,10 @@ window.startLibraryCleanup = async (resume) => {
   while (!_cleanupStop) {
     // Build paginated query (1000 docs at a time, alphabetical by title)
     const q = lastDoc
-      ? query(collection(db, 'globalLibrary'), orderBy('title'), startAfter(lastDoc),      limit(_CLEANUP_CHUNK))
+      ? query(collection(db, 'books'), orderBy('title'), startAfter(lastDoc),      limit(_CLEANUP_CHUNK))
       : state.cursorTitle
-        ? query(collection(db, 'globalLibrary'), orderBy('title'), startAfter(state.cursorTitle), limit(_CLEANUP_CHUNK))
-        : query(collection(db, 'globalLibrary'), orderBy('title'), limit(_CLEANUP_CHUNK));
+        ? query(collection(db, 'books'), orderBy('title'), startAfter(state.cursorTitle), limit(_CLEANUP_CHUNK))
+        : query(collection(db, 'books'), orderBy('title'), limit(_CLEANUP_CHUNK));
 
     const ofTotal = state.total > 0 ? ` of ${state.total.toLocaleString()}` : '';
     document.getElementById('spellScanStatus').textContent =
@@ -6174,7 +6324,7 @@ window.markGlobalRead = async (globalId) => {
     if (!personal.read) {
       personal.read = true;
       await updateBook(personal.id, { read: true });
-      await updateDoc(doc(db, 'globalLibrary', globalId), { popularity: increment(2) });
+      await updateDoc(_glRef(globalId), { popularity: increment(2) });
       if (gb) gb.popularity = (gb.popularity || 0) + 2;
       await loadBooks(); applyGlobalFilters();
       _openRateReviewPrompt(personal.id, globalId);
@@ -6184,7 +6334,7 @@ window.markGlobalRead = async (globalId) => {
       title: gb.title||'', author: gb.author||'', series: gb.series||'', seriesNumber: gb.seriesNumber||null,
       genres: gb.genres||[], location: 'GlobalRead', read: true, checkoutDate: '', borrowedBy: ''
     }, { skipGlobalSync: true });
-    await updateDoc(doc(db, 'globalLibrary', globalId), { popularity: increment(3) });
+    await updateDoc(_glRef(globalId), { popularity: increment(3) });
     if (gb) gb.popularity = (gb.popularity || 0) + 3;
     await loadBooks(); applyGlobalFilters();
     const newPersonal = books.find(x => createGlobalBookId(x.title||'', x.author||'') === globalId);
@@ -6214,9 +6364,12 @@ async function _openRateReviewPrompt(personalBookId, gbId) {
     ta.value = '';
     if (gbId && currentUser) {
       try {
-        const gbSnap = await getDoc(doc(db, 'globalLibrary', gbId));
-        const myReview = gbSnap.exists() ? (gbSnap.data()?.reviews?.[currentUser.uid]) : null;
-        if (myReview) ta.value = myReview.text || '';
+        const gbEntry = globalBookCache.find(x => x.id === gbId);
+        const gbCode = gbEntry?.bookCode;
+        if (gbCode) {
+          const myReviewSnap = await getDoc(doc(db, 'books', gbCode, 'reviews', currentUser.uid));
+          if (myReviewSnap.exists()) ta.value = myReviewSnap.data().text || '';
+        }
       } catch(e) { /* prefill optional */ }
     }
   }
@@ -6250,17 +6403,9 @@ window.submitRateReview = async () => {
         userId: uid, username: displayName, rating: _rrStars, text,
         timestamp: serverTimestamp(), avatarColor: userIconColor || ''
       };
-      const gbRef = doc(db, 'globalLibrary', _rrGbId);
-      try {
-        await updateDoc(gbRef, { [`reviews.${uid}`]: reviewData });
-      } catch(e2) {
-        if (e2?.code !== 'not-found') throw e2;
-        await setDoc(gbRef, {
-          title: b?.title || '', author: b?.author || '',
-          normalizedTitle: normalizeBookText(b?.title || ''),
-          normalizedAuthor: normalizeBookText(b?.author || ''),
-          reviews: { [uid]: reviewData }
-        });
+      const gbCode = globalBookCache.find(x => x.id === _rrGbId)?.bookCode;
+      if (gbCode) {
+        await setDoc(doc(db, 'books', gbCode, 'reviews', uid), reviewData);
       }
       _reviewCache.delete(_rrGbId);
     }
@@ -6573,13 +6718,13 @@ async function _migrateFictionRemoval() {
   );
   toFix.forEach(b => { b.genres = (b.genres||[]).filter(g => g !== 'Fiction'); });
 
-  // Global library (any user can update globalLibrary docs via existing rules)
+  // Global library — update books collection (genreNames field)
   try {
-    const snap = await getDocs(query(collection(db, 'globalLibrary'),
-      where('genres', 'array-contains', 'Fiction')));
+    const snap = await getDocs(query(collection(db, 'books'),
+      where('genreNames', 'array-contains', 'Fiction')));
     await Promise.allSettled(
-      snap.docs.map(d => updateDoc(doc(db, 'globalLibrary', d.id),
-        { genres: arrayRemove('Fiction') }))
+      snap.docs.map(d => updateDoc(doc(db, 'books', d.id),
+        { genreNames: arrayRemove('Fiction') }))
     );
     globalBookCache.forEach(b => {
       if ((b.genres||[]).includes('Fiction'))
@@ -6787,8 +6932,8 @@ async function _runDedup(manual = false) {
   const deleteIds = [...deleteSet];
   if (isAdmin) {
     await Promise.allSettled([
-      ...Object.entries(docUpdates).map(([id, fields]) => updateDoc(doc(db, 'globalLibrary', id), fields)),
-      ...deleteIds.map(id => deleteDoc(doc(db, 'globalLibrary', id))),
+      ...Object.entries(docUpdates).map(([id, fields]) => updateDoc(doc(db, 'books', id), fields)),
+      ...deleteIds.map(id => deleteDoc(doc(db, 'books', id))),
     ]);
   }
 
@@ -7421,7 +7566,7 @@ async function _loadRecSlideData(b) {
 
   try {
     if (!_reviewCache.has(b.id)) {
-      const snap = await getDocs(collection(db, 'globalLibrary', b.id, 'reviews'));
+      const snap = await getDocs(collection(db, 'books', b.bookCode || b.id, 'reviews'));
       _reviewCache.set(b.id, snap.docs.map(d => ({ uid: d.id, ...d.data() })));
     }
     const allRevs = _reviewCache.get(b.id)
@@ -8097,18 +8242,15 @@ function _buildReviewsSection(canWrite, myRating) {
 
 async function _loadAndRenderReviews(globalId) {
   _reviewBookGlobalId = globalId;
+  const entry = globalBookCache.find(x => x.id === globalId);
+  _reviewBookCode = entry?.bookCode || null;
   try {
-    if (!_reviewCache.has(globalId)) {
-      const gbSnap = await getDoc(doc(db, 'globalLibrary', globalId));
-      const reviewsMap = gbSnap.exists() ? (gbSnap.data()?.reviews || {}) : {};
-      _reviewCache.set(globalId, Object.entries(reviewsMap).map(([uid, data]) => ({
-        id: uid, userId: uid, ...data, likedBy: data.likedBy || []
-      })));
+    if (!_reviewCache.has(globalId) && _reviewBookCode) {
+      const reviewsSnap = await getDocs(collection(db, 'books', _reviewBookCode, 'reviews'));
+      _reviewCache.set(globalId, reviewsSnap.docs.map(d => ({ id: d.id, ...d.data(), likedBy: d.data().likedBy || [] })));
     }
-    _reviewsData = _reviewCache.get(globalId);
-  } catch(e) {
-    _reviewsData = [];
-  }
+    _reviewsData = _reviewCache.get(globalId) || [];
+  } catch(e) { _reviewsData = []; }
   _renderReviewList();
   if (currentUser) {
     const myReview = _reviewsData.find(r => r.userId === currentUser.uid);
@@ -8176,9 +8318,11 @@ window.toggleReviewLike = async (reviewId, e) => {
   review.likedBy = alreadyLiked ? likedBy.filter(x => x !== uid) : [...likedBy, uid];
   _renderReviewList();
   try {
-    await updateDoc(doc(db, 'globalLibrary', _reviewBookGlobalId), {
-      [`reviews.${reviewId}.likedBy`]: alreadyLiked ? arrayRemove(uid) : arrayUnion(uid)
-    });
+    if (_reviewBookCode) {
+      await updateDoc(doc(db, 'books', _reviewBookCode, 'reviews', reviewId), {
+        likedBy: alreadyLiked ? arrayRemove(uid) : arrayUnion(uid)
+      });
+    }
     if (_reviewCache.has(_reviewBookGlobalId)) {
       const cached = _reviewCache.get(_reviewBookGlobalId);
       const cr = cached.find(r => (r.id || r.userId) === reviewId);
@@ -8256,18 +8400,8 @@ window.submitReview = async () => {
       userId: uid, username: displayName, rating, text,
       timestamp: serverTimestamp(), avatarColor: userIconColor || ''
     };
-    const gbRef = doc(db, 'globalLibrary', _reviewBookGlobalId);
-    try {
-      await updateDoc(gbRef, { [`reviews.${uid}`]: reviewData });
-    } catch(e2) {
-      if (e2?.code !== 'not-found') throw e2;
-      // Parent doc doesn't exist yet — create it with this review
-      await setDoc(gbRef, {
-        title: personal?.title || '', author: personal?.author || '',
-        normalizedTitle: normalizeBookText(personal?.title || ''),
-        normalizedAuthor: normalizeBookText(personal?.author || ''),
-        reviews: { [uid]: reviewData }
-      });
+    if (_reviewBookCode) {
+      await setDoc(doc(db, 'books', _reviewBookCode, 'reviews', uid), reviewData);
     }
     _reviewCache.delete(_reviewBookGlobalId);
     const idx = _reviewsData.findIndex(r => r.userId === uid);
@@ -8514,15 +8648,16 @@ function _renderBulkUndoBanner() {
 async function _cleanGlobalAfterUndo(globalIds) {
   for (const gid of globalIds) {
     try {
-      const gref = doc(db, 'globalLibrary', gid);
-      const snap = await getDoc(gref);
+      const ref = _glRef(gid);
+      const snap = await getDoc(ref);
       if (!snap.exists()) continue;
       const pop = snap.data().popularity || 0;
       if (pop <= 1) {
-        await deleteDoc(gref);
+        await deleteDoc(ref);
         globalBookCache = globalBookCache.filter(b => b.id !== gid);
+        deletedGlobalIds.add(gid);
       } else {
-        await updateDoc(gref, { popularity: increment(-1) });
+        await updateDoc(ref, { popularity: increment(-1) });
         const cached = globalBookCache.find(b => b.id === gid);
         if (cached) cached.popularity = Math.max(0, (cached.popularity || 1) - 1);
       }
@@ -9132,7 +9267,10 @@ function _renderAdminStripeSection() {
   const el = document.getElementById('adminStripeSection');
   if (!el || !currentUser) return;
   const adminEmails = ['samuelmendlowitz@gmail.com', 'miriamslibrarian@gmail.com'];
-  el.style.display = adminEmails.includes(currentUser.email?.toLowerCase()) ? 'block' : 'none';
+  const isAdmin = adminEmails.includes(currentUser.email?.toLowerCase());
+  el.style.display = isAdmin ? 'block' : 'none';
+  const reseedEl = document.getElementById('adminReseedSection');
+  if (reseedEl) reseedEl.style.display = isAdmin ? 'block' : 'none';
 }
 
 window.adminSaveStripeId = async () => {
@@ -11923,6 +12061,57 @@ window._activatePendingCheckout = async () => {
     history.replaceState({}, '', window.location.pathname);
   }
 })();
+
+// ── ADMIN RESEED ──────────────────────────────────────────────────────────────
+// NOTE: This reads from users/{uid}/books subcollections which requires admin
+// Firestore rules that allow the app owner to read other users' book data.
+window.reseedGlobalLibrary = async () => {
+  if (!currentUser || currentUser.email !== 'samuelmendlowitz@gmail.com') return;
+  const progressEl = document.getElementById('reseedProgress');
+  const btn = document.getElementById('reseedBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Seeding…'; }
+  let userCount = 0, bookCount = 0, errorCount = 0;
+  try {
+    if (progressEl) progressEl.textContent = 'Loading user registry…';
+    const registrySnap = await getDocs(collection(db, '_userRegistry'));
+    const userUids = registrySnap.docs.map(d => d.id);
+    if (progressEl) progressEl.textContent = `Found ${userUids.length} users. Processing…`;
+    for (const uid of userUids) {
+      try {
+        const booksSnap = await getDocs(collection(db, 'users', uid, 'books'));
+        userCount++;
+        for (const bookDoc of booksSnap.docs) {
+          const b = bookDoc.data();
+          if (!b.title || !b.author) continue;
+          if (b.location === 'Wishlist') continue;
+          if (isLikelyTestBook && isLikelyTestBook(b.title, b.author)) continue;
+          try {
+            const pop = 1 + (b.read ? 2 : 0);
+            await _glFindOrCreateBook({
+              title: b.title, author: b.author || '',
+              genres: cleanGenreList ? cleanGenreList(b.genres || []) : (b.genres || []),
+              series: b.series || '', seriesNumber: b.seriesNumber || null,
+              popularity: pop
+            });
+            bookCount++;
+            if (progressEl && bookCount % 10 === 0) progressEl.textContent = `Users: ${userCount}/${userUids.length} | Books processed: ${bookCount}`;
+          } catch(e) { errorCount++; }
+          await new Promise(r => setTimeout(r, 200)); // throttle
+        }
+      } catch(e) { errorCount++; }
+    }
+    // Reload global cache
+    localStorage.removeItem(_GLC_KEY);
+    await _fetchGlobalFromFirestore();
+    if (progressEl) progressEl.textContent = `✓ Done — ${bookCount} books seeded from ${userCount} users. ${errorCount ? errorCount + ' errors.' : ''}`;
+    showStatus(`Reseed complete: ${bookCount} books from ${userCount} users`, 'success');
+    setTimeout(hideStatus, 5000);
+  } catch(e) {
+    if (progressEl) progressEl.textContent = 'Error: ' + e.message;
+    showStatus('Reseed failed: ' + e.message, 'error');
+  }
+  if (btn) { btn.disabled = false; btn.textContent = 'Reseed Global Library'; }
+};
 
 // If the user presses Back from Stripe without completing payment, the browser
 // restores this page from bfcache with the button still disabled. Reset it.
