@@ -2648,7 +2648,7 @@ Output only the CSV — no explanation needed.</div>
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as fbSignOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-import { getFirestore, initializeFirestore, persistentLocalCache, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, getDocsFromCache, getDocsFromServer, query, where, limit, orderBy, startAfter, onSnapshot, serverTimestamp, increment, arrayUnion, arrayRemove, getCountFromServer, waitForPendingWrites, enableNetwork, runTransaction } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+import { getFirestore, initializeFirestore, persistentLocalCache, collection, collectionGroup, doc, addDoc, setDoc, updateDoc, deleteDoc, getDoc, getDocs, getDocsFromCache, getDocsFromServer, query, where, limit, orderBy, startAfter, onSnapshot, serverTimestamp, increment, arrayUnion, arrayRemove, getCountFromServer, waitForPendingWrites, enableNetwork, runTransaction } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 
 // ── CONFIG ───────────────────────────────────────────────────────────────────
 const firebaseConfig = {
@@ -12073,39 +12073,47 @@ window._activatePendingCheckout = async () => {
 // NOTE: This reads from users/{uid}/books subcollections which requires admin
 // Firestore rules that allow the app owner to read other users' book data.
 window.reseedGlobalLibrary = async () => {
-  if (!currentUser || currentUser.email !== 'samuelmendlowitz@gmail.com') return;
+  const adminEmails = ['samuelmendlowitz@gmail.com', 'miriamslibrarian@gmail.com'];
+  if (!currentUser || !adminEmails.includes(currentUser.email?.toLowerCase())) return;
   const progressEl = document.getElementById('reseedProgress');
   const btn = document.getElementById('reseedBtn');
   if (btn) { btn.disabled = true; btn.textContent = 'Seeding…'; }
   let userCount = 0, bookCount = 0, errorCount = 0;
   try {
-    if (progressEl) progressEl.textContent = 'Loading user registry…';
-    const registrySnap = await getDocs(collection(db, '_userRegistry'));
-    const userUids = registrySnap.docs.map(d => d.id);
-    if (progressEl) progressEl.textContent = `Found ${userUids.length} users. Processing…`;
-    for (const uid of userUids) {
-      try {
-        const booksSnap = await getDocs(collection(db, 'users', uid, 'books'));
-        userCount++;
-        for (const bookDoc of booksSnap.docs) {
-          const b = bookDoc.data();
-          if (!b.title || !b.author) continue;
-          if (b.location === 'Wishlist') continue;
-          if (isLikelyTestBook && isLikelyTestBook(b.title, b.author)) continue;
-          try {
-            const pop = 1 + (b.read ? 2 : 0);
-            await _glFindOrCreateBook({
-              title: b.title, author: b.author || '',
-              genres: cleanGenreList ? cleanGenreList(b.genres || []) : (b.genres || []),
-              series: b.series || '', seriesNumber: b.seriesNumber || null,
-              popularity: pop
-            });
-            bookCount++;
-            if (progressEl && bookCount % 10 === 0) progressEl.textContent = `Users: ${userCount}/${userUids.length} | Books processed: ${bookCount}`;
-          } catch(e) { errorCount++; }
-          await new Promise(r => setTimeout(r, 200)); // throttle
-        }
-      } catch(e) { errorCount++; }
+    if (progressEl) progressEl.textContent = 'Loading all user books via collection group…';
+    // collectionGroup hits every users/{uid}/books subcollection across all users.
+    // Filter to paths under users/ so we don't touch the global /books collection.
+    const allBooksSnap = await getDocs(collectionGroup(db, 'books'));
+    const userBooks = allBooksSnap.docs.filter(d => d.ref.path.startsWith('users/'));
+    // Group by uid for progress tracking
+    const byUid = {};
+    for (const d of userBooks) {
+      const uid = d.ref.path.split('/')[1];
+      if (!byUid[uid]) byUid[uid] = [];
+      byUid[uid].push(d);
+    }
+    const uids = Object.keys(byUid);
+    if (progressEl) progressEl.textContent = `Found ${uids.length} users, ${userBooks.length} total books. Processing…`;
+    for (const uid of uids) {
+      userCount++;
+      for (const bookDoc of byUid[uid]) {
+        const b = bookDoc.data();
+        if (!b.title || !b.author) continue;
+        if (b.location === 'Wishlist') continue;
+        if (isLikelyTestBook && isLikelyTestBook(b.title, b.author)) continue;
+        try {
+          const pop = 1 + (b.read ? 2 : 0);
+          await _glFindOrCreateBook({
+            title: b.title, author: b.author || '',
+            genres: cleanGenreList ? cleanGenreList(b.genres || []) : (b.genres || []),
+            series: b.series || '', seriesNumber: b.seriesNumber || null,
+            popularity: pop
+          });
+          bookCount++;
+          if (progressEl && bookCount % 10 === 0) progressEl.textContent = `Users: ${userCount}/${uids.length} | Books processed: ${bookCount}`;
+        } catch(e) { errorCount++; }
+        await new Promise(r => setTimeout(r, 200));
+      }
     }
     // Reload global cache
     localStorage.removeItem(_GLC_KEY);
