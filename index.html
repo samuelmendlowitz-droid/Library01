@@ -3674,7 +3674,7 @@ async function _glFuzzyFind(colName, normField, normalized, limit2 = 20) {
   if (!normalized) return [];
   const prefix = normalized.slice(0, Math.min(3, normalized.length));
   const snap = await getDocs(query(collection(db, colName),
-    where(normField, '>=', prefix), where(normField, '<=', prefix + ''), limit(limit2)));
+    where(normField, '>=', prefix), where(normField, '<=', prefix + ''), limit(limit2)));
   return snap.docs
     .filter(d => _editDist(d.data()[normField] || '', normalized) <= 2)
     .map(d => ({ _docId: d.id, ...d.data() }));
