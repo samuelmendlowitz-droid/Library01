@@ -3829,8 +3829,17 @@ function isLikelyTestBook(title, author) {
   const a = (author || '').trim().toLowerCase();
   if (!t || !a) return true;
   if (normalizeBookText(t).length < 3) return true;
-  const fakeWords = ['test','asdf','qwerty','qwer','zxcv','aaa','bbb','ccc','xxx','foo','bar','baz','hello','sample','dummy','placeholder','fake','temp','blah','lol'];
-  return fakeWords.some(w => t === w || t.startsWith(w + ' ') || t.endsWith(' ' + w) || a === w);
+  const fakeWords = new Set([
+    'test','testing','tested','tests',
+    'asdf','qwerty','qwer','zxcv',
+    'aaa','bbb','ccc','ddd','xxx','yyy','zzz',
+    'foo','bar','baz','foobar',
+    'hello','sample','dummy','placeholder',
+    'fake','temp','blah','lol','lmao','wtf',
+    'untitled','noname','none','null','undefined'
+  ]);
+  const titleWords = t.split(/\s+/);
+  return titleWords.some(w => fakeWords.has(w)) || a.split(/\s+/).some(w => fakeWords.has(w));
 }
 
 // Queries Google Books API to confirm a real book with this title/author exists.
