@@ -1626,6 +1626,13 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
     <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
   </div>
   <div id="offlineBanner">📶 You're in offline mode. Options may be limited.</div>
+  <div id="gbDebugBox" style="display:none;position:fixed;bottom:10px;left:10px;right:10px;max-height:180px;overflow:auto;background:rgba(20,20,20,0.92);color:#7fffa0;font:11px/1.4 monospace;padding:10px;border-radius:10px;z-index:99999;box-shadow:0 4px 16px rgba(0,0,0,0.4);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+      <strong style="color:#fff;">Autofill debug log</strong>
+      <span style="cursor:pointer;color:#fff;font-weight:bold;" onclick="document.getElementById('gbDebugBox').style.display='none'">✕</span>
+    </div>
+    <div id="gbDebugBoxBody"></div>
+  </div>
   <div class="book-list" id="bookList"></div>
   <div class="shelf-view-root" id="shelfView" style="display:none;"></div>
   <div id="globalLoadSentinel" style="display:none;padding:20px;text-align:center;color:var(--text2);font-size:13px;"></div>
@@ -3440,6 +3447,23 @@ const _gbResultCache = new Map();
 // Last full result objects per context (used by selection handlers for genres etc.)
 const _gbLastResults = {};
 
+// On-screen debug log visible only to admins — lets them see autofill
+// fetch failures live on a phone without needing browser dev tools.
+function _gbDebugLog(msg) {
+  const adminEmails = ['samuelmendlowitz@gmail.com', 'miriamslibrarian@gmail.com'];
+  if (!currentUser || !adminEmails.includes((currentUser.email || '').toLowerCase())) return;
+  console.warn('[autofill]', msg);
+  const box = document.getElementById('gbDebugBox');
+  const body = document.getElementById('gbDebugBoxBody');
+  if (!box || !body) return;
+  const line = document.createElement('div');
+  line.textContent = new Date().toLocaleTimeString() + ' — ' + msg;
+  body.appendChild(line);
+  while (body.children.length > 12) body.removeChild(body.firstChild);
+  box.style.display = 'block';
+  box.scrollTop = box.scrollHeight;
+}
+
 // Returns: array of matches (possibly empty — genuine "no results"),
 // or null to signal the request failed/was skipped (caller should use the
 // offline/local fallback rather than treating it as a confirmed empty result).
@@ -3456,9 +3480,14 @@ async function _gbFetch(type, query2) {
         { signal: controller.signal }
       );
       clearTimeout(tid);
-      if (!resp.ok) { console.warn('[autofill] Google Books request failed', resp.status, q); return null; }
+      if (!resp.ok) {
+        let body = '';
+        try { body = (await resp.text()).slice(0, 200); } catch(e2) {}
+        _gbDebugLog(`HTTP ${resp.status} for "${q}" — ${body}`);
+        return null;
+      }
       const data = await resp.json();
-      return (data.items || []).map(item => {
+      const mapped = (data.items || []).map(item => {
         const v = item.volumeInfo || {};
         const series = (v.seriesInfo?.bookSeries || [])[0]?.title || '';
         return {
@@ -3468,9 +3497,11 @@ async function _gbFetch(type, query2) {
           categories: v.categories || []
         };
       }).filter(r => r.title);
+      _gbDebugLog(`OK "${q}" → ${mapped.length} result(s)`);
+      return mapped;
     } catch(e) {
       clearTimeout(tid);
-      console.warn('[autofill] Google Books request errored', e?.message || e, q);
+      _gbDebugLog(`ERROR for "${q}" — ${e?.message || e}`);
       return null;
     }
   };
@@ -3480,6 +3511,7 @@ async function _gbFetch(type, query2) {
   // search before giving up and falling back to the local cache.
   let results = await doFetch(type + ':' + query2);
   if (results !== null && results.length === 0) {
+    _gbDebugLog(`No results for "${type}:${query2}", retrying plain query "${query2}"`);
     results = await doFetch(query2);
   }
   if (results !== null) _gbResultCache.set(key, results);
