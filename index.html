@@ -3440,8 +3440,11 @@ const _gbResultCache = new Map();
 // Last full result objects per context (used by selection handlers for genres etc.)
 const _gbLastResults = {};
 
+// Returns: array of matches (possibly empty — genuine "no results"),
+// or null to signal the request failed/was skipped (caller should use the
+// offline/local fallback rather than treating it as a confirmed empty result).
 async function _gbFetch(type, query2) {
-  if (!query2 || query2.length < 2) return [];
+  if (!query2) return null;
   const key = type + ':' + query2.toLowerCase();
   if (_gbResultCache.has(key)) return _gbResultCache.get(key);
   try {
@@ -3453,7 +3456,7 @@ async function _gbFetch(type, query2) {
       { signal: controller.signal }
     );
     clearTimeout(tid);
-    if (!resp.ok) return [];
+    if (!resp.ok) return null;
     const data = await resp.json();
     const results = (data.items || []).map(item => {
       const v = item.volumeInfo || {};
@@ -3467,7 +3470,7 @@ async function _gbFetch(type, query2) {
     }).filter(r => r.title);
     _gbResultCache.set(key, results);
     return results;
-  } catch(e) { return []; }
+  } catch(e) { return null; }
 }
 
 // Debounced wrapper — calls cb(results) after 280ms quiet time.
@@ -3600,11 +3603,12 @@ window.handleGlobalTitleSearch = function() {
   const dropdown = document.getElementById('titleAutocomplete');
   if (!input || !dropdown) return;
   const raw = input.value.trim();
-  if (!raw) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; return; }
+  // Title autofill is Google-Books-backed — wait for 2+ characters.
+  if (raw.length < 2) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; return; }
 
   _gbDebounce('titleAc', 'intitle', raw, results => {
-    if (results === null) {
-      // Offline — search expanded cache
+    if (results === null || !results.length) {
+      // Offline, request failed, or no Google Books matches — search expanded cache
       const norm = normalizeBookText(raw);
       const seen = new Set();
       const matches = [];
@@ -3648,7 +3652,7 @@ window.selectAutocompleteBook = function(idx) {
   if (cats.length) {
     addSelectedGenres = cats.slice(0, 3);
     buildGenreGrid('addGenreGrid', addSelectedGenres);
-    updateGenreHint();
+    document.getElementById('genreHint').textContent = addSelectedGenres.length ? 'Selected: ' + addSelectedGenres.join(', ') : '';
   }
 
   const dropdown = document.getElementById('titleAutocomplete');
@@ -3691,12 +3695,13 @@ window.handleAuthorSearch = function() {
   const dropdown = document.getElementById('authorAutocomplete');
   if (!input || !dropdown) return;
   const raw = input.value.trim();
-  if (!raw) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; return; }
+  // Author autofill is Google-Books-backed — wait for 2+ characters.
+  if (raw.length < 2) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; return; }
 
   _gbDebounce('authorAc', 'inauthor', raw, results => {
     let names = [];
-    if (results === null) {
-      // Offline — search OAC authors list
+    if (results === null || !results.length) {
+      // Offline, request failed, or no Google Books matches — search OAC authors list
       const rl = raw.toLowerCase();
       names = _oac.authors.filter(a => a.toLowerCase().includes(rl)).slice(0, 5);
     } else {
@@ -3733,10 +3738,23 @@ window.handleSeriesSearch = function(ctx) {
   const raw = input.value.trim();
   if (!raw) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; return; }
 
+  // Series still draws from the locally downloaded library cache, so it can
+  // start suggesting after just 1 character — no need to wait on Google Books.
+  if (raw.length < 2) {
+    const rl = raw.toLowerCase();
+    const seriesList = _oac.series.filter(s => s.toLowerCase().includes(rl)).slice(0, 5);
+    if (!seriesList.length) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; return; }
+    dropdown.innerHTML = seriesList.map(s =>
+      `<div class="autocomplete-item" onmousedown="event.preventDefault()" onclick="selectSeriesSuggestion('${s.replace(/'/g, "\\'")}','${ctx}')"><div class="autocomplete-title">${esc(s)}</div></div>`
+    ).join('');
+    dropdown.style.display = 'block';
+    return;
+  }
+
   _gbDebounce('seriesAc-' + ctx, 'intitle', raw, results => {
     let seriesList = [];
     if (results === null) {
-      // Offline — search OAC series list
+      // Offline or request failed — search OAC series list
       const rl = raw.toLowerCase();
       seriesList = _oac.series.filter(s => s.toLowerCase().includes(rl)).slice(0, 5);
     } else {
@@ -5420,7 +5438,7 @@ window.addGlobalBookToCollection = bookId => {
   document.getElementById('newSeries').value = b.series || '';
   addSelectedGenres = [...(b.genres||[]).slice(0,3)];
   buildGenreGrid('addGenreGrid', addSelectedGenres);
-  updateGenreHint();
+  document.getElementById('genreHint').textContent = addSelectedGenres.length ? 'Selected: ' + addSelectedGenres.join(', ') : '';
   if (b.series) onSeriesInput('new');
   if (b.seriesNumber) {
     _seriesNumCleared.new = false;
@@ -6765,6 +6783,22 @@ function _hlUpdateAc(cat, val) {
     return;
   }
 
+  // Books/authors are Google-Books-backed — wait for 2+ characters and don't
+  // fall back to the local cache below that (series still draws from the
+  // downloaded library cache, so it can suggest after just 1 character).
+  if (cat !== 'series' && val.length < 2) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
+  if (cat === 'series' && val.length < 2) {
+    const q = val.toLowerCase();
+    const matches = _hlAcSources('series').filter(s => !existing.has(s) && s.toLowerCase().includes(q)).slice(0, 5);
+    _hlAcResults[cat] = matches;
+    if (!matches.length) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
+    acEl.innerHTML = matches.map((m,i) => `<div class="hl-ac-item" onmousedown="event.preventDefault()" onclick="addHlChip('series',${i})">${esc(m)}</div>`).join('');
+    acEl.style.display = '';
+    const inputEl = document.getElementById('hl-input-series');
+    if (inputEl) _positionAcDropdown(acEl, inputEl);
+    return;
+  }
+
   const gbType = (cat === 'authors') ? 'inauthor' : 'intitle';
   _gbDebounce('hlAc-' + cat, gbType, val, results => {
     let items = [];
@@ -6826,6 +6860,22 @@ function _clubHlUpdateAc(cat, val) {
     acEl.innerHTML = matches.map((m,i) => `<div class="hl-ac-item" onmousedown="event.preventDefault()" onclick="addClubHlChip('genres',${i})">${esc(m)}</div>`).join('');
     acEl.style.display = '';
     const inputEl = document.getElementById('chl-input-genres');
+    if (inputEl) _positionAcDropdown(acEl, inputEl);
+    return;
+  }
+
+  // Books/authors are Google-Books-backed — wait for 2+ characters and don't
+  // fall back to the local cache below that (series still draws from the
+  // downloaded library cache, so it can suggest after just 1 character).
+  if (cat !== 'series' && val.length < 2) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
+  if (cat === 'series' && val.length < 2) {
+    const q = val.toLowerCase();
+    const matches = _clubHlAcSources('series').filter(s => !existing.has(s) && s.toLowerCase().includes(q)).slice(0, 5);
+    _clubHlAcResults[cat] = matches;
+    if (!matches.length) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
+    acEl.innerHTML = matches.map((m,i) => `<div class="hl-ac-item" onmousedown="event.preventDefault()" onclick="addClubHlChip('series',${i})">${esc(m)}</div>`).join('');
+    acEl.style.display = '';
+    const inputEl = document.getElementById('chl-input-series');
     if (inputEl) _positionAcDropdown(acEl, inputEl);
     return;
   }
