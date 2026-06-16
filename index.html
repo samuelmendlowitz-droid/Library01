@@ -3765,7 +3765,11 @@ async function _glFindOrCreateBook({ title, author, genres, series, seriesNumber
     return { bookCode, globalId: match.globalId || globalId };
   }
 
-  // New book — create all linked records
+  // New book — verify it exists in Google Books before adding to global library
+  const isRealBook = await validateWithGoogleBooks(title, author);
+  if (!isRealBook) return null;
+
+  // Create all linked records
   const [{ authorCode, name: canonAuthor }, ...genreResults] = await Promise.all([
     _glFindOrCreateAuthor(author),
     ...((genres || []).slice(0, 3).map((g, i) => _glFindOrCreateGenre(g)))
@@ -3842,25 +3846,33 @@ function isLikelyTestBook(title, author) {
   return titleWords.some(w => fakeWords.has(w)) || a.split(/\s+/).some(w => fakeWords.has(w));
 }
 
+// In-session cache so the same book isn't looked up twice (e.g. 10 users own Harry Potter)
+const _gbValidateCache = new Map();
+
 // Queries Google Books API to confirm a real book with this title/author exists.
 // Returns true on network errors (fail-open) so valid books aren't blocked.
+// Returns false only when the API responds with 0 matching results.
 async function validateWithGoogleBooks(title, author) {
+  const cacheKey = normalizeBookText(title) + '__' + normalizeBookText(author || '');
+  if (_gbValidateCache.has(cacheKey)) return _gbValidateCache.get(cacheKey);
   try {
     const controller = new AbortController();
-    const tid = setTimeout(() => controller.abort(), 6000);
+    const tid = setTimeout(() => controller.abort(), 4000);
     const q = encodeURIComponent(`intitle:${title}${author ? ' inauthor:' + author : ''}`);
     const resp = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=5`, { signal: controller.signal });
     clearTimeout(tid);
-    if (!resp.ok) return true;
+    if (!resp.ok) { _gbValidateCache.set(cacheKey, true); return true; }
     const data = await resp.json();
-    if (!data.items || !data.items.length) return false;
+    if (!data.items || !data.items.length) { _gbValidateCache.set(cacheKey, false); return false; }
     const normTitle = normalizeBookText(title);
-    return data.items.some(item => {
+    const found = data.items.some(item => {
       const t = normalizeBookText(item.volumeInfo?.title || '');
       return t.includes(normTitle) || normTitle.includes(t);
     });
-  } catch (e) {
-    return true; // abort / network error — don't block
+    _gbValidateCache.set(cacheKey, found);
+    return found;
+  } catch(e) {
+    return true; // timeout / network error — fail open, don't block real books
   }
 }
 
@@ -12087,7 +12099,7 @@ window.reseedGlobalLibrary = async () => {
   const progressEl = document.getElementById('reseedProgress');
   const btn = document.getElementById('reseedBtn');
   if (btn) { btn.disabled = true; btn.textContent = 'Seeding…'; }
-  let userCount = 0, bookCount = 0, errorCount = 0;
+  let userCount = 0, bookCount = 0, skippedCount = 0, errorCount = 0;
   try {
     if (progressEl) progressEl.textContent = 'Loading all user books via collection group…';
     // collectionGroup hits every users/{uid}/books subcollection across all users.
@@ -12109,17 +12121,23 @@ window.reseedGlobalLibrary = async () => {
         const b = bookDoc.data();
         if (!b.title || !b.author) continue;
         if (b.location === 'Wishlist') continue;
-        if (isLikelyTestBook && isLikelyTestBook(b.title, b.author)) continue;
+        if (isLikelyTestBook(b.title, b.author)) { skippedCount++; continue; }
         try {
           const pop = 1 + (b.read ? 2 : 0);
-          await _glFindOrCreateBook({
+          const result = await _glFindOrCreateBook({
             title: b.title, author: b.author || '',
-            genres: cleanGenreList ? cleanGenreList(b.genres || []) : (b.genres || []),
+            genres: cleanGenreList(b.genres || []),
             series: b.series || '', seriesNumber: b.seriesNumber || null,
             popularity: pop
           });
-          bookCount++;
-          if (progressEl && bookCount % 10 === 0) progressEl.textContent = `Users: ${userCount}/${uids.length} | Books processed: ${bookCount}`;
+          if (result) {
+            bookCount++;
+          } else {
+            skippedCount++; // not found in Google Books
+          }
+          if (progressEl && (bookCount + skippedCount) % 5 === 0) {
+            progressEl.textContent = `Users: ${userCount}/${uids.length} | Seeded: ${bookCount} | Skipped: ${skippedCount}`;
+          }
         } catch(e) { errorCount++; }
         await new Promise(r => setTimeout(r, 200));
       }
@@ -12127,7 +12145,7 @@ window.reseedGlobalLibrary = async () => {
     // Reload global cache
     localStorage.removeItem(_GLC_KEY);
     await _fetchGlobalFromFirestore();
-    if (progressEl) progressEl.textContent = `✓ Done — ${bookCount} books seeded from ${userCount} users. ${errorCount ? errorCount + ' errors.' : ''}`;
+    if (progressEl) progressEl.textContent = `✓ Done — ${bookCount} seeded, ${skippedCount} skipped (not in Google Books), ${errorCount ? errorCount + ' errors' : 'no errors'} — from ${userCount} users.`;
     showStatus(`Reseed complete: ${bookCount} books from ${userCount} users`, 'success');
     setTimeout(hideStatus, 5000);
   } catch(e) {
