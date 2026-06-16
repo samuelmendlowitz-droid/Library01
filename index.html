@@ -987,6 +987,19 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .settings-tabs { display: none; }
 .settings-tab { display: none; }
 
+/* Offline banner */
+#offlineBanner {
+  display: none;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  padding: 8px 16px;
+  font-size: 12px;
+  color: var(--text2);
+  text-align: center;
+  letter-spacing: 0.01em;
+}
+#offlineBanner.visible { display: block; }
+
 /* Settings menu (home page) */
 .settings-menu-item {
   width: 100%; display: flex; align-items: center; gap: 14px;
@@ -1612,6 +1625,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
          data-full-width-responsive="true"></ins>
     <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
   </div>
+  <div id="offlineBanner">📶 You're in offline mode. Options may be limited.</div>
   <div class="book-list" id="bookList"></div>
   <div class="shelf-view-root" id="shelfView" style="display:none;"></div>
   <div id="globalLoadSentinel" style="display:none;padding:20px;text-align:center;color:var(--text2);font-size:13px;"></div>
@@ -3201,6 +3215,8 @@ onAuthStateChanged(auth, async user => {
     loadBooks();          // don't block on global books
     loadNotifications();  // async, non-blocking
     preloadGlobalBooks().then(() => syncUserBooksToCache()); // background, merge after
+    _initOAC();          // load / refresh expanded offline autofill cache
+    _updateOfflineBanner(); // reflect current online/offline state
     _loadPremiumStatus().then(() => _activatePendingCheckout && _activatePendingCheckout()); // load status, then handle return from checkout if needed
     // Ensure customers/{uid} doc exists at login so the Stripe Extension can
     // find/create the Stripe customer when checkout is attempted.
@@ -3339,6 +3355,132 @@ let _globalLibraryTotalCount = null; // actual Firestore document count
 const GLOBAL_FETCH_PAGE = 500; // docs fetched per Firestore request
 const _GLC_KEY = 'glb_v1';
 const _GLC_TTL = 30 * 60 * 1000; // 30 minutes
+
+// ── OFFLINE AUTOFILL CACHE (OAC) ─────────────────────────────────────────────
+// Stored separately from globalBookCache. Used as autofill fallback when offline.
+const _OAC_KEY   = 'oac_v1';
+const _OAC_TTL   = 4 * 60 * 60 * 1000; // 4 hours
+let _oac = { books: [], authors: [], genres: [], series: [], ts: 0 };
+
+function _saveOAC() {
+  try { localStorage.setItem(_OAC_KEY, JSON.stringify({ ..._oac, ts: Date.now() })); } catch(e) {}
+}
+function _loadOAC() {
+  try {
+    const raw = localStorage.getItem(_OAC_KEY);
+    if (!raw) return false;
+    const d = JSON.parse(raw);
+    if (!d.ts || Date.now() - d.ts > _OAC_TTL) return false;
+    _oac = d;
+    return true;
+  } catch(e) { return false; }
+}
+
+async function _fetchOAC() {
+  try {
+    // Top 5000 books by popularity
+    const booksSnap = await getDocs(query(collection(db, 'books'),
+      where('popularity', '>', 0), orderBy('popularity', 'desc'), limit(5000)));
+    _oac.books = booksSnap.docs.map(d => {
+      const v = d.data();
+      return { title: v.title || '', author: v.author || '',
+               series: v.series || '', normalizedTitle: v.normalizedTitle || '' };
+    }).filter(b => b.title && b.author && !isLikelyTestBook(b.title, b.author));
+
+    // Deduplicated series list from the books we just fetched
+    const seriesSeen = new Set();
+    _oac.series = _oac.books.reduce((acc, b) => {
+      if (b.series && !seriesSeen.has(b.series)) { seriesSeen.add(b.series); acc.push(b.series); }
+      return acc;
+    }, []).slice(0, 1000);
+
+    // Top 1000 authors
+    const authSnap = await getDocs(query(collection(db, 'authors'), limit(1000)));
+    _oac.authors = authSnap.docs.map(d => d.data().name || '').filter(Boolean).sort();
+
+    // Top 200 genres
+    const genreSnap = await getDocs(query(collection(db, 'genres'), limit(200)));
+    _oac.genres = genreSnap.docs.map(d => d.data().name || '').filter(Boolean).sort();
+
+    _saveOAC();
+  } catch(e) { /* offline or insufficient permissions — keep existing cache */ }
+}
+
+// Load OAC from storage at startup, refresh in background if stale.
+function _initOAC() {
+  const hit = _loadOAC();
+  if (!hit) _fetchOAC(); // no cache or stale → fetch immediately
+  else setTimeout(_fetchOAC, 5000); // cache is fresh → quiet background refresh
+}
+
+// ── OFFLINE / ONLINE DETECTION ────────────────────────────────────────────────
+let _isOffline = !navigator.onLine;
+
+function _updateOfflineBanner() {
+  const el = document.getElementById('offlineBanner');
+  if (el) el.classList.toggle('visible', _isOffline);
+}
+
+window.addEventListener('online', () => {
+  _isOffline = false;
+  _updateOfflineBanner();
+  _fetchOAC(); // refresh expanded cache now that we're back online
+  // If the global library is loaded from offline fallback, refresh it
+  if (_globalLibraryExhausted && globalBookCache.every(b => b._fromOAC)) {
+    _fetchGlobalFromFirestore().then(() => { if (currentPage === 'global') { syncUserBooksToCache(); applyGlobalFilters(); } });
+  }
+});
+window.addEventListener('offline', () => { _isOffline = true; _updateOfflineBanner(); });
+
+// ── GOOGLE BOOKS AUTOFILL ─────────────────────────────────────────────────────
+// Per-context debounce timers (key = context string)
+const _gbTimers = {};
+// In-session result cache keyed by "type:query"
+const _gbResultCache = new Map();
+// Last full result objects per context (used by selection handlers for genres etc.)
+const _gbLastResults = {};
+
+async function _gbFetch(type, query2) {
+  if (!query2 || query2.length < 2) return [];
+  const key = type + ':' + query2.toLowerCase();
+  if (_gbResultCache.has(key)) return _gbResultCache.get(key);
+  try {
+    const q = encodeURIComponent(type + ':' + query2);
+    const controller = new AbortController();
+    const tid = setTimeout(() => controller.abort(), 5000);
+    const resp = await fetch(
+      `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=10&fields=items(volumeInfo/title,volumeInfo/authors,volumeInfo/categories,volumeInfo/seriesInfo)`,
+      { signal: controller.signal }
+    );
+    clearTimeout(tid);
+    if (!resp.ok) return [];
+    const data = await resp.json();
+    const results = (data.items || []).map(item => {
+      const v = item.volumeInfo || {};
+      const series = (v.seriesInfo?.bookSeries || [])[0]?.title || '';
+      return {
+        title:      v.title || '',
+        author:     (v.authors || []).join(', '),
+        series,
+        categories: v.categories || []
+      };
+    }).filter(r => r.title);
+    _gbResultCache.set(key, results);
+    return results;
+  } catch(e) { return []; }
+}
+
+// Debounced wrapper — calls cb(results) after 280ms quiet time.
+// If offline, calls cb(null) immediately so callers can use offline fallback.
+function _gbDebounce(ctx, type, query2, cb) {
+  clearTimeout(_gbTimers[ctx]);
+  if (_isOffline) { cb(null); return; }
+  _gbTimers[ctx] = setTimeout(async () => {
+    const results = await _gbFetch(type, query2);
+    cb(results);
+  }, 280);
+}
+
 function _saveGlobalCache(books, count) {
   try { localStorage.setItem(_GLC_KEY, JSON.stringify({ books, count, ts: Date.now() })); } catch(e) {}
 }
@@ -3387,6 +3529,21 @@ async function _fetchGlobalFromFirestore() {
 }
 
 async function preloadGlobalBooks() {
+  // When offline, serve from OAC (5000 books) or localStorage cache
+  if (_isOffline) {
+    const cached = _loadGlobalCache();
+    if (cached && cached.books.length) {
+      globalBookCache = cached.books.map(_fmtBook);
+      _globalLibraryTotalCount = cached.count;
+    } else if (_oac.books.length) {
+      globalBookCache = _oac.books.map(b => _fmtBook({ id: normalizeBookText(b.title) + '__' + normalizeBookText(b.author), ...b, _fromOAC: true }));
+      _globalLibraryTotalCount = globalBookCache.length;
+    }
+    _globalBooksPreloaded = true;
+    _globalLibraryExhausted = true; // no more to load while offline
+    _maybeResyncToGlobal();
+    return;
+  }
   const cached = _loadGlobalCache();
   if (cached) {
     globalBookCache = cached.books.map(_fmtBook);
@@ -3439,64 +3596,63 @@ async function loadMoreGlobalBooks() {
 }
 
 window.handleGlobalTitleSearch = function() {
-  const input = document.getElementById('newTitle');
+  const input    = document.getElementById('newTitle');
   const dropdown = document.getElementById('titleAutocomplete');
-
   if (!input || !dropdown) return;
-
   const raw = input.value.trim();
+  if (!raw) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; return; }
 
-  const normalized = normalizeBookText(raw);
-
-  if (!normalized) {
-    dropdown.style.display = 'none';
-    dropdown.innerHTML = '';
-    return;
-  }
-
-  const matches = globalBookCache
-    .filter(book => {
-      const title = book.normalizedTitle || normalizeBookText(book.title || '');
-      return title.startsWith(normalized);
-    })
-    .slice(0, 5);
-
-  if (!matches.length) {
-    dropdown.style.display = 'none';
-    dropdown.innerHTML = '';
-    return;
-  }
-
-  dropdown.innerHTML = matches.map(book => `
-    <div class="autocomplete-item" onclick="selectAutocompleteBook('${(book.title || '').replace(/'/g, "\\'")}', '${(book.author || '').replace(/'/g, "\\'")}', '${((book.series || '')).replace(/'/g, "\\'")}')">
-      <div class="autocomplete-title">${book.title || ''}</div>
-      <div class="autocomplete-author">${book.author || ''}</div>
-    </div>
-  `).join('');
-
-  dropdown.style.display = 'block';
+  _gbDebounce('titleAc', 'intitle', raw, results => {
+    if (results === null) {
+      // Offline — search expanded cache
+      const norm = normalizeBookText(raw);
+      const seen = new Set();
+      const matches = [];
+      for (const b of _oac.books) {
+        if (matches.length >= 5) break;
+        const nt = b.normalizedTitle || normalizeBookText(b.title);
+        if (nt.startsWith(norm) && !seen.has(b.title)) { seen.add(b.title); matches.push(b); }
+      }
+      _gbLastResults['titleAc'] = matches.map(b => ({ title: b.title, author: b.author, series: b.series || '', categories: [] }));
+      _renderTitleAcDropdown(dropdown, _gbLastResults['titleAc']);
+    } else {
+      // Deduplicate by title
+      const seen = new Set();
+      _gbLastResults['titleAc'] = results.filter(r => { if (seen.has(r.title)) return false; seen.add(r.title); return true; });
+      _renderTitleAcDropdown(dropdown, _gbLastResults['titleAc']);
+    }
+  });
 };
 
-window.selectAutocompleteBook = function(title, author, series) {
-  document.getElementById('newTitle').value = title;
-  document.getElementById('newAuthor').value = author || '';
-  if (series) {
-    document.getElementById('newSeries').value = series;
-  }
+function _renderTitleAcDropdown(dropdown, items) {
+  if (!items || !items.length) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; return; }
+  dropdown.innerHTML = items.map((r, i) => `
+    <div class="autocomplete-item" onclick="selectAutocompleteBook(${i})">
+      <div class="autocomplete-title">${esc(r.title)}</div>
+      <div class="autocomplete-author">${esc(r.author || '')}</div>
+    </div>`).join('');
+  dropdown.style.display = 'block';
+}
 
-  const match = globalBookCache.find(
-    b => b.title === title && b.author === author
-  );
+window.selectAutocompleteBook = function(idx) {
+  const results = _gbLastResults['titleAc'] || [];
+  const r = results[idx];
+  if (!r) return;
+  document.getElementById('newTitle').value  = r.title;
+  document.getElementById('newAuthor').value = r.author || '';
+  if (r.series) document.getElementById('newSeries').value = r.series;
 
-  if (match && Array.isArray(match.genres)) {
-    addSelectedGenres = match.genres.slice(0,3);
+  // Pre-fill genres — from Google Books categories or from globalBookCache
+  const cats = r.categories && r.categories.length ? r.categories :
+    (globalBookCache.find(b => b.title === r.title && b.author === r.author)?.genres || []);
+  if (cats.length) {
+    addSelectedGenres = cats.slice(0, 3);
     buildGenreGrid('addGenreGrid', addSelectedGenres);
     updateGenreHint();
   }
 
   const dropdown = document.getElementById('titleAutocomplete');
-  dropdown.style.display = 'none';
-  dropdown.innerHTML = '';
+  dropdown.style.display = 'none'; dropdown.innerHTML = '';
 };
 
 document.addEventListener('click', (e) => {
@@ -3531,25 +3687,36 @@ document.addEventListener('click', (e) => {
 });
 
 window.handleAuthorSearch = function() {
-  const input = document.getElementById('newAuthor');
+  const input    = document.getElementById('newAuthor');
   const dropdown = document.getElementById('authorAutocomplete');
   if (!input || !dropdown) return;
   const raw = input.value.trim();
-  const normalized = normalizeBookText(raw);
-  if (!normalized) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; return; }
-  const seen = new Set();
-  const matches = [];
-  globalBookCache.forEach(b => {
-    if (!b.author || seen.has(b.author)) return;
-    if (normalizeBookText(b.author).startsWith(normalized)) { seen.add(b.author); matches.push(b.author); }
+  if (!raw) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; return; }
+
+  _gbDebounce('authorAc', 'inauthor', raw, results => {
+    let names = [];
+    if (results === null) {
+      // Offline — search OAC authors list
+      const rl = raw.toLowerCase();
+      names = _oac.authors.filter(a => a.toLowerCase().includes(rl)).slice(0, 5);
+    } else {
+      // Extract unique author names from Google Books results
+      const seen = new Set();
+      for (const r of results) {
+        for (const a of (r.author ? [r.author] : [])) {
+          if (!seen.has(a)) { seen.add(a); names.push(a); }
+          if (names.length >= 5) break;
+        }
+        if (names.length >= 5) break;
+      }
+    }
+    if (!names.length) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; return; }
+    dropdown.innerHTML = names.map(a =>
+      `<div class="autocomplete-item" onclick="selectAuthorSuggestion('${a.replace(/'/g, "\\'")}')">
+        <div class="autocomplete-title">${esc(a)}</div>
+      </div>`).join('');
+    dropdown.style.display = 'block';
   });
-  if (!matches.length) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; return; }
-  dropdown.innerHTML = matches.slice(0, 5).map(a =>
-    `<div class="autocomplete-item" onclick="selectAuthorSuggestion('${a.replace(/'/g, "\\'")}')">
-      <div class="autocomplete-title">${esc(a)}</div>
-    </div>`
-  ).join('');
-  dropdown.style.display = 'block';
 };
 
 window.selectAuthorSuggestion = function(author) {
@@ -3559,23 +3726,38 @@ window.selectAuthorSuggestion = function(author) {
 };
 
 window.handleSeriesSearch = function(ctx) {
-  const inputId = ctx === 'new' ? 'newSeries' : 'editSeries';
-  const input = document.getElementById(inputId);
+  const inputId  = ctx === 'new' ? 'newSeries' : 'editSeries';
+  const input    = document.getElementById(inputId);
   const dropdown = document.getElementById('seriesAutocomplete-' + ctx);
   if (!input || !dropdown) return;
-  const q = normalizeBookText(input.value.trim());
-  if (!q) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; return; }
-  const seen = new Set();
-  const matches = [];
-  globalBookCache.forEach(b => {
-    if (!b.series || seen.has(b.series)) return;
-    if (normalizeBookText(b.series).includes(q)) { seen.add(b.series); matches.push(b.series); }
+  const raw = input.value.trim();
+  if (!raw) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; return; }
+
+  _gbDebounce('seriesAc-' + ctx, 'intitle', raw, results => {
+    let seriesList = [];
+    if (results === null) {
+      // Offline — search OAC series list
+      const rl = raw.toLowerCase();
+      seriesList = _oac.series.filter(s => s.toLowerCase().includes(rl)).slice(0, 5);
+    } else {
+      // Extract series names from Google Books results
+      const seen = new Set();
+      for (const r of results) {
+        if (r.series && !seen.has(r.series)) { seen.add(r.series); seriesList.push(r.series); }
+        if (seriesList.length >= 5) break;
+      }
+      // If Google Books had no series, fall back to OAC
+      if (!seriesList.length) {
+        const rl = raw.toLowerCase();
+        seriesList = _oac.series.filter(s => s.toLowerCase().includes(rl)).slice(0, 5);
+      }
+    }
+    if (!seriesList.length) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; return; }
+    dropdown.innerHTML = seriesList.map(s =>
+      `<div class="autocomplete-item" onmousedown="event.preventDefault()" onclick="selectSeriesSuggestion('${s.replace(/'/g, "\\'")}','${ctx}')"><div class="autocomplete-title">${esc(s)}</div></div>`
+    ).join('');
+    dropdown.style.display = 'block';
   });
-  if (!matches.length) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; return; }
-  dropdown.innerHTML = matches.slice(0, 5).map(s =>
-    `<div class="autocomplete-item" onmousedown="event.preventDefault()" onclick="selectSeriesSuggestion('${s.replace(/'/g, "\\'")}','${ctx}')"><div class="autocomplete-title">${esc(s)}</div></div>`
-  ).join('');
-  dropdown.style.display = 'block';
 };
 
 window.selectSeriesSuggestion = function(series, ctx) {
@@ -6568,51 +6750,131 @@ function _positionAcDropdown(acEl, inputEl) {
 function _hlUpdateAc(cat, val) {
   const acEl = document.getElementById('hl-ac-' + cat);
   if (!acEl) return;
-  const existing = new Set(_myHighlights[cat]||[]);
-  if (cat === 'books') {
-    const bookResults = _searchGlobalBooks(val).filter(b => !existing.has(b.title));
-    _hlAcResults[cat] = bookResults.map(b => b.title);
-    if (!bookResults.length) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
-    acEl.innerHTML = bookResults.map((b,i) =>
-      `<div class="hl-ac-item" onmousedown="event.preventDefault()" onclick="addHlChip('books',${i})">`
-      + `<span style="font-weight:500">${esc(b.title)}</span>`
-      + (b.author ? `<span style="color:var(--text3);font-size:11px;margin-left:4px">· ${esc(b.author)}</span>` : '')
-      + `</div>`).join('');
-  } else {
+  const existing = new Set(_myHighlights[cat] || []);
+
+  if (cat === 'genres') {
+    // Genres always use the local orderedGenres list — no API needed
     const q = val.toLowerCase();
-    const matches = _hlAcSources(cat).filter(s => !existing.has(s) && s.toLowerCase().includes(q)).slice(0, 5);
+    const matches = _hlAcSources('genres').filter(s => !existing.has(s) && s.toLowerCase().includes(q)).slice(0, 5);
     _hlAcResults[cat] = matches;
     if (!matches.length) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
-    acEl.innerHTML = matches.map((m,i) => `<div class="hl-ac-item" onmousedown="event.preventDefault()" onclick="addHlChip('${cat}',${i})">${esc(m)}</div>`).join('');
+    acEl.innerHTML = matches.map((m,i) => `<div class="hl-ac-item" onmousedown="event.preventDefault()" onclick="addHlChip('genres',${i})">${esc(m)}</div>`).join('');
+    acEl.style.display = '';
+    const inputEl = document.getElementById('hl-input-genres');
+    if (inputEl) _positionAcDropdown(acEl, inputEl);
+    return;
   }
-  acEl.style.display = '';
-  const inputEl = document.getElementById('hl-input-' + cat);
-  if (inputEl) _positionAcDropdown(acEl, inputEl);
+
+  const gbType = (cat === 'authors') ? 'inauthor' : 'intitle';
+  _gbDebounce('hlAc-' + cat, gbType, val, results => {
+    let items = [];
+    if (results === null || !results.length) {
+      // Offline or no results — fall back to local cache
+      const q = val.toLowerCase();
+      items = _hlAcSources(cat).filter(s => !existing.has(s) && s.toLowerCase().includes(q)).slice(0, 5)
+                .map(s => ({ label: s, sub: '' }));
+    } else if (cat === 'books') {
+      const seen = new Set();
+      for (const r of results) {
+        if (!r.title || existing.has(r.title) || seen.has(r.title)) continue;
+        seen.add(r.title); items.push({ label: r.title, sub: r.author || '' });
+        if (items.length >= 5) break;
+      }
+    } else if (cat === 'authors') {
+      const seen = new Set();
+      for (const r of results) {
+        if (!r.author || existing.has(r.author) || seen.has(r.author)) continue;
+        seen.add(r.author); items.push({ label: r.author, sub: '' });
+        if (items.length >= 5) break;
+      }
+    } else if (cat === 'series') {
+      const seen = new Set();
+      for (const r of results) {
+        if (!r.series || existing.has(r.series) || seen.has(r.series)) continue;
+        seen.add(r.series); items.push({ label: r.series, sub: '' });
+        if (items.length >= 5) break;
+      }
+      if (!items.length) {
+        const q = val.toLowerCase();
+        items = _hlAcSources('series').filter(s => !existing.has(s) && s.toLowerCase().includes(q)).slice(0, 5)
+                  .map(s => ({ label: s, sub: '' }));
+      }
+    }
+    _hlAcResults[cat] = items.map(i => i.label);
+    if (!items.length) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
+    acEl.innerHTML = items.map((item, i) =>
+      `<div class="hl-ac-item" onmousedown="event.preventDefault()" onclick="addHlChip('${cat}',${i})">`
+      + `<span style="font-weight:500">${esc(item.label)}</span>`
+      + (item.sub ? `<span style="color:var(--text3);font-size:11px;margin-left:4px">· ${esc(item.sub)}</span>` : '')
+      + `</div>`).join('');
+    acEl.style.display = '';
+    const inputEl = document.getElementById('hl-input-' + cat);
+    if (inputEl) _positionAcDropdown(acEl, inputEl);
+  });
 }
 
 function _clubHlUpdateAc(cat, val) {
   const acEl = document.getElementById('chl-ac-' + cat);
   if (!acEl) return;
-  const existing = new Set(_clubSubjects[cat]||[]);
-  if (cat === 'books') {
-    const bookResults = _searchGlobalBooks(val).filter(b => !existing.has(b.title));
-    _clubHlAcResults[cat] = bookResults.map(b => b.title);
-    if (!bookResults.length) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
-    acEl.innerHTML = bookResults.map((b,i) =>
-      `<div class="hl-ac-item" onmousedown="event.preventDefault()" onclick="addClubHlChip('books',${i})">`
-      + `<span style="font-weight:500">${esc(b.title)}</span>`
-      + (b.author ? `<span style="color:var(--text3);font-size:11px;margin-left:4px">· ${esc(b.author)}</span>` : '')
-      + `</div>`).join('');
-  } else {
+  const existing = new Set(_clubSubjects[cat] || []);
+
+  if (cat === 'genres') {
     const q = val.toLowerCase();
-    const matches = _clubHlAcSources(cat).filter(s => !existing.has(s) && s.toLowerCase().includes(q)).slice(0, 5);
+    const matches = _clubHlAcSources('genres').filter(s => !existing.has(s) && s.toLowerCase().includes(q)).slice(0, 5);
     _clubHlAcResults[cat] = matches;
     if (!matches.length) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
-    acEl.innerHTML = matches.map((m,i) => `<div class="hl-ac-item" onmousedown="event.preventDefault()" onclick="addClubHlChip('${cat}',${i})">${esc(m)}</div>`).join('');
+    acEl.innerHTML = matches.map((m,i) => `<div class="hl-ac-item" onmousedown="event.preventDefault()" onclick="addClubHlChip('genres',${i})">${esc(m)}</div>`).join('');
+    acEl.style.display = '';
+    const inputEl = document.getElementById('chl-input-genres');
+    if (inputEl) _positionAcDropdown(acEl, inputEl);
+    return;
   }
-  acEl.style.display = '';
-  const inputEl = document.getElementById('chl-input-' + cat);
-  if (inputEl) _positionAcDropdown(acEl, inputEl);
+
+  const gbType = (cat === 'authors') ? 'inauthor' : 'intitle';
+  _gbDebounce('clubHlAc-' + cat, gbType, val, results => {
+    let items = [];
+    if (results === null || !results.length) {
+      const q = val.toLowerCase();
+      items = _clubHlAcSources(cat).filter(s => !existing.has(s) && s.toLowerCase().includes(q)).slice(0, 5)
+                .map(s => ({ label: s, sub: '' }));
+    } else if (cat === 'books') {
+      const seen = new Set();
+      for (const r of results) {
+        if (!r.title || existing.has(r.title) || seen.has(r.title)) continue;
+        seen.add(r.title); items.push({ label: r.title, sub: r.author || '' });
+        if (items.length >= 5) break;
+      }
+    } else if (cat === 'authors') {
+      const seen = new Set();
+      for (const r of results) {
+        if (!r.author || existing.has(r.author) || seen.has(r.author)) continue;
+        seen.add(r.author); items.push({ label: r.author, sub: '' });
+        if (items.length >= 5) break;
+      }
+    } else if (cat === 'series') {
+      const seen = new Set();
+      for (const r of results) {
+        if (!r.series || existing.has(r.series) || seen.has(r.series)) continue;
+        seen.add(r.series); items.push({ label: r.series, sub: '' });
+        if (items.length >= 5) break;
+      }
+      if (!items.length) {
+        const q = val.toLowerCase();
+        items = _clubHlAcSources('series').filter(s => !existing.has(s) && s.toLowerCase().includes(q)).slice(0, 5)
+                  .map(s => ({ label: s, sub: '' }));
+      }
+    }
+    _clubHlAcResults[cat] = items.map(i => i.label);
+    if (!items.length) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
+    acEl.innerHTML = items.map((item, i) =>
+      `<div class="hl-ac-item" onmousedown="event.preventDefault()" onclick="addClubHlChip('${cat}',${i})">`
+      + `<span style="font-weight:500">${esc(item.label)}</span>`
+      + (item.sub ? `<span style="color:var(--text3);font-size:11px;margin-left:4px">· ${esc(item.sub)}</span>` : '')
+      + `</div>`).join('');
+    acEl.style.display = '';
+    const inputEl = document.getElementById('chl-input-' + cat);
+    if (inputEl) _positionAcDropdown(acEl, inputEl);
+  });
 }
 
 function _renderHlEditor() {
