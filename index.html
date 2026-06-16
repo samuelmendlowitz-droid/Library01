@@ -3357,6 +3357,9 @@ async function ensurePersonalBooksInGlobalCache() {
 
 // Cursor used for paginating Firestore global library fetches
 let _globalLibraryCursor = null;
+// Google Books API key — keeps autofill/validation requests on our own
+// quota instead of the shared/easily-exhausted anonymous quota.
+const GOOGLE_BOOKS_API_KEY = 'AIzaSyAzEz60MxinHh3YscgUCTS4zAVkdXpA5-g';
 let _globalLibraryExhausted = false;
 let _globalLibraryTotalCount = null; // actual Firestore document count
 const GLOBAL_FETCH_PAGE = 500; // docs fetched per Firestore request
@@ -3476,7 +3479,7 @@ async function _gbFetch(type, query2) {
     const tid = setTimeout(() => controller.abort(), 5000);
     try {
       const resp = await fetch(
-        `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=10&fields=items(volumeInfo/title,volumeInfo/authors,volumeInfo/categories,volumeInfo/seriesInfo)`,
+        `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=10&fields=items(volumeInfo/title,volumeInfo/authors,volumeInfo/categories,volumeInfo/seriesInfo)&key=${GOOGLE_BOOKS_API_KEY}`,
         { signal: controller.signal }
       );
       clearTimeout(tid);
@@ -4107,7 +4110,7 @@ async function validateWithGoogleBooks(title, author) {
     const controller = new AbortController();
     const tid = setTimeout(() => controller.abort(), 4000);
     const q = encodeURIComponent(`intitle:${title}${author ? ' inauthor:' + author : ''}`);
-    const resp = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=5`, { signal: controller.signal });
+    const resp = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=5&key=${GOOGLE_BOOKS_API_KEY}`, { signal: controller.signal });
     clearTimeout(tid);
     if (!resp.ok) { _gbValidateCache.set(cacheKey, true); return true; }
     const data = await resp.json();
@@ -5590,7 +5593,7 @@ async function _queryGoogleBooks(title, author) {
   try {
     const q = encodeURIComponent(title + ' ' + author);
     const resp = await fetch(
-      `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=5`,
+      `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=5&key=${GOOGLE_BOOKS_API_KEY}`,
       { signal: controller.signal }
     );
     clearTimeout(tid);
