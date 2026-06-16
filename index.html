@@ -3447,30 +3447,43 @@ async function _gbFetch(type, query2) {
   if (!query2) return null;
   const key = type + ':' + query2.toLowerCase();
   if (_gbResultCache.has(key)) return _gbResultCache.get(key);
-  try {
-    const q = encodeURIComponent(type + ':' + query2);
+  const doFetch = async (q) => {
     const controller = new AbortController();
     const tid = setTimeout(() => controller.abort(), 5000);
-    const resp = await fetch(
-      `https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=10&fields=items(volumeInfo/title,volumeInfo/authors,volumeInfo/categories,volumeInfo/seriesInfo)`,
-      { signal: controller.signal }
-    );
-    clearTimeout(tid);
-    if (!resp.ok) return null;
-    const data = await resp.json();
-    const results = (data.items || []).map(item => {
-      const v = item.volumeInfo || {};
-      const series = (v.seriesInfo?.bookSeries || [])[0]?.title || '';
-      return {
-        title:      v.title || '',
-        author:     (v.authors || []).join(', '),
-        series,
-        categories: v.categories || []
-      };
-    }).filter(r => r.title);
-    _gbResultCache.set(key, results);
-    return results;
-  } catch(e) { return null; }
+    try {
+      const resp = await fetch(
+        `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=10&fields=items(volumeInfo/title,volumeInfo/authors,volumeInfo/categories,volumeInfo/seriesInfo)`,
+        { signal: controller.signal }
+      );
+      clearTimeout(tid);
+      if (!resp.ok) { console.warn('[autofill] Google Books request failed', resp.status, q); return null; }
+      const data = await resp.json();
+      return (data.items || []).map(item => {
+        const v = item.volumeInfo || {};
+        const series = (v.seriesInfo?.bookSeries || [])[0]?.title || '';
+        return {
+          title:      v.title || '',
+          author:     (v.authors || []).join(', '),
+          series,
+          categories: v.categories || []
+        };
+      }).filter(r => r.title);
+    } catch(e) {
+      clearTimeout(tid);
+      console.warn('[autofill] Google Books request errored', e?.message || e, q);
+      return null;
+    }
+  };
+  // First try the field-restricted query (e.g. "intitle:five"). The
+  // intitle:/inauthor: operators can be overly strict for short/common
+  // words, so if it comes back genuinely empty, retry as a plain keyword
+  // search before giving up and falling back to the local cache.
+  let results = await doFetch(type + ':' + query2);
+  if (results !== null && results.length === 0) {
+    results = await doFetch(query2);
+  }
+  if (results !== null) _gbResultCache.set(key, results);
+  return results;
 }
 
 // Debounced wrapper — calls cb(results) after 280ms quiet time.
