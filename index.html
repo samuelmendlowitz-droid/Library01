@@ -3477,7 +3477,10 @@ async function _gbFetch(type, query2) {
 // If offline, calls cb(null) immediately so callers can use offline fallback.
 function _gbDebounce(ctx, type, query2, cb) {
   clearTimeout(_gbTimers[ctx]);
-  if (_isOffline) { cb(null); return; }
+  // Don't gate on navigator.onLine — it's notoriously unreliable (can report
+  // "offline" even with a working connection). Always attempt the Google
+  // Books request; _gbFetch already returns null on real failure/timeout,
+  // which callers treat as a signal to use the offline cache fallback.
   _gbTimers[ctx] = setTimeout(async () => {
     const results = await _gbFetch(type, query2);
     cb(results);
