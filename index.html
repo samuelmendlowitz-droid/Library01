@@ -2754,6 +2754,14 @@ let currentSort = 'popularity-desc';
 let _personalSort = 'title-asc';
 let _globalSort   = 'popularity-desc';
 let _personalGroupBy = localStorage.getItem('personalGroupBy') || 'location'; // 'location' | 'genre' | 'author'
+let _personalShelfOrder    = localStorage.getItem('personalShelfOrder')    || 'settings';
+let _personalShelfItemSort = localStorage.getItem('personalShelfItemSort') || 'author-alpha';
+let _globalGroupBy         = localStorage.getItem('globalGroupBy')         || 'author';
+let _globalShelfOrder      = localStorage.getItem('globalShelfOrder')      || 'most';
+let _globalShelfItemSort   = localStorage.getItem('globalShelfItemSort')   || 'author-alpha';
+let _wishlistGroupBy       = localStorage.getItem('wishlistGroupBy')       || 'author';
+let _wishlistShelfOrder    = localStorage.getItem('wishlistShelfOrder')    || 'alpha';
+let _wishlistShelfItemSort = localStorage.getItem('wishlistShelfItemSort') || 'author-alpha';
 let _appTheme = localStorage.getItem('appTheme') || 'dark-blue';
 let currentBookView = localStorage.getItem('bookView') || 'shelf'; // 'card' | 'book' | 'shelf'
 let filterPanelOpen = false;
@@ -5151,55 +5159,19 @@ function _shelfSeriesBoxHtml(books, isGlobal) {
 function renderShelfView(list, isGlobal) {
   const root = document.getElementById('shelfView');
   document.getElementById('listHeader').textContent = list.length + ' book' + (list.length !== 1 ? 's' : '');
+  if (!list.length) { root.innerHTML = '<div class="shelf-empty">No books found</div>'; return; }
 
-  if (!list.length) {
-    root.innerHTML = '<div class="shelf-empty">No books found</div>';
-    return;
-  }
+  const isWishlist = currentPage === 'wishlist';
+  const isPersonal = !isGlobal && !isWishlist;
+  const groupBy    = isGlobal ? _globalGroupBy    : isWishlist ? _wishlistGroupBy    : _personalGroupBy;
+  const shelfOrder = isGlobal ? _globalShelfOrder : isWishlist ? _wishlistShelfOrder : _personalShelfOrder;
+  const itemSort   = isGlobal ? _globalShelfItemSort : isWishlist ? _wishlistShelfItemSort : _personalShelfItemSort;
 
-  let shelves; // array of { label, rawLoc, books[] }
-  if (isGlobal) {
-    // One shelf per author, most popular authors first
-    const byAuthor = {};
-    list.forEach(b => {
-      const key = (b.author || 'Unknown').trim();
-      if (!byAuthor[key]) byAuthor[key] = { score: 0, books: [] };
-      byAuthor[key].books.push(b);
-      byAuthor[key].score += (b.popularity || 0) + (b.ratingCount || 0) * 2;
-    });
-    shelves = Object.entries(byAuthor)
-      .sort(([, a], [, b]) => b.score - a.score)
-      .map(([author, { books: ab }]) => ({ label: author, rawLoc: author, books: ab }));
-  } else if (currentPage === 'wishlist') {
-    // One shelf per author, alphabetical
-    const byAuthor = {};
-    list.forEach(b => {
-      const key = (b.author || 'Unknown').trim();
-      if (!byAuthor[key]) byAuthor[key] = [];
-      byAuthor[key].push(b);
-    });
-    shelves = Object.entries(byAuthor)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([author, ab]) => ({ label: author, rawLoc: author, books: ab }));
-  } else if (_personalGroupBy === 'genre') {
-    const byGenre = {};
-    list.forEach(b => {
-      const key = (b.genres && b.genres.length ? b.genres[0] : 'Uncategorized').trim();
-      if (!byGenre[key]) byGenre[key] = [];
-      byGenre[key].push(b);
-    });
-    shelves = Object.keys(byGenre).sort((a, b) => a.localeCompare(b))
-      .map(g => ({ label: g, rawLoc: g, books: byGenre[g] }));
-  } else if (_personalGroupBy === 'author') {
-    const byAuthor = {};
-    list.forEach(b => {
-      const key = (b.author || 'Unknown').trim();
-      if (!byAuthor[key]) byAuthor[key] = [];
-      byAuthor[key].push(b);
-    });
-    shelves = Object.keys(byAuthor).sort((a, b) => a.localeCompare(b))
-      .map(a => ({ label: a, rawLoc: a, books: byAuthor[a] }));
-  } else {
+  const stripArticle = t => (t || '').replace(/^(the|an?)\s+/i, '').trim();
+
+  // ── Group into shelves ──────────────────────────────────────────────────────
+  let shelves;
+  if (groupBy === 'location' && isPersonal) {
     const byLoc = {};
     list.forEach(b => { const loc = b.location || 'Other'; if (!byLoc[loc]) byLoc[loc] = []; byLoc[loc].push(b); });
     const locOrder = [...orderedLocations, 'Borrowed', 'GlobalRead'];
@@ -5209,8 +5181,67 @@ function renderShelfView(list, isGlobal) {
       if (byLoc[loc]?.length) { shelves.push({ label: loc === 'GlobalRead' ? 'Not Owned' : loc, rawLoc: loc, books: byLoc[loc] }); seen.add(loc); }
     });
     Object.keys(byLoc).forEach(loc => { if (!seen.has(loc) && byLoc[loc].length) shelves.push({ label: loc, rawLoc: loc, books: byLoc[loc] }); });
+    if (shelfOrder === 'most')  shelves.sort((a, b) => b.books.length - a.books.length);
+    else if (shelfOrder === 'least') shelves.sort((a, b) => a.books.length - b.books.length);
+    // 'settings' keeps orderedLocations order already applied above
+  } else if (groupBy === 'genre') {
+    const byGenre = {};
+    list.forEach(b => {
+      const key = ((b.genres || [])[0] || 'Uncategorized').trim();
+      if (!byGenre[key]) byGenre[key] = [];
+      byGenre[key].push(b);
+    });
+    shelves = Object.entries(byGenre).map(([g, books]) => ({ label: g, rawLoc: g, books }));
+    if (shelfOrder === 'most')  shelves.sort((a, b) => b.books.length - a.books.length);
+    else if (shelfOrder === 'least') shelves.sort((a, b) => a.books.length - b.books.length);
+    else if (shelfOrder === 'alpha') shelves.sort((a, b) => a.label.localeCompare(b.label));
+    else { // 'settings' — use orderedGenres
+      shelves.sort((a, b) => {
+        const ai = orderedGenres.indexOf(a.label), bi = orderedGenres.indexOf(b.label);
+        const an = ai < 0 ? 9999 : ai, bn = bi < 0 ? 9999 : bi;
+        return an !== bn ? an - bn : a.label.localeCompare(b.label);
+      });
+    }
+  } else if (groupBy === 'title-alpha') {
+    const byLetter = {};
+    list.forEach(b => {
+      const letter = (stripArticle(b.title || '')[0] || '#').toUpperCase();
+      if (!byLetter[letter]) byLetter[letter] = [];
+      byLetter[letter].push(b);
+    });
+    shelves = Object.entries(byLetter).map(([letter, books]) => ({ label: letter, rawLoc: letter, books }));
+    if (shelfOrder === 'most')  shelves.sort((a, b) => b.books.length - a.books.length);
+    else if (shelfOrder === 'least') shelves.sort((a, b) => a.books.length - b.books.length);
+    else shelves.sort((a, b) => a.label.localeCompare(b.label)); // alpha (default)
+  } else { // author (default for all views if groupBy is unrecognised)
+    const byAuthor = {};
+    list.forEach(b => {
+      const key = (b.author || 'Unknown').trim();
+      if (!byAuthor[key]) byAuthor[key] = { books: [], score: 0 };
+      byAuthor[key].books.push(b);
+      byAuthor[key].score += (b.popularity || 0) + (b.ratingCount || 0) * 2;
+    });
+    shelves = Object.entries(byAuthor).map(([author, { books: ab, score }]) => ({ label: author, rawLoc: author, books: ab, score }));
+    if (shelfOrder === 'most')  shelves.sort((a, b) => b.books.length - a.books.length);
+    else if (shelfOrder === 'least') shelves.sort((a, b) => a.books.length - b.books.length);
+    else shelves.sort((a, b) => a.label.localeCompare(b.label)); // alpha (default)
   }
 
+  // ── Sort books within each shelf ────────────────────────────────────────────
+  const getRating = b => b.rating || b.avgRating || 0;
+  shelves.forEach(shelf => {
+    if (itemSort === 'title-alpha') {
+      shelf.books.sort((a, b) => stripArticle(a.title || '').localeCompare(stripArticle(b.title || '')));
+    } else if (itemSort === 'date') {
+      shelf.books.sort((a, b) => (b.addedAt?.seconds || 0) - (a.addedAt?.seconds || 0));
+    } else if (itemSort === 'rating') {
+      shelf.books.sort((a, b) => getRating(b) - getRating(a));
+    } else { // author-alpha (default)
+      shelf.books.sort((a, b) => (a.author || '').localeCompare(b.author || ''));
+    }
+  });
+
+  // ── Render ──────────────────────────────────────────────────────────────────
   root.innerHTML = shelves.map(({ label, rawLoc, books: shelfBooks }) => {
     const grouped = groupBySeries(shelfBooks);
     const spinesHtml = grouped.map(item => {
@@ -5225,7 +5256,7 @@ function renderShelfView(list, isGlobal) {
   }).join('');
 
   refreshIcons();
-  const dndActive = !isGlobal && currentPage !== 'wishlist' && _personalGroupBy === 'location';
+  const dndActive = isPersonal && groupBy === 'location';
   root.classList.toggle('shelf-dnd-mode', dndActive);
   if (dndActive) _initShelfDnd();
 }
@@ -9840,30 +9871,74 @@ window.toggleSortPanel = () => {
 };
 
 function buildSortOptions() {
+  const panel = document.getElementById('sortPanel');
+  if (!panel) return;
+
+  if (currentBookView === 'shelf') {
+    const isGlobal   = currentPage === 'global';
+    const isWishlist = currentPage === 'wishlist';
+    const isPersonal = !isGlobal && !isWishlist;
+    const groupBy    = isGlobal ? _globalGroupBy    : isWishlist ? _wishlistGroupBy    : _personalGroupBy;
+    const shelfOrder = isGlobal ? _globalShelfOrder : isWishlist ? _wishlistShelfOrder : _personalShelfOrder;
+    const itemSort   = isGlobal ? _globalShelfItemSort : isWishlist ? _wishlistShelfItemSort : _personalShelfItemSort;
+
+    const groupOpts = [
+      ...(isPersonal ? [{val:'location', label:'Location'}] : []),
+      {val:'author',      label:'Author'},
+      {val:'genre',       label:'Genre'},
+      {val:'title-alpha', label:'Title A–Z'},
+    ];
+
+    let orderOpts;
+    if (groupBy === 'location') {
+      orderOpts = [{val:'settings',label:'Settings order'},{val:'most',label:'Most books'},{val:'least',label:'Fewest books'}];
+    } else if (groupBy === 'author') {
+      orderOpts = [{val:'alpha',label:'A → Z'},{val:'most',label:'Most books'},{val:'least',label:'Fewest books'}];
+    } else if (groupBy === 'genre') {
+      orderOpts = [
+        ...(isPersonal ? [{val:'settings',label:'Settings order'}] : []),
+        {val:'alpha',label:'A → Z'},{val:'most',label:'Most books'},{val:'least',label:'Fewest books'},
+      ];
+    } else { // title-alpha
+      orderOpts = [{val:'alpha',label:'A → Z'},{val:'most',label:'Most books'},{val:'least',label:'Fewest books'}];
+    }
+
+    const itemOpts = [
+      ...(groupBy !== 'author'      ? [{val:'author-alpha', label:'Author (A→Z)'}] : []),
+      ...(groupBy !== 'title-alpha' ? [{val:'title-alpha',  label:'Title (A→Z)'}]  : []),
+      {val:'date',   label:'Recently Added'},
+      {val:'rating', label:'Rating (High→Low)'},
+    ];
+
+    const gFn = isGlobal ? 'setGlobalShelfGroupBy'    : isWishlist ? 'setWishlistShelfGroupBy'    : 'setPersonalShelfGroupBy';
+    const oFn = isGlobal ? 'setGlobalShelfOrder'      : isWishlist ? 'setWishlistShelfOrder'      : 'setPersonalShelfOrder';
+    const iFn = isGlobal ? 'setGlobalShelfItemSort'   : isWishlist ? 'setWishlistShelfItemSort'   : 'setPersonalShelfItemSort';
+
+    const row = (opts, cur, fn) => '<div class="sort-options">' +
+      opts.map(o => `<button class="sort-option${cur === o.val ? ' active' : ''}" onclick="${fn}('${o.val}')">${o.label}</button>`).join('') +
+      '</div>';
+
+    panel.innerHTML =
+      '<div class="sort-section-label">Shelf grouping</div>'    + row(groupOpts, groupBy, gFn) +
+      '<div class="sort-section-label">Shelf order</div>'       + row(orderOpts, shelfOrder, oFn) +
+      '<div class="sort-section-label">Sort within shelves</div>' + row(itemOpts, itemSort, iFn);
+    return;
+  }
+
+  // List / grid view — flat sort options (unchanged)
   const opts = [
     ...(currentPage === 'global' ? [{val:'popularity-desc', label:'Most Popular'}] : []),
-    {val:'title-asc',  label:'Title A→Z'},
-    {val:'title-desc', label:'Title Z→A'},
-    {val:'author-asc', label:'Author A→Z'},
-    {val:'author-desc',label:'Author Z→A'},
-    {val:'genre-asc',  label:'Genre A→Z'},
-    {val:'genre-custom',label:'Genre (Custom)'},
-    {val:'added-desc', label:'Recently Added'},
+    {val:'title-asc',    label:'Title A→Z'},
+    {val:'title-desc',   label:'Title Z→A'},
+    {val:'author-asc',   label:'Author A→Z'},
+    {val:'author-desc',  label:'Author Z→A'},
+    {val:'genre-asc',    label:'Genre A→Z'},
+    {val:'genre-custom', label:'Genre (Custom)'},
+    {val:'added-desc',   label:'Recently Added'},
   ];
-  const isPersonal = currentPage !== 'global' && currentPage !== 'wishlist';
-  let html = '';
-  if (isPersonal) {
-    const groupOpts = [{val:'location',label:'Location'},{val:'genre',label:'Genre'},{val:'author',label:'Author'}];
-    html += '<div class="sort-section-label">Group shelves by</div>';
-    html += '<div class="sort-options">' + groupOpts.map(o =>
-      '<button class="sort-option' + (_personalGroupBy === o.val ? ' active' : '') + '" onclick="setGroupBy(\'' + o.val + '\')">' + o.label + '</button>'
-    ).join('') + '</div>';
-    html += '<div class="sort-section-label">Sort within shelf</div>';
-  }
-  html += '<div class="sort-options" id="sortOptions">' + opts.map(o =>
-    '<button class="sort-option' + (currentSort === o.val ? ' active' : '') + '" onclick="setSort(\'' + o.val + '\')">' + o.label + '</button>'
-  ).join('') + '</div>';
-  document.getElementById('sortPanel').innerHTML = html;
+  panel.innerHTML = '<div class="sort-options" id="sortOptions">' +
+    opts.map(o => `<button class="sort-option${currentSort === o.val ? ' active' : ''}" onclick="setSort('${o.val}')">${o.label}</button>`).join('') +
+    '</div>';
 }
 
 window.setSort = (sort) => {
@@ -9878,14 +9953,54 @@ window.setSort = (sort) => {
   else applyFilters();
 };
 
-window.setGroupBy = (groupBy) => {
-  _personalGroupBy = groupBy;
-  localStorage.setItem('personalGroupBy', groupBy);
-  // Rebuild sort panel to reflect new active state, keep panel open
+function _applyShelfSort() {
   buildSortOptions();
   document.getElementById('sortPanel').style.display = '';
-  applyFilters();
+  if (currentPage === 'global') applyGlobalFilters();
+  else applyFilters();
+}
+
+window.setPersonalShelfGroupBy = (v) => {
+  _personalGroupBy = v; localStorage.setItem('personalGroupBy', v);
+  const defs = { location:'settings', author:'alpha', genre:'settings', 'title-alpha':'alpha' };
+  _personalShelfOrder = defs[v] || 'alpha'; localStorage.setItem('personalShelfOrder', _personalShelfOrder);
+  _applyShelfSort();
 };
+window.setPersonalShelfOrder = (v) => {
+  _personalShelfOrder = v; localStorage.setItem('personalShelfOrder', v); _applyShelfSort();
+};
+window.setPersonalShelfItemSort = (v) => {
+  _personalShelfItemSort = v; localStorage.setItem('personalShelfItemSort', v); _applyShelfSort();
+};
+
+window.setGlobalShelfGroupBy = (v) => {
+  _globalGroupBy = v; localStorage.setItem('globalGroupBy', v);
+  const defs = { author:'most', genre:'alpha', 'title-alpha':'alpha' };
+  _globalShelfOrder = defs[v] || 'alpha'; localStorage.setItem('globalShelfOrder', _globalShelfOrder);
+  _applyShelfSort();
+};
+window.setGlobalShelfOrder = (v) => {
+  _globalShelfOrder = v; localStorage.setItem('globalShelfOrder', v); _applyShelfSort();
+};
+window.setGlobalShelfItemSort = (v) => {
+  _globalShelfItemSort = v; localStorage.setItem('globalShelfItemSort', v); _applyShelfSort();
+};
+
+window.setWishlistShelfGroupBy = (v) => {
+  _wishlistGroupBy = v; localStorage.setItem('wishlistGroupBy', v);
+  const defs = { author:'alpha', genre:'alpha', 'title-alpha':'alpha' };
+  _wishlistShelfOrder = defs[v] || 'alpha'; localStorage.setItem('wishlistShelfOrder', _wishlistShelfOrder);
+  _applyShelfSort();
+};
+window.setWishlistShelfOrder = (v) => {
+  _wishlistShelfOrder = v; localStorage.setItem('wishlistShelfOrder', v); _applyShelfSort();
+};
+window.setWishlistShelfItemSort = (v) => {
+  _wishlistShelfItemSort = v; localStorage.setItem('wishlistShelfItemSort', v); _applyShelfSort();
+};
+
+// Keep setGroupBy as an alias so any other callsites keep working
+window.setGroupBy = window.setPersonalShelfGroupBy;
 
 window.cycleBookView = () => {
   const cycle = { card: 'book', book: 'shelf', shelf: 'card' };
