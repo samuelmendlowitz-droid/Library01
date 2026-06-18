@@ -3540,13 +3540,13 @@ function _modWarnEl(textarea, warningId) {
   }
   if (result.tier === 1) {
     el.className = 'mod-warn tier1 visible';
-    el.textContent = '⛔ That language contains a slur that isn\'t allowed on this platform. Please edit your message before posting.';
+    el.textContent = '⛔ Hateful speech detected — you won\'t be able to post this. Please remove it before submitting.';
   } else {
     el.className = 'mod-warn tier2 visible';
     if (currentUserIsMinor) {
       el.textContent = '⚠️ That language isn\'t allowed for your account. Please keep your message kind and respectful.';
     } else {
-      el.textContent = '⚠️ Please keep it respectful — this is a family-friendly app used by readers of all ages.';
+      el.textContent = '⚠️ Note: this content won\'t be visible to users with family-friendly mode enabled.';
     }
   }
 }
