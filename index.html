@@ -914,6 +914,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .status-bar.loading { display: block; color: var(--text3); }
 .status-bar.error { display: block; color: var(--danger); background: color-mix(in srgb, var(--danger) 15%, var(--surface2)); }
 .status-bar.success { display: block; color: var(--read); background: color-mix(in srgb, var(--read) 15%, var(--surface2)); }
+.status-bar.info { display: block; color: #0077cc; background: color-mix(in srgb, #0077cc 12%, var(--surface2)); }
 .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -3234,6 +3235,9 @@ onAuthStateChanged(auth, async user => {
     // measure header height after it's visible
     requestAnimationFrame(updateHeaderSpacer);
     await loadSettings(); // also loads borrowLog
+    getDoc(doc(db, 'users', user.uid, 'meta', 'moderation')).then(snap => {
+      if (snap.exists() && snap.data()?.banned) _modApplyBan();
+    }).catch(() => {});
     updateHeaderSubtitle();
     checkUsernameOnLogin(); // async, non-blocking — shows modal if new user
     _personalBooksLoaded = false;
@@ -3543,7 +3547,7 @@ function _modWarnEl(textarea, warningId) {
   }
 }
 
-// Returns true and shows the warning if the text can't be posted; false if OK.
+// Returns true (blocked), 'adult-warn' (allowed but visible warning shown), or false (clean).
 function _modBlockPost(text, warningId) {
   const result = _modCheck(text);
   if (!result) return false;
@@ -3552,12 +3556,43 @@ function _modBlockPost(text, warningId) {
     if (el) {
       el.className = 'mod-warn ' + (result.tier === 1 ? 'tier1' : 'tier2') + ' visible';
       el.textContent = result.tier === 1
-        ? '⛔ Your message contains a slur that isn\'t allowed here. Please remove it before posting.'
+        ? '⛔ Hateful speech was detected and blocked from posting. Repeated use of hateful speech can result in an account ban.'
         : '⚠️ Your account can\'t post that language. Please keep messages kind and respectful.';
     }
+    if (result.tier === 1) _modRecordStrike(text);
     return true;
   }
-  return false; // adult with tier-2 word — warned while typing, allowed to post
+  return 'adult-warn'; // adult with tier-2 word — warn but allow post
+}
+
+async function _modRecordStrike(text) {
+  if (!currentUser) return;
+  const modRef = doc(db, 'users', currentUser.uid, 'meta', 'moderation');
+  try {
+    const snap = await getDoc(modRef);
+    const data = snap.exists() ? snap.data() : {};
+    const strikes = (data.slurStrikes || 0) + 1;
+    const flaggedTexts = [...(data.flaggedTexts || []), { text, at: new Date().toISOString() }];
+    const update = { slurStrikes: strikes, flaggedTexts };
+    if (strikes >= 5) { update.banned = true; update.bannedAt = serverTimestamp(); }
+    await setDoc(modRef, update, { merge: true });
+    if (strikes >= 5) _modApplyBan();
+  } catch(e) {}
+}
+
+function _modApplyBan() {
+  if (document.getElementById('banOverlay')) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'banOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:99999;display:flex;align-items:center;justify-content:center;padding:24px;';
+  overlay.innerHTML = '<div style="background:#fff;border-radius:16px;padding:36px 28px;max-width:440px;text-align:center;font-family:inherit;">'
+    + '<div style="font-size:52px;margin-bottom:12px;">⛔</div>'
+    + '<h2 style="margin:0 0 14px;color:#c0392b;font-size:22px;">Account Suspended</h2>'
+    + '<p style="color:#444;line-height:1.65;margin:0 0 14px;font-size:15px;">Your account has been locked due to repeated use of hateful language that violates our community guidelines. Your library data has been preserved.</p>'
+    + '<p style="color:#444;line-height:1.65;margin:0 0 18px;font-size:15px;">If you believe this was an error, please appeal by emailing <strong>support@libraryapp.com</strong> with your account email address. Allow up to 5 business days for review.</p>'
+    + '<p style="color:#999;font-size:12px;">Account ID: ' + (currentUser ? currentUser.uid : '') + '</p>'
+    + '</div>';
+  document.body.appendChild(overlay);
 }
 
 // Called on login to update currentUserIsMinor from stored birthdate.
@@ -6910,7 +6945,11 @@ window.submitRateReview = async () => {
     }
     const ta = document.getElementById('rrTextarea');
     const text = (ta?.value || '').trim();
-    if (text && _modBlockPost(text, 'rrModWarn')) { _rrDone(); return; }
+    if (text) {
+      const _rrMod = _modBlockPost(text, 'rrModWarn');
+      if (_rrMod === true) { _rrDone(); return; }
+      if (_rrMod === 'adult-warn') { showStatus('Note: This review contains language that won\'t be visible to some accounts.', 'info'); setTimeout(hideStatus, 4000); }
+    }
     if (text && _rrGbId && _rrStars > 0) {
       const uid = currentUser.uid;
       const displayName = userUsername || currentUser.displayName || currentUser.email || 'Anonymous';
@@ -8989,7 +9028,9 @@ window.submitReview = async () => {
   const ta = document.getElementById('review-textarea');
   const text = (ta?.value || '').trim();
   if (!text) { showStatus('Write something before submitting.', 'error'); setTimeout(hideStatus, 2000); return; }
-  if (_modBlockPost(text, 'reviewModWarn')) return;
+  const _reviewMod = _modBlockPost(text, 'reviewModWarn');
+  if (_reviewMod === true) return;
+  if (_reviewMod === 'adult-warn') { showStatus('Note: This review contains language that won\'t be visible to some accounts.', 'info'); setTimeout(hideStatus, 4000); }
   const personal = books.find(x => createGlobalBookId(x.title||'', x.author||'') === _reviewBookGlobalId);
   const rating = personal ? (personal.rating || 0) : 0;
   if (!rating) {
@@ -11442,7 +11483,9 @@ window.sendChatMessage = async () => {
   const input = document.getElementById('chatTextInput');
   const text = input.value.trim();
   if (!text || !friendDetailsUid) return;
-  if (_modBlockPost(text, 'chatModWarn')) return;
+  const _chatMod = _modBlockPost(text, 'chatModWarn');
+  if (_chatMod === true) return;
+  if (_chatMod === 'adult-warn') { showStatus('Note: This message contains language that won\'t be visible to some accounts.', 'info'); setTimeout(hideStatus, 4000); }
   input.value = ''; input.style.height = 'auto';
   closeBookPicker();
   try {
@@ -11825,7 +11868,9 @@ window.sendClubMessage = async () => {
   const input = document.getElementById('clubChatInput');
   const text = input.value.trim();
   if (!text || !currentClubId) return;
-  if (_modBlockPost(text, 'clubModWarn')) return;
+  const _clubMod = _modBlockPost(text, 'clubModWarn');
+  if (_clubMod === true) return;
+  if (_clubMod === 'adult-warn') { showStatus('Note: This message contains language that won\'t be visible to some accounts.', 'info'); setTimeout(hideStatus, 4000); }
   input.value = ''; input.style.height = 'auto';
   closeClubBookPicker();
   try {
