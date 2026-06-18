@@ -279,6 +279,10 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .borrow-req-card.mine { background: rgba(201,169,110,0.08); border-color: rgba(201,169,110,0.25); }
 .borrow-req-card.theirs { background: var(--surface3); }
 .chat-input-row { padding: 10px 14px; border-top: 1px solid var(--border); display: flex; gap: 8px; align-items: flex-end; background: var(--surface); flex-shrink: 0; }
+.mod-warn { font-size: 12px; padding: 8px 12px; border-radius: var(--radius-sm); margin-top: 6px; display: none; line-height: 1.4; }
+.mod-warn.visible { display: block; }
+.mod-warn.tier2 { background: color-mix(in srgb, #f5a623 15%, var(--surface2)); color: var(--text2); border: 1px solid color-mix(in srgb, #f5a623 40%, transparent); }
+.mod-warn.tier1 { background: color-mix(in srgb, var(--danger) 12%, var(--surface2)); color: var(--danger); border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent); font-weight: 600; }
 .chat-textarea { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 9px 14px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--text); resize: none; outline: none; min-height: 38px; max-height: 120px; overflow-y: auto; line-height: 1.4; }
 .chat-textarea:focus { border-color: var(--accent); }
 .chat-send-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); border: none; color: var(--bg); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
@@ -1805,11 +1809,12 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
         <input class="book-picker-search" id="bookPickerSearch" placeholder="Search your books…" oninput="filterBookPicker(this.value)">
         <div id="bookPickerList" style="margin-top:6px"></div>
       </div>
+      <div id="chatModWarn" class="mod-warn" style="margin:0 14px 2px;"></div>
       <div class="chat-input-row">
         <button class="chat-plus-btn" onclick="toggleBookPicker()"><i data-lucide="plus"></i></button>
         <textarea class="chat-textarea" id="chatTextInput" placeholder="Message…" rows="1"
           onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMessage()}"
-          oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
+          oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px';_modWarnEl(this,'chatModWarn')"></textarea>
         <button class="chat-send-btn" onclick="sendChatMessage()"><i data-lucide="send"></i></button>
       </div>
     </div>
@@ -1931,11 +1936,12 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
         <input class="book-picker-search" id="clubBookPickerSearch" placeholder="Search your books…" oninput="filterClubBookPicker(this.value)">
         <div id="clubBookPickerList" style="margin-top:6px"></div>
       </div>
+      <div id="clubModWarn" class="mod-warn" style="margin:0 14px 2px;"></div>
       <div class="chat-input-row">
         <button class="chat-plus-btn" onclick="toggleClubBookPicker()"><i data-lucide="plus"></i></button>
         <textarea class="chat-textarea" id="clubChatInput" placeholder="Message…" rows="1"
           onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendClubMessage()}"
-          oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
+          oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px';_modWarnEl(this,'clubModWarn')"></textarea>
         <button class="chat-send-btn" onclick="sendClubMessage()"><i data-lucide="send"></i></button>
       </div>
     </div>
@@ -2220,7 +2226,8 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
     </div>
     <div style="margin-bottom:20px;">
       <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;">Review <span style="color:var(--text3);font-weight:400;">(optional)</span></div>
-      <textarea class="review-textarea" id="rrTextarea" placeholder="Share your thoughts about this book…"></textarea>
+      <textarea class="review-textarea" id="rrTextarea" placeholder="Share your thoughts about this book…" oninput="_modWarnEl(this,'rrModWarn')"></textarea>
+      <div id="rrModWarn" class="mod-warn" style="margin-top:6px;"></div>
     </div>
     <div style="display:flex;gap:10px;">
       <button class="btn-submit" id="rrSaveBtn" onclick="submitRateReview()" style="flex:1;">Save</button>
@@ -2543,6 +2550,11 @@ Output only the CSV — no explanation needed.</div>
         </div>
         <div class="form-group">
           <label class="form-label">Display Name</label>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:10px;">Google's account system doesn't share your age with third-party apps. Enter your birthdate here so we can apply age-appropriate content settings.</div>
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;">
+            <input type="date" class="form-input" id="birthdateInput" style="flex:1;" onchange="saveBirthdate(this.value)">
+            <span id="birthdateStatus" style="font-size:12px;color:var(--text3);white-space:nowrap;"></span>
+          </div>
           <div id="displayNameDisplay" style="display:none;align-items:center;gap:10px;">
             <span id="displayNameDisplayText" style="font-size:15px;color:var(--text);font-weight:500;"></span>
             <button onclick="editDisplayName()" style="background:none;border:none;padding:4px;cursor:pointer;color:var(--text3);display:flex;align-items:center;"><i data-lucide="pencil" style="width:14px;height:14px;"></i></button>
@@ -2810,6 +2822,11 @@ async function loadSettings() {
       if (data.iconFgColor) userIconFgColor = data.iconFgColor;
       if (data.iconSvgIdx != null) userIconSvgIdx = data.iconSvgIdx;
       _isPremium = !!data.isPremium;
+      if (data.birthdate) {
+        _modApplyBirthdate(data.birthdate);
+        const bi = document.getElementById('birthdateInput');
+        if (bi) bi.value = data.birthdate;
+      }
     }
   } catch(e) {}
 }
@@ -3443,6 +3460,129 @@ window.addEventListener('online', () => {
   }
 });
 window.addEventListener('offline', () => { _isOffline = true; _updateOfflineBanner(); });
+
+// ── CONTENT MODERATION ───────────────────────────────────────────────────────
+// Age detection: Google OAuth does not expose the user's birthdate in the
+// standard ID token, so we store it in the settings document and derive
+// currentUserIsMinor from it on login. Unknown age → treated as adult (18+).
+let currentUserIsMinor = false;
+
+// Leet-speak normaliser: replaces common digit/symbol substitutions with
+// their letter equivalents, then collapses evasion punctuation (f*ck → fck,
+// sh!t → sht) before the word-list check.
+function _modNorm(s) {
+  return (s || '').toLowerCase()
+    .replace(/[@4]/g, 'a').replace(/3/g, 'e')
+    .replace(/[1!|]/g, 'i').replace(/0/g, 'o')
+    .replace(/[5$]/g, 's').replace(/7/g, 't')
+    .replace(/[*\-_.#^]/g, ''); // collapse evasion chars — f*ck → fck
+}
+
+function _modBoundary(norm, word) {
+  return new RegExp('(?<![a-z])' + word + '(?![a-z])').test(norm);
+}
+
+// Tier 1 — racial/ethnic/identity slurs. Hard-blocked for ALL accounts.
+const _MOD_T1 = [
+  'nigger','nigg3r','n1gger','niggr','nigga','n1gga',
+  'spic','sp1c','ch1nk','chink','gook','g00k',
+  'towelhead','sandnigger','wetback','beaner','kraut',
+  'kike','k1ke',
+  'faggot','fagg0t','f4ggot','fags','f4g',
+  'dyke','dy1e',
+  'tranny','tr4nny',
+  'retard','ret4rd','r3tard',
+  'coon','c00n','jiggaboo','jigaboo','zipperhead','raghead','spook',
+];
+// Tier 2 — strong profanity. Blocked for under-18 users; adults see a
+// courtesy warning but may still post. "damn", "hell", "crap", "ass"
+// (standalone) and "bastard" are intentionally excluded — too mild and
+// too common in book discussions.
+const _MOD_T2 = [
+  'fuck','fck','fuk','fuckin','fucking','fucked','fucker','fuckers',
+  'motherfuck','motherfucker','motherfucking',
+  'shit','sht','shite','bullshit',
+  'bitch','btch','bitches',
+  'cunt','cnt',
+  'cock','c0ck',
+  'prick','pr1ck',
+  'whore','wh0re',
+  'slut','sl0t',
+  'asshole','ashole','assh0le','arshole',
+];
+
+// Returns {tier:1|2, word} or null if the text is clean.
+function _modCheck(text) {
+  if (!text) return null;
+  const norm = _modNorm(text);
+  for (const w of _MOD_T1) { if (_modBoundary(norm, w)) return { tier: 1, word: w }; }
+  for (const w of _MOD_T2) { if (_modBoundary(norm, w)) return { tier: 2, word: w }; }
+  return null;
+}
+
+// Show/hide the warning element next to a textarea as the user types.
+function _modWarnEl(textarea, warningId) {
+  const el = document.getElementById(warningId);
+  if (!el) return;
+  const result = _modCheck(textarea.value);
+  if (!result) {
+    el.className = 'mod-warn';
+    el.textContent = '';
+    return;
+  }
+  if (result.tier === 1) {
+    el.className = 'mod-warn tier1 visible';
+    el.textContent = '⛔ That language contains a slur that isn\'t allowed on this platform. Please edit your message before posting.';
+  } else {
+    el.className = 'mod-warn tier2 visible';
+    if (currentUserIsMinor) {
+      el.textContent = '⚠️ That language isn\'t allowed for your account. Please keep your message kind and respectful.';
+    } else {
+      el.textContent = '⚠️ Please keep it respectful — this is a family-friendly app used by readers of all ages.';
+    }
+  }
+}
+
+// Returns true and shows the warning if the text can't be posted; false if OK.
+function _modBlockPost(text, warningId) {
+  const result = _modCheck(text);
+  if (!result) return false;
+  if (result.tier === 1 || currentUserIsMinor) {
+    const el = document.getElementById(warningId);
+    if (el) {
+      el.className = 'mod-warn ' + (result.tier === 1 ? 'tier1' : 'tier2') + ' visible';
+      el.textContent = result.tier === 1
+        ? '⛔ Your message contains a slur that isn\'t allowed here. Please remove it before posting.'
+        : '⚠️ Your account can\'t post that language. Please keep messages kind and respectful.';
+    }
+    return true;
+  }
+  return false; // adult with tier-2 word — warned while typing, allowed to post
+}
+
+// Called on login to update currentUserIsMinor from stored birthdate.
+function _modApplyBirthdate(birthdateStr) {
+  if (!birthdateStr) { currentUserIsMinor = false; return; }
+  const birth = new Date(birthdateStr);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const mDiff = today.getMonth() - birth.getMonth();
+  if (mDiff < 0 || (mDiff === 0 && today.getDate() < birth.getDate())) age--;
+  currentUserIsMinor = age < 18;
+}
+
+// Save birthdate to Firestore settings and recompute minor status.
+window.saveBirthdate = async (val) => {
+  _modApplyBirthdate(val);
+  const statusEl = document.getElementById('birthdateStatus');
+  try {
+    await setDoc(userSettingsDoc(), { birthdate: val }, { merge: true });
+    if (statusEl) {
+      statusEl.textContent = currentUserIsMinor ? 'Saved (under 18)' : 'Saved';
+      setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 2500);
+    }
+  } catch(e) {}
+};
 
 // ── GOOGLE BOOKS AUTOFILL ─────────────────────────────────────────────────────
 // Per-context debounce timers (key = context string)
@@ -6770,6 +6910,7 @@ window.submitRateReview = async () => {
     }
     const ta = document.getElementById('rrTextarea');
     const text = (ta?.value || '').trim();
+    if (text && _modBlockPost(text, 'rrModWarn')) { _rrDone(); return; }
     if (text && _rrGbId && _rrStars > 0) {
       const uid = currentUser.uid;
       const displayName = userUsername || currentUser.displayName || currentUser.email || 'Anonymous';
@@ -8663,7 +8804,8 @@ function _buildReviewsSection(canWrite, myRating) {
 
   const writeBox = canWrite ? `<div class="review-write-box">
     <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;">Your review <span style="color:var(--text3);font-weight:400;">(${myRating}/5)</span></div>
-    <textarea class="review-textarea" id="review-textarea" placeholder="Share your thoughts about this book…"></textarea>
+    <textarea class="review-textarea" id="review-textarea" placeholder="Share your thoughts about this book…" oninput="_modWarnEl(this,'reviewModWarn')"></textarea>
+    <div id="reviewModWarn" class="mod-warn" style="margin-top:6px;"></div>
     <button class="btn-submit" id="review-submit-btn" style="margin-top:10px;" onclick="submitReview()">Post Review</button>
   </div>` : '';
 
@@ -8728,6 +8870,7 @@ function _renderReviewList() {
   const listEl = document.getElementById('review-list');
   if (!listEl) return;
   let data = [..._reviewsData];
+  if (currentUserIsMinor) data = data.filter(r => !_modCheck(r.text));
   if (_reviewFilter !== null) data = data.filter(r => r.rating === _reviewFilter);
   if (_reviewSort === 'high') data.sort((a,b) => (b.rating||0) - (a.rating||0));
   else if (_reviewSort === 'low') data.sort((a,b) => (a.rating||0) - (b.rating||0));
@@ -8846,6 +8989,7 @@ window.submitReview = async () => {
   const ta = document.getElementById('review-textarea');
   const text = (ta?.value || '').trim();
   if (!text) { showStatus('Write something before submitting.', 'error'); setTimeout(hideStatus, 2000); return; }
+  if (_modBlockPost(text, 'reviewModWarn')) return;
   const personal = books.find(x => createGlobalBookId(x.title||'', x.author||'') === _reviewBookGlobalId);
   const rating = personal ? (personal.rating || 0) : 0;
   if (!rating) {
@@ -11237,7 +11381,8 @@ function renderChatMessages(msgs) {
     el.innerHTML = '<div style="padding:40px 0;text-align:center;color:var(--text3);font-size:13px">No messages yet. Say hello!</div>';
     return;
   }
-  el.innerHTML = msgs.map(m => {
+  const visibleMsgs = currentUserIsMinor ? msgs.filter(m => m.type !== 'text' || !_modCheck(m.text)) : msgs;
+  el.innerHTML = visibleMsgs.map(m => {
     const mine = m.fromUid === currentUser.uid;
     const side = mine ? 'mine' : 'theirs';
     const ts = m.createdAt?.toDate ? m.createdAt.toDate().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '';
@@ -11297,6 +11442,7 @@ window.sendChatMessage = async () => {
   const input = document.getElementById('chatTextInput');
   const text = input.value.trim();
   if (!text || !friendDetailsUid) return;
+  if (_modBlockPost(text, 'chatModWarn')) return;
   input.value = ''; input.style.height = 'auto';
   closeBookPicker();
   try {
@@ -11609,7 +11755,8 @@ function renderClubMessages(msgs) {
     el.innerHTML = '<div style="padding:40px 0;text-align:center;color:var(--text3);font-size:13px">No messages yet. Say hello! 👋</div>';
     return;
   }
-  el.innerHTML = msgs.map(m => {
+  const visibleClubMsgs = currentUserIsMinor ? msgs.filter(m => m.type !== 'text' || !_modCheck(m.text)) : msgs;
+  el.innerHTML = visibleClubMsgs.map(m => {
     const mine = m.fromUid === currentUser.uid;
     const side = mine ? 'mine' : 'theirs';
     const ts = m.createdAt?.toDate ? m.createdAt.toDate().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}) : '';
@@ -11678,6 +11825,7 @@ window.sendClubMessage = async () => {
   const input = document.getElementById('clubChatInput');
   const text = input.value.trim();
   if (!text || !currentClubId) return;
+  if (_modBlockPost(text, 'clubModWarn')) return;
   input.value = ''; input.style.height = 'auto';
   closeClubBookPicker();
   try {
