@@ -840,6 +840,12 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .review-date { font-size:11px;color:var(--text3);white-space:nowrap;padding-top:2px; }
 .review-stars { color:#f5a623;font-size:14px;letter-spacing:1px;margin-top:1px; }
 .review-text { font-size:13px;color:var(--text2);line-height:1.5; }
+.review-own-card { background:color-mix(in srgb,var(--accent) 6%,var(--surface2));border:1px solid color-mix(in srgb,var(--accent) 25%,var(--border));border-radius:var(--radius);padding:12px;margin-bottom:16px; }
+.review-own-label { font-size:11px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px; }
+.review-action-btn { display:inline-flex;align-items:center;padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface3);color:var(--text2);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all 0.12s;line-height:1.4; }
+.review-action-btn:hover { background:var(--surface2);color:var(--text); }
+.review-action-btn.delete { border-color:color-mix(in srgb,var(--danger) 60%,var(--border));color:var(--danger); }
+.review-action-btn.delete:hover { background:color-mix(in srgb,var(--danger) 10%,var(--surface3)); }
 .review-empty { font-size:13px;color:var(--text3);text-align:center;padding:20px 0; }
 .subject-type-badge { display:inline-flex;align-items:center;padding:2px 6px;border-radius:5px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;margin-right:4px; }
 .subject-type-badge.book { background:#1e2a1e;color:#6bc97e; }
@@ -8891,7 +8897,7 @@ function _buildReviewsSection(canWrite, myRating) {
   const sortLabel = sortLabels[_reviewSort] || 'Newest';
   const filterLabel = _reviewFilter !== null ? '★'.repeat(_reviewFilter) : 'All stars';
 
-  const writeBox = canWrite ? `<div class="review-write-box">
+  const writeBox = canWrite ? `<div class="review-write-box" id="review-write-box">
     <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;">Your review <span style="color:var(--text3);font-weight:400;">(${myRating}/5)</span></div>
     <textarea class="review-textarea" id="review-textarea" placeholder="Share your thoughts about this book…" oninput="_modWarnEl(this,'reviewModWarn')"></textarea>
     <div id="reviewModWarn" class="mod-warn" style="margin-top:6px;"></div>
@@ -8946,8 +8952,8 @@ async function _loadAndRenderReviews(globalId) {
   _renderReviewList();
   if (currentUser) {
     const myReview = _reviewsData.find(r => r.userId === currentUser.uid);
-    const ta = document.getElementById('review-textarea');
-    if (ta && myReview) ta.value = myReview.text || '';
+    const writeBox = document.getElementById('review-write-box');
+    if (writeBox && myReview) writeBox.style.display = 'none';
   }
 }
 
@@ -8958,25 +8964,31 @@ function _heartSvg() {
 function _renderReviewList() {
   const listEl = document.getElementById('review-list');
   if (!listEl) return;
-  let data = [..._reviewsData];
-  if (currentUserIsMinor) data = data.filter(r => !_modCheck(r.text));
-  if (_reviewFilter !== null) data = data.filter(r => r.rating === _reviewFilter);
-  if (_reviewSort === 'high') data.sort((a,b) => (b.rating||0) - (a.rating||0));
-  else if (_reviewSort === 'low') data.sort((a,b) => (a.rating||0) - (b.rating||0));
-  else if (_reviewSort === 'newest') data.sort((a,b) => (b.timestamp?.seconds||0) - (a.timestamp?.seconds||0));
-  else if (_reviewSort === 'oldest') data.sort((a,b) => (a.timestamp?.seconds||0) - (b.timestamp?.seconds||0));
-  if (!data.length) {
+
+  let allData = [..._reviewsData];
+  if (currentUserIsMinor) allData = allData.filter(r => !_modCheck(r.text));
+
+  // Pin user's own review to top; exclude it from the sorted/filtered list
+  const myReview = currentUser ? allData.find(r => r.userId === currentUser.uid) : null;
+  let others = myReview ? allData.filter(r => r.userId !== currentUser.uid) : [...allData];
+
+  if (_reviewFilter !== null) others = others.filter(r => r.rating === _reviewFilter);
+  if (_reviewSort === 'high')   others.sort((a,b) => (b.rating||0) - (a.rating||0));
+  else if (_reviewSort === 'low')    others.sort((a,b) => (a.rating||0) - (b.rating||0));
+  else if (_reviewSort === 'newest') others.sort((a,b) => (b.timestamp?.seconds||0) - (a.timestamp?.seconds||0));
+  else if (_reviewSort === 'oldest') others.sort((a,b) => (a.timestamp?.seconds||0) - (b.timestamp?.seconds||0));
+
+  if (!myReview && !others.length) {
     listEl.innerHTML = `<div class="review-empty">No reviews yet${_reviewFilter !== null ? ' for this rating' : ''}.</div>`;
     return;
   }
-  listEl.innerHTML = data.map(r => {
+
+  const renderOther = r => {
     const stars = Array.from({length:5},(_,i)=>`<span style="color:${i<(r.rating||0)?'#f5a623':'var(--surface3)'}">★</span>`).join('');
     const dateStr = r.timestamp?.seconds
-      ? new Date(r.timestamp.seconds*1000).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})
-      : '';
-    const isMe = currentUser && r.userId === currentUser.uid;
+      ? new Date(r.timestamp.seconds*1000).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
     const displayName = r.username || r.displayName || 'Anonymous';
-    const char = displayName[0].toUpperCase();
+    const char = (displayName[0] || '?').toUpperCase();
     const avatarStyle = r.avatarColor ? `background:${r.avatarColor};` : '';
     const likedBy = r.likedBy || [];
     const iLiked = !!(currentUser && likedBy.includes(currentUser.uid));
@@ -8989,7 +9001,7 @@ function _renderReviewList() {
       <div class="review-item-header">
         <div class="review-avatar" style="${avatarStyle}">${esc(char)}</div>
         <div style="flex:1;min-width:0;">
-          <div class="review-user">${esc(displayName)}${isMe?' <span style="font-size:10px;color:var(--text3);font-weight:400;">(you)</span>':''}</div>
+          <div class="review-user">${esc(displayName)}</div>
           <div class="review-stars">${stars}</div>
         </div>
         <div class="review-date">${dateStr}</div>
@@ -8997,7 +9009,32 @@ function _renderReviewList() {
       ${r.text ? `<div class="review-text">${esc(r.text)}</div>` : ''}
       ${likeBtn ? `<div style="display:flex;justify-content:flex-end;margin-top:4px;">${likeBtn}</div>` : ''}
     </div>`;
-  }).join('');
+  };
+
+  let myCard = '';
+  if (myReview) {
+    const stars = Array.from({length:5},(_,i)=>`<span style="color:${i<(myReview.rating||0)?'#f5a623':'var(--surface3)'}">★</span>`).join('');
+    const displayName = myReview.username || myReview.displayName || 'Anonymous';
+    const char = (displayName[0] || '?').toUpperCase();
+    const avatarStyle = myReview.avatarColor ? `background:${myReview.avatarColor};` : '';
+    myCard = `<div class="review-own-card">
+      <div class="review-own-label">Your review</div>
+      <div class="review-item-header" style="margin-bottom:4px;">
+        <div class="review-avatar" style="${avatarStyle}">${esc(char)}</div>
+        <div style="flex:1;min-width:0;">
+          <div class="review-user">${esc(displayName)}</div>
+          <div class="review-stars">${stars}</div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
+          <button class="review-action-btn" onclick="editReview()">Edit</button>
+          <button class="review-action-btn delete" onclick="deleteReview()">Delete</button>
+        </div>
+      </div>
+      ${myReview.text ? `<div class="review-text">${esc(myReview.text)}</div>` : ''}
+    </div>`;
+  }
+
+  listEl.innerHTML = myCard + others.map(renderOther).join('');
 }
 
 window.toggleReviewLike = async (reviewId, e) => {
@@ -9106,6 +9143,8 @@ window.submitReview = async () => {
     if (idx >= 0) _reviewsData[idx] = local; else _reviewsData.push(local);
     _renderReviewList();
     if (ta) ta.value = '';
+    const writeBox = document.getElementById('review-write-box');
+    if (writeBox) writeBox.style.display = 'none';
     showStatus('Review saved!', 'success'); setTimeout(hideStatus, 2000);
   } catch(e) {
     console.error('submitReview:', e);
@@ -9113,6 +9152,38 @@ window.submitReview = async () => {
     setTimeout(hideStatus, 6000);
   }
   if (btn) { btn.disabled = false; btn.textContent = 'Post Review'; }
+};
+
+window.editReview = () => {
+  const myReview = currentUser ? _reviewsData.find(r => r.userId === currentUser.uid) : null;
+  if (!myReview) return;
+  const writeBox = document.getElementById('review-write-box');
+  const ta = document.getElementById('review-textarea');
+  const btn = document.getElementById('review-submit-btn');
+  if (writeBox) writeBox.style.display = '';
+  if (ta) { ta.value = myReview.text || ''; ta.focus(); }
+  if (btn) btn.textContent = 'Update Review';
+  writeBox?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+};
+
+window.deleteReview = async () => {
+  if (!currentUser || !_reviewBookCode || !_reviewBookGlobalId) return;
+  const uid = currentUser.uid;
+  try {
+    await deleteDoc(doc(db, 'books', _reviewBookCode, 'reviews', uid));
+    _reviewsData = _reviewsData.filter(r => r.userId !== uid);
+    _reviewCache.delete(_reviewBookGlobalId);
+    _renderReviewList();
+    const writeBox = document.getElementById('review-write-box');
+    if (writeBox) {
+      writeBox.style.display = '';
+      const ta = document.getElementById('review-textarea');
+      if (ta) ta.value = '';
+      const btn = document.getElementById('review-submit-btn');
+      if (btn) btn.textContent = 'Post Review';
+    }
+    showStatus('Review deleted.', 'success'); setTimeout(hideStatus, 2000);
+  } catch(e) { showStatus('Could not delete review.', 'error'); setTimeout(hideStatus, 2000); }
 };
 
 // ── CSV BULK ADD ───────────────────────────────────────────────────────────────
