@@ -558,6 +558,13 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 
 /* SEARCH & FILTERS */
 .search-wrap { position: relative; }
+#librarySearchAc { top: calc(100% + 4px); }
+@keyframes bookHighlight {
+  0%   { outline: 3px solid var(--accent); outline-offset: 3px; box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 25%, transparent); }
+  70%  { outline: 3px solid var(--accent); outline-offset: 3px; box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 25%, transparent); }
+  100% { outline: 3px solid transparent; outline-offset: 3px; box-shadow: none; }
+}
+.book-highlight { animation: bookHighlight 1.8s ease-out forwards; border-radius: 4px; }
 .search-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 16px 10px 40px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; transition: border-color 0.2s; box-sizing: border-box; }
 .search-input::placeholder { color: var(--text3); }
 .search-input:focus { border-color: var(--accent); }
@@ -1585,7 +1592,8 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
     <div class="subheader-ctrl">
       <div class="search-wrap" style="flex:1;min-width:0">
         <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input class="search-input" type="text" id="searchInput" placeholder="Search title, author or series…" oninput="applyFilters()">
+        <input class="search-input" type="text" id="searchInput" placeholder="Search title, author or series…" oninput="handleLibrarySearch()" autocomplete="off">
+        <div class="autocomplete-dropdown" id="librarySearchAc"></div>
       </div>
       <button class="ctrl-btn" id="filterBtn" onclick="toggleFilterPanel()" title="Filter"><i data-lucide="sliders-horizontal"></i></button>
       <button class="ctrl-btn" id="sortBtn" onclick="toggleSortPanel()" title="Sort"><i data-lucide="arrow-up-down"></i></button>
@@ -3831,6 +3839,96 @@ window.selectSeriesSuggestion = function(series, ctx) {
   onSeriesInput(ctx);
 };
 
+
+// ── PERSONAL LIBRARY SEARCH (navigate-to, not filter) ────────────────────────
+window.handleLibrarySearch = function() {
+  const input = document.getElementById('searchInput');
+  const dropdown = document.getElementById('librarySearchAc');
+  if (!input || !dropdown) return;
+  const raw = input.value.trim();
+
+  if (!raw) {
+    dropdown.style.display = 'none'; dropdown.innerHTML = '';
+    applyFilters(); // restore full list when cleared
+    return;
+  }
+
+  // Search across title, author, and series in the personal library.
+  // _rankByQuery sorts by: starts-with > contains > fuzzy (tier 2 = Google's
+  // matches; here tier 2 = anything that matched but not prefix/contains).
+  const rl = raw.toLowerCase();
+  const strip = s => (s || '').toLowerCase().replace(/^(the|an|a)\s+/, '').trim();
+  const candidates = books.filter(b => {
+    const t = (b.title || '').toLowerCase(), a = (b.author || '').toLowerCase(), s = (b.series || '').toLowerCase();
+    return t.includes(rl) || strip(t).includes(rl) || a.includes(rl) || s.includes(rl);
+  });
+
+  // Rank by how well the title matches, falling back to author/series match.
+  const scored = candidates.map(b => {
+    const t = (b.title || '').toLowerCase();
+    const ts = strip(t);
+    if (ts.startsWith(rl) || t.startsWith(rl)) return { b, score: 0 };
+    if (t.includes(rl) || ts.includes(rl)) return { b, score: 1 };
+    return { b, score: 2 };
+  }).sort((a, b) => a.score - b.score);
+
+  const matches = scored.slice(0, 7).map(x => x.b);
+
+  // Auto-navigate when exactly one match remains.
+  if (matches.length === 1) {
+    input.value = '';
+    dropdown.style.display = 'none'; dropdown.innerHTML = '';
+    scrollToBook(matches[0].id);
+    return;
+  }
+
+  if (!matches.length) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; return; }
+
+  dropdown.innerHTML = matches.map(b => {
+    const sub = b.author || '';
+    return `<div class="autocomplete-item" onmousedown="event.preventDefault()" onclick="selectLibraryBook('${b.id.replace(/'/g, "\\'")}')">
+      <div class="autocomplete-title">${esc(b.title)}</div>
+      ${sub ? `<div class="autocomplete-author">${esc(sub)}</div>` : ''}
+    </div>`;
+  }).join('');
+  dropdown.style.display = 'block';
+};
+
+window.selectLibraryBook = function(bookId) {
+  const input = document.getElementById('searchInput');
+  const dropdown = document.getElementById('librarySearchAc');
+  if (input) input.value = '';
+  if (dropdown) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; }
+  scrollToBook(bookId);
+};
+
+window.scrollToBook = function(bookId) {
+  // Try each view in order: shelf spines (data-id), then card IDs.
+  const spineEl = document.querySelector(`.shelf-spine[data-id="${CSS.escape(bookId)}"], .shelf-series-spine[data-id="${CSS.escape(bookId)}"]`);
+  if (spineEl) {
+    // Scroll the shelf vertically into view first, then horizontally within the row.
+    const row = spineEl.closest('.shelf-books-row');
+    spineEl.closest('.shelf-shelf')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (row) {
+      const targetLeft = spineEl.offsetLeft - row.offsetWidth / 2 + spineEl.offsetWidth / 2;
+      setTimeout(() => row.scrollTo({ left: Math.max(0, targetLeft), behavior: 'smooth' }), 300);
+    }
+    setTimeout(() => { spineEl.classList.add('book-highlight'); setTimeout(() => spineEl.classList.remove('book-highlight'), 1900); }, 400);
+    return;
+  }
+  const cardEl = document.getElementById('card-' + bookId);
+  if (cardEl) {
+    cardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => { cardEl.classList.add('book-highlight'); setTimeout(() => cardEl.classList.remove('book-highlight'), 1900); }, 200);
+  }
+};
+
+// Close library search dropdown when clicking outside.
+document.addEventListener('click', e => {
+  const wrap = document.getElementById('searchInput')?.closest('.search-wrap');
+  const drop = document.getElementById('librarySearchAc');
+  if (drop && wrap && !wrap.contains(e.target)) { drop.style.display = 'none'; drop.innerHTML = ''; }
+});
 
 // ── GLOBAL COMMUNITY LIBRARY ────────────────────────────────────────────────
 function normalizeBookText(str = '') {
