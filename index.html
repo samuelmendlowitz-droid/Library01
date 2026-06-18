@@ -3521,6 +3521,24 @@ async function _gbFetch(type, query2) {
   return results;
 }
 
+// Re-sorts autofill results into three priority tiers:
+//   0 — label starts with the query (article-stripped, e.g. "The" ignored)
+//   1 — label contains the query somewhere
+//   2 — everything else (similarity / Google's own relevance)
+// getLabel(item) → the string to compare against (title, author name, etc.)
+function _rankByQuery(items, rawQuery, getLabel) {
+  if (!items || !items.length || !rawQuery) return items;
+  const q = rawQuery.toLowerCase().trim();
+  const strip = s => (s || '').toLowerCase().replace(/^(the|an|a)\s+/, '').trim();
+  const rank = item => {
+    const lbl = (getLabel(item) || '').toLowerCase();
+    if (strip(lbl).startsWith(q) || lbl.startsWith(q)) return 0;
+    if (lbl.includes(q) || strip(lbl).includes(q)) return 1;
+    return 2;
+  };
+  return [...items].sort((a, b) => rank(a) - rank(b));
+}
+
 // Debounced wrapper — calls cb(results) after 280ms quiet time.
 // If offline, calls cb(null) immediately so callers can use offline fallback.
 function _gbDebounce(ctx, type, query2, cb) {
@@ -3658,24 +3676,32 @@ window.handleGlobalTitleSearch = function() {
   if (raw.length < 2) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; return; }
 
   _gbDebounce('titleAc', 'intitle', raw, results => {
+    let items;
     if (results === null || !results.length) {
-      // Offline, request failed, or no Google Books matches — search expanded cache
-      const norm = normalizeBookText(raw);
+      // Offline, request failed, or no Google Books matches — search OAC cache.
+      // Collect starts-with matches first, then contains matches, sorted by tier.
+      const rl = raw.toLowerCase();
+      const strip = s => (s || '').toLowerCase().replace(/^(the|an|a)\s+/, '').trim();
       const seen = new Set();
-      const matches = [];
+      const tier0 = [], tier1 = [];
       for (const b of _oac.books) {
-        if (matches.length >= 5) break;
-        const nt = b.normalizedTitle || normalizeBookText(b.title);
-        if (nt.startsWith(norm) && !seen.has(b.title)) { seen.add(b.title); matches.push(b); }
+        if (seen.has(b.title)) continue;
+        const lbl = (b.title || '').toLowerCase();
+        const stripped = strip(lbl);
+        if (stripped.startsWith(rl) || lbl.startsWith(rl)) { seen.add(b.title); tier0.push(b); }
+        else if (lbl.includes(rl) || stripped.includes(rl)) { seen.add(b.title); tier1.push(b); }
+        if (tier0.length + tier1.length >= 10) break;
       }
-      _gbLastResults['titleAc'] = matches.map(b => ({ title: b.title, author: b.author, series: b.series || '', categories: [] }));
-      _renderTitleAcDropdown(dropdown, _gbLastResults['titleAc']);
+      items = [...tier0, ...tier1].slice(0, 5)
+        .map(b => ({ title: b.title, author: b.author, series: b.series || '', categories: [] }));
     } else {
-      // Deduplicate by title
+      // Deduplicate then re-rank by how well each title matches the typed query.
       const seen = new Set();
-      _gbLastResults['titleAc'] = results.filter(r => { if (seen.has(r.title)) return false; seen.add(r.title); return true; });
-      _renderTitleAcDropdown(dropdown, _gbLastResults['titleAc']);
+      const deduped = results.filter(r => { if (seen.has(r.title)) return false; seen.add(r.title); return true; });
+      items = _rankByQuery(deduped, raw, r => r.title);
     }
+    _gbLastResults['titleAc'] = items;
+    _renderTitleAcDropdown(dropdown, items);
   });
 };
 
@@ -3752,19 +3778,19 @@ window.handleAuthorSearch = function() {
   _gbDebounce('authorAc', 'inauthor', raw, results => {
     let names = [];
     if (results === null || !results.length) {
-      // Offline, request failed, or no Google Books matches — search OAC authors list
+      // Offline / failed — rank OAC authors by the same three-tier priority.
       const rl = raw.toLowerCase();
-      names = _oac.authors.filter(a => a.toLowerCase().includes(rl)).slice(0, 5);
+      const strip = s => (s || '').toLowerCase().replace(/^(the|an|a)\s+/, '').trim();
+      const all = _oac.authors.filter(a => a.toLowerCase().includes(rl) || strip(a).includes(rl));
+      names = _rankByQuery(all, raw, a => a).slice(0, 5);
     } else {
-      // Extract unique author names from Google Books results
+      // Extract unique author names, then rank by match quality.
       const seen = new Set();
+      const raw2 = [];
       for (const r of results) {
-        for (const a of (r.author ? [r.author] : [])) {
-          if (!seen.has(a)) { seen.add(a); names.push(a); }
-          if (names.length >= 5) break;
-        }
-        if (names.length >= 5) break;
+        if (r.author && !seen.has(r.author)) { seen.add(r.author); raw2.push(r.author); }
       }
+      names = _rankByQuery(raw2, raw, a => a).slice(0, 5);
     }
     if (!names.length) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; return; }
     dropdown.innerHTML = names.map(a =>
@@ -3791,14 +3817,18 @@ window.handleSeriesSearch = function(ctx) {
 
   // Series still draws from the locally downloaded library cache, so it can
   // start suggesting after just 1 character — no need to wait on Google Books.
-  if (raw.length < 2) {
-    const rl = raw.toLowerCase();
-    const seriesList = _oac.series.filter(s => s.toLowerCase().includes(rl)).slice(0, 5);
-    if (!seriesList.length) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; return; }
-    dropdown.innerHTML = seriesList.map(s =>
+  const renderSeries = list => {
+    if (!list.length) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; return; }
+    dropdown.innerHTML = list.map(s =>
       `<div class="autocomplete-item" onmousedown="event.preventDefault()" onclick="selectSeriesSuggestion('${s.replace(/'/g, "\\'")}','${ctx}')"><div class="autocomplete-title">${esc(s)}</div></div>`
     ).join('');
     dropdown.style.display = 'block';
+  };
+
+  if (raw.length < 2) {
+    // 1-character: local-only, ranked by match tier
+    const candidates = _oac.series.filter(s => s.toLowerCase().includes(raw.toLowerCase()));
+    renderSeries(_rankByQuery(candidates, raw, s => s).slice(0, 5));
     return;
   }
 
@@ -3806,26 +3836,23 @@ window.handleSeriesSearch = function(ctx) {
     let seriesList = [];
     if (results === null) {
       // Offline or request failed — search OAC series list
-      const rl = raw.toLowerCase();
-      seriesList = _oac.series.filter(s => s.toLowerCase().includes(rl)).slice(0, 5);
+      const candidates = _oac.series.filter(s => s.toLowerCase().includes(raw.toLowerCase()));
+      seriesList = _rankByQuery(candidates, raw, s => s).slice(0, 5);
     } else {
-      // Extract series names from Google Books results
+      // Extract unique series names from Google Books results, then rank
       const seen = new Set();
+      const raw2 = [];
       for (const r of results) {
-        if (r.series && !seen.has(r.series)) { seen.add(r.series); seriesList.push(r.series); }
-        if (seriesList.length >= 5) break;
+        if (r.series && !seen.has(r.series)) { seen.add(r.series); raw2.push(r.series); }
       }
-      // If Google Books had no series, fall back to OAC
+      seriesList = _rankByQuery(raw2, raw, s => s).slice(0, 5);
+      // If Google Books returned no series, fall back to OAC
       if (!seriesList.length) {
-        const rl = raw.toLowerCase();
-        seriesList = _oac.series.filter(s => s.toLowerCase().includes(rl)).slice(0, 5);
+        const candidates = _oac.series.filter(s => s.toLowerCase().includes(raw.toLowerCase()));
+        seriesList = _rankByQuery(candidates, raw, s => s).slice(0, 5);
       }
     }
-    if (!seriesList.length) { dropdown.style.display = 'none'; dropdown.innerHTML = ''; return; }
-    dropdown.innerHTML = seriesList.map(s =>
-      `<div class="autocomplete-item" onmousedown="event.preventDefault()" onclick="selectSeriesSuggestion('${s.replace(/'/g, "\\'")}','${ctx}')"><div class="autocomplete-title">${esc(s)}</div></div>`
-    ).join('');
-    dropdown.style.display = 'block';
+    renderSeries(seriesList);
   });
 };
 
@@ -6839,11 +6866,11 @@ function _hlUpdateAc(cat, val) {
   // downloaded library cache, so it can suggest after just 1 character).
   if (cat !== 'series' && val.length < 2) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
   if (cat === 'series' && val.length < 2) {
-    const q = val.toLowerCase();
-    const matches = _hlAcSources('series').filter(s => !existing.has(s) && s.toLowerCase().includes(q)).slice(0, 5);
-    _hlAcResults[cat] = matches;
-    if (!matches.length) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
-    acEl.innerHTML = matches.map((m,i) => `<div class="hl-ac-item" onmousedown="event.preventDefault()" onclick="addHlChip('series',${i})">${esc(m)}</div>`).join('');
+    const candidates = _hlAcSources('series').filter(s => !existing.has(s) && s.toLowerCase().includes(val.toLowerCase()));
+    const ranked = _rankByQuery(candidates, val, s => s).slice(0, 5);
+    _hlAcResults[cat] = ranked;
+    if (!ranked.length) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
+    acEl.innerHTML = ranked.map((m,i) => `<div class="hl-ac-item" onmousedown="event.preventDefault()" onclick="addHlChip('series',${i})">${esc(m)}</div>`).join('');
     acEl.style.display = '';
     const inputEl = document.getElementById('hl-input-series');
     if (inputEl) _positionAcDropdown(acEl, inputEl);
@@ -6853,37 +6880,24 @@ function _hlUpdateAc(cat, val) {
   const gbType = (cat === 'authors') ? 'inauthor' : 'intitle';
   _gbDebounce('hlAc-' + cat, gbType, val, results => {
     let items = [];
+    const rankItems = (rawItems, getLabel) =>
+      _rankByQuery(rawItems, val, getLabel).slice(0, 5).map(x => ({ label: getLabel(x), sub: '' }));
     if (results === null || !results.length) {
-      // Offline or no results — fall back to local cache
-      const q = val.toLowerCase();
-      items = _hlAcSources(cat).filter(s => !existing.has(s) && s.toLowerCase().includes(q)).slice(0, 5)
-                .map(s => ({ label: s, sub: '' }));
+      const candidates = _hlAcSources(cat).filter(s => !existing.has(s) && s.toLowerCase().includes(val.toLowerCase()));
+      items = rankItems(candidates, s => s);
     } else if (cat === 'books') {
       const seen = new Set();
-      for (const r of results) {
-        if (!r.title || existing.has(r.title) || seen.has(r.title)) continue;
-        seen.add(r.title); items.push({ label: r.title, sub: r.author || '' });
-        if (items.length >= 5) break;
-      }
+      const raw2 = results.filter(r => r.title && !existing.has(r.title) && !seen.has(r.title) && (seen.add(r.title), true));
+      items = _rankByQuery(raw2, val, r => r.title).slice(0, 5).map(r => ({ label: r.title, sub: r.author || '' }));
     } else if (cat === 'authors') {
       const seen = new Set();
-      for (const r of results) {
-        if (!r.author || existing.has(r.author) || seen.has(r.author)) continue;
-        seen.add(r.author); items.push({ label: r.author, sub: '' });
-        if (items.length >= 5) break;
-      }
+      const raw2 = results.filter(r => r.author && !existing.has(r.author) && !seen.has(r.author) && (seen.add(r.author), true));
+      items = rankItems(raw2.map(r => r.author), s => s);
     } else if (cat === 'series') {
       const seen = new Set();
-      for (const r of results) {
-        if (!r.series || existing.has(r.series) || seen.has(r.series)) continue;
-        seen.add(r.series); items.push({ label: r.series, sub: '' });
-        if (items.length >= 5) break;
-      }
-      if (!items.length) {
-        const q = val.toLowerCase();
-        items = _hlAcSources('series').filter(s => !existing.has(s) && s.toLowerCase().includes(q)).slice(0, 5)
-                  .map(s => ({ label: s, sub: '' }));
-      }
+      const raw2 = results.filter(r => r.series && !existing.has(r.series) && !seen.has(r.series) && (seen.add(r.series), true)).map(r => r.series);
+      items = raw2.length ? rankItems(raw2, s => s)
+        : rankItems(_hlAcSources('series').filter(s => !existing.has(s) && s.toLowerCase().includes(val.toLowerCase())), s => s);
     }
     _hlAcResults[cat] = items.map(i => i.label);
     if (!items.length) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
@@ -6920,11 +6934,11 @@ function _clubHlUpdateAc(cat, val) {
   // downloaded library cache, so it can suggest after just 1 character).
   if (cat !== 'series' && val.length < 2) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
   if (cat === 'series' && val.length < 2) {
-    const q = val.toLowerCase();
-    const matches = _clubHlAcSources('series').filter(s => !existing.has(s) && s.toLowerCase().includes(q)).slice(0, 5);
-    _clubHlAcResults[cat] = matches;
-    if (!matches.length) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
-    acEl.innerHTML = matches.map((m,i) => `<div class="hl-ac-item" onmousedown="event.preventDefault()" onclick="addClubHlChip('series',${i})">${esc(m)}</div>`).join('');
+    const candidates = _clubHlAcSources('series').filter(s => !existing.has(s) && s.toLowerCase().includes(val.toLowerCase()));
+    const ranked = _rankByQuery(candidates, val, s => s).slice(0, 5);
+    _clubHlAcResults[cat] = ranked;
+    if (!ranked.length) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
+    acEl.innerHTML = ranked.map((m,i) => `<div class="hl-ac-item" onmousedown="event.preventDefault()" onclick="addClubHlChip('series',${i})">${esc(m)}</div>`).join('');
     acEl.style.display = '';
     const inputEl = document.getElementById('chl-input-series');
     if (inputEl) _positionAcDropdown(acEl, inputEl);
@@ -6934,36 +6948,24 @@ function _clubHlUpdateAc(cat, val) {
   const gbType = (cat === 'authors') ? 'inauthor' : 'intitle';
   _gbDebounce('clubHlAc-' + cat, gbType, val, results => {
     let items = [];
+    const rankItems = (rawItems, getLabel) =>
+      _rankByQuery(rawItems, val, getLabel).slice(0, 5).map(x => ({ label: getLabel(x), sub: '' }));
     if (results === null || !results.length) {
-      const q = val.toLowerCase();
-      items = _clubHlAcSources(cat).filter(s => !existing.has(s) && s.toLowerCase().includes(q)).slice(0, 5)
-                .map(s => ({ label: s, sub: '' }));
+      const candidates = _clubHlAcSources(cat).filter(s => !existing.has(s) && s.toLowerCase().includes(val.toLowerCase()));
+      items = rankItems(candidates, s => s);
     } else if (cat === 'books') {
       const seen = new Set();
-      for (const r of results) {
-        if (!r.title || existing.has(r.title) || seen.has(r.title)) continue;
-        seen.add(r.title); items.push({ label: r.title, sub: r.author || '' });
-        if (items.length >= 5) break;
-      }
+      const raw2 = results.filter(r => r.title && !existing.has(r.title) && !seen.has(r.title) && (seen.add(r.title), true));
+      items = _rankByQuery(raw2, val, r => r.title).slice(0, 5).map(r => ({ label: r.title, sub: r.author || '' }));
     } else if (cat === 'authors') {
       const seen = new Set();
-      for (const r of results) {
-        if (!r.author || existing.has(r.author) || seen.has(r.author)) continue;
-        seen.add(r.author); items.push({ label: r.author, sub: '' });
-        if (items.length >= 5) break;
-      }
+      const raw2 = results.filter(r => r.author && !existing.has(r.author) && !seen.has(r.author) && (seen.add(r.author), true));
+      items = rankItems(raw2.map(r => r.author), s => s);
     } else if (cat === 'series') {
       const seen = new Set();
-      for (const r of results) {
-        if (!r.series || existing.has(r.series) || seen.has(r.series)) continue;
-        seen.add(r.series); items.push({ label: r.series, sub: '' });
-        if (items.length >= 5) break;
-      }
-      if (!items.length) {
-        const q = val.toLowerCase();
-        items = _clubHlAcSources('series').filter(s => !existing.has(s) && s.toLowerCase().includes(q)).slice(0, 5)
-                  .map(s => ({ label: s, sub: '' }));
-      }
+      const raw2 = results.filter(r => r.series && !existing.has(r.series) && !seen.has(r.series) && (seen.add(r.series), true)).map(r => r.series);
+      items = raw2.length ? rankItems(raw2, s => s)
+        : rankItems(_clubHlAcSources('series').filter(s => !existing.has(s) && s.toLowerCase().includes(val.toLowerCase())), s => s);
     }
     _clubHlAcResults[cat] = items.map(i => i.label);
     if (!items.length) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
