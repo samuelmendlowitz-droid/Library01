@@ -3326,11 +3326,9 @@ async function resyncPersonalBooksToGlobal() {
     const globalId = createGlobalBookId(book.title, book.author);
     if (deletedGlobalIds.has(globalId)) continue;
     try {
-      if (await validateWithGoogleBooks(book.title, book.author)) {
-        await syncBookToGlobalLibrary(book);
-        await updateDoc(doc(db, 'users', currentUser.uid, 'books', book.id), { globalSynced: true });
-        book.globalSynced = true;
-      }
+      await syncBookToGlobalLibrary(book);
+      await updateDoc(doc(db, 'users', currentUser.uid, 'books', book.id), { globalSynced: true });
+      book.globalSynced = true;
     } catch(e) { /* continue */ }
     await new Promise(r => setTimeout(r, 1500));
   }
@@ -3595,6 +3593,15 @@ function _modApplyBan() {
   document.body.appendChild(overlay);
 }
 
+// Shows an inline post-send visibility warning for adult tier-2 posts.
+function _modShowAdultWarn(warningId) {
+  const el = document.getElementById(warningId);
+  if (!el) return;
+  el.className = 'mod-warn tier2 visible';
+  el.textContent = '⚠️ Sent. Note: this content won\'t be visible to accounts with family-friendly mode enabled.';
+  setTimeout(() => { el.className = 'mod-warn'; el.textContent = ''; }, 5000);
+}
+
 // Called on login to update currentUserIsMinor from stored birthdate.
 function _modApplyBirthdate(birthdateStr) {
   if (!birthdateStr) { currentUserIsMinor = false; return; }
@@ -3733,12 +3740,13 @@ async function _fetchGlobalFromFirestore() {
         normalizedTitle: data.normalizedTitle || '',
         popularity: data.popularity || 0,
         ratingTotal: data.ratingTotal || 0,
-        ratingCount: data.ratingCount || 0
+        ratingCount: data.ratingCount || 0,
+        unverified: data.unverified || false
       });
     };
-    const popularBooks = popularSnap.docs.map(mapDoc).filter(b => !isLikelyTestBook(b.title, b.author));
+    const popularBooks = popularSnap.docs.map(mapDoc).filter(b => !isLikelyTestBook(b.title, b.author) && !b.unverified);
     const popularIds   = new Set(popularBooks.map(b => b.id));
-    const alphaBooks   = alphaSnap.docs.map(mapDoc).filter(b => !isLikelyTestBook(b.title, b.author) && !popularIds.has(b.id));
+    const alphaBooks   = alphaSnap.docs.map(mapDoc).filter(b => !isLikelyTestBook(b.title, b.author) && !popularIds.has(b.id) && !b.unverified);
     globalBookCache = [...popularBooks, ...alphaBooks];
     _globalLibraryCursor = alphaSnap.docs.length === GLOBAL_FETCH_PAGE ? alphaSnap.docs[alphaSnap.docs.length - 1] : null;
     _globalLibraryExhausted = alphaSnap.docs.length < GLOBAL_FETCH_PAGE;
@@ -4020,6 +4028,14 @@ window.handleLibrarySearch = function() {
   const input = document.getElementById('searchInput');
   const dropdown = document.getElementById('librarySearchAc');
   if (!input || !dropdown) return;
+
+  // Global library view: just filter in place, no autofill/navigate
+  if (currentPage === 'global') {
+    dropdown.style.display = 'none'; dropdown.innerHTML = '';
+    applyGlobalFilters();
+    return;
+  }
+
   const raw = input.value.trim();
 
   if (!raw) {
@@ -4242,7 +4258,7 @@ async function _glFindOrCreateSeries(name, authorCode) {
 
 // Main entry: find or create a book. Returns {bookCode, globalId} or null.
 // popularity: 1=owned, 2=owned+read
-async function _glFindOrCreateBook({ title, author, genres, series, seriesNumber, popularity = 1 }) {
+async function _glFindOrCreateBook({ title, author, genres, series, seriesNumber, popularity = 1, uid = null }) {
   if (!title || !author) return null;
   const normTitle  = _glNorm(title, 'book');
   const normAuthor = _glNorm(author, 'author');
@@ -4253,8 +4269,31 @@ async function _glFindOrCreateBook({ title, author, genres, series, seriesNumber
   const match = titleMatches.find(m => _editDist(m.normalizedAuthor || '', normAuthor) <= 2);
 
   if (match) {
-    // Existing book — update popularity and genre scores
     const bookCode = match.bookCode || match._docId;
+
+    if (match.unverified) {
+      // Pending verification — track this user's vote; promote at 5 unique users
+      if (uid) {
+        const snap = await getDoc(doc(db, 'books', bookCode));
+        const bdata = snap.exists() ? snap.data() : {};
+        const currentIds = bdata.unverifiedUserIds || [];
+        if (!currentIds.includes(uid)) {
+          const newIds = [...currentIds, uid];
+          if (newIds.length >= 5) {
+            await updateDoc(doc(db, 'books', bookCode), {
+              unverified: false, unverifiedUserIds: newIds, popularity: increment(popularity)
+            });
+            const cached = globalBookCache.find(x => x.id === (match.globalId || globalId) || x.bookCode === bookCode);
+            if (cached) { cached.unverified = false; cached.popularity = (cached.popularity || 0) + popularity; }
+          } else {
+            await updateDoc(doc(db, 'books', bookCode), { unverifiedUserIds: arrayUnion(uid) });
+          }
+        }
+      }
+      return { bookCode, globalId: match.globalId || globalId };
+    }
+
+    // Existing verified book — update popularity and genre scores
     const updates = { popularity: increment(popularity) };
     if (genres && genres.length) {
       const existingEntries = match.genreEntries || [];
@@ -4277,15 +4316,25 @@ async function _glFindOrCreateBook({ title, author, genres, series, seriesNumber
       updates.genreNames = updatedEntries.map(e => e.name);
     }
     await updateDoc(doc(db, 'books', bookCode), updates);
-    // Update cache entry
     const cached = globalBookCache.find(x => x.id === globalId || x.bookCode === bookCode);
     if (cached) cached.popularity = (cached.popularity || 0) + popularity;
     return { bookCode, globalId: match.globalId || globalId };
   }
 
-  // New book — verify it exists in Google Books before adding to global library
+  // New book — check Google Books; if not found, store as unverified pending 5 votes
   const isRealBook = await validateWithGoogleBooks(title, author);
-  if (!isRealBook) return null;
+  if (!isRealBook) {
+    if (!uid) return null;
+    const bookCode = await _glNextCode('book');
+    await setDoc(doc(db, 'books', bookCode), {
+      bookCode, globalId,
+      title: _fmtTitle ? _fmtTitle(title) : title, normalizedTitle: normTitle,
+      author: _fmtAuthor ? _fmtAuthor(author) : author, normalizedAuthor: normAuthor,
+      popularity: 0, unverified: true, unverifiedUserIds: [uid],
+      ratingTotal: 0, ratingCount: 0, avgRating: 0, addedAt: serverTimestamp()
+    });
+    return { bookCode, globalId };
+  }
 
   // Create all linked records
   const [{ authorCode, name: canonAuthor }, ...genreResults] = await Promise.all([
@@ -4400,8 +4449,9 @@ async function syncBookToGlobalLibrary(bookData) {
   if (!title || !author) return;
   const genres = cleanGenreList ? cleanGenreList(bookData.genres || []) : (bookData.genres || []);
   const popularity = 1 + (bookData.read ? 2 : 0);
+  const uid = currentUser?.uid || null;
   try {
-    await _glFindOrCreateBook({ title, author, genres, series: bookData.series, seriesNumber: bookData.seriesNumber, popularity });
+    await _glFindOrCreateBook({ title, author, genres, series: bookData.series, seriesNumber: bookData.seriesNumber, popularity, uid });
   } catch(e) { console.error('Global library sync failed:', e); }
 }
 
@@ -4470,7 +4520,7 @@ async function saveBook(data, { skipGlobalSync = false, backgroundSync = false }
     const title = (data.title || '').trim();
     const author = (data.author || '').trim();
     const _doSync = async () => {
-      if (!isLikelyTestBook(title, author) && await validateWithGoogleBooks(title, author)) {
+      if (!isLikelyTestBook(title, author)) {
         await syncBookToGlobalLibrary(data);
       }
     };
@@ -5403,7 +5453,7 @@ window.toggleGlobalGenreFilter = g => {
 
 function _matchesGlobalFilters(b) {
   const q = (document.getElementById('searchInput') || {}).value?.toLowerCase().trim() || '';
-  if (b._localOnly) return false;
+  if (b._localOnly || b.unverified) return false;
   if (q && !(b.title||'').toLowerCase().includes(q) && !(b.author||'').toLowerCase().includes(q) && !(b.series||'').toLowerCase().includes(q)) return false;
   if (selectedGenreFilters.length > 0) {
     const ok = genreFilterMode === 'AND'
@@ -6948,7 +6998,7 @@ window.submitRateReview = async () => {
     if (text) {
       const _rrMod = _modBlockPost(text, 'rrModWarn');
       if (_rrMod === true) { _rrDone(); return; }
-      if (_rrMod === 'adult-warn') { showStatus('Note: This review contains language that won\'t be visible to some accounts.', 'info'); setTimeout(hideStatus, 4000); }
+      if (_rrMod === 'adult-warn') { _modShowAdultWarn('rrModWarn'); }
     }
     if (text && _rrGbId && _rrStars > 0) {
       const uid = currentUser.uid;
@@ -7057,7 +7107,7 @@ function _searchGlobalBooks(q) {
   const results = [];
   for (const b of globalBookCache) {
     if (results.length >= 5) break;
-    if (!b.title || seen.has(b.title) || b._localOnly) continue;
+    if (!b.title || seen.has(b.title) || b._localOnly || b.unverified) continue;
     if (!ql || (b.title||'').toLowerCase().includes(ql) || (b.author||'').toLowerCase().includes(ql)) {
       seen.add(b.title);
       results.push({ title: b.title, author: b.author || '' });
@@ -9030,7 +9080,7 @@ window.submitReview = async () => {
   if (!text) { showStatus('Write something before submitting.', 'error'); setTimeout(hideStatus, 2000); return; }
   const _reviewMod = _modBlockPost(text, 'reviewModWarn');
   if (_reviewMod === true) return;
-  if (_reviewMod === 'adult-warn') { showStatus('Note: This review contains language that won\'t be visible to some accounts.', 'info'); setTimeout(hideStatus, 4000); }
+  if (_reviewMod === 'adult-warn') { _modShowAdultWarn('reviewModWarn'); }
   const personal = books.find(x => createGlobalBookId(x.title||'', x.author||'') === _reviewBookGlobalId);
   const rating = personal ? (personal.rating || 0) : 0;
   if (!rating) {
@@ -11485,7 +11535,7 @@ window.sendChatMessage = async () => {
   if (!text || !friendDetailsUid) return;
   const _chatMod = _modBlockPost(text, 'chatModWarn');
   if (_chatMod === true) return;
-  if (_chatMod === 'adult-warn') { showStatus('Note: This message contains language that won\'t be visible to some accounts.', 'info'); setTimeout(hideStatus, 4000); }
+  if (_chatMod === 'adult-warn') { _modShowAdultWarn('chatModWarn'); }
   input.value = ''; input.style.height = 'auto';
   closeBookPicker();
   try {
@@ -11870,7 +11920,7 @@ window.sendClubMessage = async () => {
   if (!text || !currentClubId) return;
   const _clubMod = _modBlockPost(text, 'clubModWarn');
   if (_clubMod === true) return;
-  if (_clubMod === 'adult-warn') { showStatus('Note: This message contains language that won\'t be visible to some accounts.', 'info'); setTimeout(hideStatus, 4000); }
+  if (_clubMod === 'adult-warn') { _modShowAdultWarn('clubModWarn'); }
   input.value = ''; input.style.height = 'auto';
   closeClubBookPicker();
   try {
