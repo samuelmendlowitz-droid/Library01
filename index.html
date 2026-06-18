@@ -1816,7 +1816,6 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
         <input class="book-picker-search" id="bookPickerSearch" placeholder="Search your books…" oninput="filterBookPicker(this.value)">
         <div id="bookPickerList" style="margin-top:6px"></div>
       </div>
-      <div id="chatModWarn" class="mod-warn" style="margin:0 14px 2px;"></div>
       <div class="chat-input-row">
         <button class="chat-plus-btn" onclick="toggleBookPicker()"><i data-lucide="plus"></i></button>
         <textarea class="chat-textarea" id="chatTextInput" placeholder="Message…" rows="1"
@@ -1824,6 +1823,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
           oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px';_modWarnEl(this,'chatModWarn')"></textarea>
         <button class="chat-send-btn" onclick="sendChatMessage()"><i data-lucide="send"></i></button>
       </div>
+      <div id="chatModWarn" class="mod-warn" style="margin:4px 14px 2px;"></div>
     </div>
 
     <!-- Clubs tab -->
@@ -1943,7 +1943,6 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
         <input class="book-picker-search" id="clubBookPickerSearch" placeholder="Search your books…" oninput="filterClubBookPicker(this.value)">
         <div id="clubBookPickerList" style="margin-top:6px"></div>
       </div>
-      <div id="clubModWarn" class="mod-warn" style="margin:0 14px 2px;"></div>
       <div class="chat-input-row">
         <button class="chat-plus-btn" onclick="toggleClubBookPicker()"><i data-lucide="plus"></i></button>
         <textarea class="chat-textarea" id="clubChatInput" placeholder="Message…" rows="1"
@@ -1951,6 +1950,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
           oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px';_modWarnEl(this,'clubModWarn')"></textarea>
         <button class="chat-send-btn" onclick="sendClubMessage()"><i data-lucide="send"></i></button>
       </div>
+      <div id="clubModWarn" class="mod-warn" style="margin:4px 14px 2px;"></div>
     </div>
 
     <!-- Club About tab -->
@@ -9181,6 +9181,8 @@ window.deleteReview = async () => {
       if (ta) ta.value = '';
       const btn = document.getElementById('review-submit-btn');
       if (btn) btn.textContent = 'Post Review';
+      const warn = document.getElementById('reviewModWarn');
+      if (warn) { warn.className = 'mod-warn'; warn.textContent = ''; }
     }
     showStatus('Review deleted.', 'success'); setTimeout(hideStatus, 2000);
   } catch(e) { showStatus('Could not delete review.', 'error'); setTimeout(hideStatus, 2000); }
@@ -12909,6 +12911,19 @@ window.addEventListener('pageshow', (e) => {
     btn.textContent = _selectedPlan === 'monthly' ? 'Subscribe — $1.99 / month' : 'Subscribe — $16 / year';
   }
 });
+
+// Bulletproof fallback: event delegation for moderation warnings on all textareas.
+// Covers cases where the inline oninput chain is interrupted (e.g. mobile IME, Safari quirks).
+document.addEventListener('input', (e) => {
+  const map = {
+    'chatTextInput':   'chatModWarn',
+    'clubChatInput':   'clubModWarn',
+    'review-textarea': 'reviewModWarn',
+    'rrTextarea':      'rrModWarn'
+  };
+  const warningId = map[e.target.id];
+  if (warningId) _modWarnEl(e.target, warningId);
+}, true);
 
 </script>
 </body>
