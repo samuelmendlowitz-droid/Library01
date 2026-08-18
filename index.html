@@ -3285,6 +3285,7 @@ onAuthStateChanged(auth, async user => {
     }).catch(() => {});
     updateHeaderSubtitle();
     checkUsernameOnLogin(); // async, non-blocking — shows modal if new user
+    setPage('mylibrary'); // initialize bottom bars and page state
     _personalBooksLoaded = false;
     _globalBooksPreloaded = false;
     loadBooks();          // don't block on global books
@@ -9842,7 +9843,7 @@ window.setPage = (page) => {
   const subNavBar = document.getElementById('subNavBar');
   const subNavC   = document.getElementById('subNavCommunity');
   const subNavD   = document.getElementById('subNavDiscover');
-  if (subNavBar) subNavBar.style.display = ['community','discover'].includes(page) ? 'flex' : 'none';
+  if (subNavBar) subNavBar.style.display = ['community','discover'].includes(page) ? 'block' : 'none';
   if (subNavC)  subNavC.classList.toggle('snav-active',  page === 'community');
   if (subNavD)  subNavD.classList.toggle('snav-active',  page === 'discover');
   // Stats bar: library/wishlist show it; discover lets setDiscoverTab control it; community hides it
