@@ -1664,6 +1664,75 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
     </div>
   </div>
 
+  <!-- Community search drawer (slides up from bottom, same as library drawer) -->
+  <div class="subheader" id="commDrawer">
+    <!-- All tab: chat search + read-status filter -->
+    <div id="comm-search-all">
+      <div id="chatFilterPanel" class="filter-panel" style="display:none">
+        <div class="filter-section-label">Read Status</div>
+        <div class="filter-row">
+          <button class="filter-btn active" id="cfilt-read-all" onclick="setChatReadFilter('all')">All</button>
+          <button class="filter-btn" id="cfilt-read-unread" onclick="setChatReadFilter('unread')">Unread</button>
+          <button class="filter-btn" id="cfilt-read-read" onclick="setChatReadFilter('read')">Read</button>
+        </div>
+      </div>
+      <div class="subheader-ctrl">
+        <div class="search-wrap" style="flex:1;min-width:0">
+          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="search-input" id="chatSearch" placeholder="Search chats…" oninput="renderChats()">
+        </div>
+        <button class="ctrl-btn" id="chatFilterBtn" onclick="toggleChatFilter()" title="Filter"><i data-lucide="sliders-horizontal"></i></button>
+      </div>
+    </div>
+    <!-- Friends tab: friend search + find people -->
+    <div id="comm-search-friends" style="display:none">
+      <div id="findPeoplePanel" class="filter-panel" style="display:none">
+        <div class="search-wrap" style="margin-bottom:8px">
+          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="search-input" id="friendSearchInput" placeholder="Search by username…" oninput="debounceFriendSearch(this.value)">
+        </div>
+        <div class="find-results" id="findResults">
+          <div style="padding:8px 0;color:var(--text3);font-size:13px;text-align:center">Type at least 3 characters</div>
+        </div>
+      </div>
+      <div class="subheader-ctrl">
+        <div class="search-wrap" style="flex:1;min-width:0">
+          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="search-input" id="friendsListSearch" placeholder="Search friends…" oninput="renderFriendsList()">
+        </div>
+        <button class="ctrl-btn" id="findPeopleBtn" onclick="toggleFindPeoplePanel()" title="Find People"><i data-lucide="user-plus"></i></button>
+      </div>
+    </div>
+    <!-- Clubs tab: clubs search + find/create -->
+    <div id="comm-search-clubs" style="display:none">
+      <div id="findClubsPanel" class="filter-panel" style="display:none">
+        <div class="search-wrap" style="margin-bottom:8px">
+          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="search-input" id="clubSearchInput" placeholder="Search clubs by name or keywords…" oninput="debounceClubSearch(this.value)">
+        </div>
+        <div class="find-results" id="findClubResults">
+          <div style="padding:8px 0;color:var(--text3);font-size:13px;text-align:center">Type at least 3 characters</div>
+        </div>
+      </div>
+      <div class="subheader-ctrl">
+        <div class="search-wrap" style="flex:1;min-width:0">
+          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="search-input" id="clubsListSearch" placeholder="Search clubs…" oninput="renderClubsList()">
+        </div>
+        <button class="ctrl-btn" onclick="openCreateClubModal()" title="Create Club"><i data-lucide="plus"></i></button>
+        <button class="ctrl-btn" id="findClubsBtn" onclick="toggleFindClubsPanel()" title="Find Clubs"><i data-lucide="search"></i></button>
+      </div>
+    </div>
+    <!-- Requests tab: filter buttons -->
+    <div id="comm-search-requests" style="display:none">
+      <div class="subheader-ctrl" style="gap:8px">
+        <button class="filter-btn active" id="rqfilt-all" onclick="setRequestFilter('all')">All</button>
+        <button class="filter-btn" id="rqfilt-received" onclick="setRequestFilter('received')">Received</button>
+        <button class="filter-btn" id="rqfilt-sent" onclick="setRequestFilter('sent')">Sent</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Discover page: non-global tab panels (tab bar lives in subheader above) -->
   <div id="page-discover" style="display:none">
     <div id="dtab-panel-find"></div>
@@ -1688,78 +1757,10 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 
   <button class="fab" id="fabAdd" onclick="openAddModal()" style="display:none"><i data-lucide="plus"></i></button>
   <div id="page-community" style="display:none">
-    <!-- All: chats sorted by last message -->
-    <div id="comm-all">
-      <div style="padding:12px 16px 4px;display:flex;gap:8px;align-items:center">
-        <div class="search-wrap" style="flex:1">
-          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input class="search-input" id="chatSearch" placeholder="Search chats…" oninput="renderChats()">
-        </div>
-        <button class="ctrl-btn" id="chatFilterBtn" onclick="toggleChatFilter()" title="Filter"><i data-lucide="sliders-horizontal"></i></button>
-      </div>
-      <div id="chatFilterPanel" class="filter-panel" style="display:none;padding:10px 16px 12px">
-        <div class="filter-section-label">Read Status</div>
-        <div class="filter-row">
-          <button class="filter-btn active" id="cfilt-read-all" onclick="setChatReadFilter('all')">All</button>
-          <button class="filter-btn" id="cfilt-read-unread" onclick="setChatReadFilter('unread')">Unread</button>
-          <button class="filter-btn" id="cfilt-read-read" onclick="setChatReadFilter('read')">Read</button>
-        </div>
-      </div>
-      <div id="comm-chats-list" class="friends-list"></div>
-    </div>
-
-    <!-- Friends: all accepted friends -->
-    <div id="comm-friends" style="display:none">
-      <div style="padding:12px 16px 4px;display:flex;gap:8px;align-items:center">
-        <div class="search-wrap" style="flex:1">
-          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input class="search-input" id="friendsListSearch" placeholder="Search friends…" oninput="renderFriendsList()">
-        </div>
-        <button class="btn-add-collection" id="findPeopleBtn" onclick="toggleFindPeoplePanel()" style="flex-shrink:0;white-space:nowrap">Find People</button>
-      </div>
-      <div id="findPeoplePanel" style="display:none;padding:4px 16px 10px;border-bottom:1px solid var(--border);">
-        <div class="search-wrap">
-          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input class="search-input" id="friendSearchInput" placeholder="Search by username…" oninput="debounceFriendSearch(this.value)">
-        </div>
-        <div class="find-results" id="findResults">
-          <div style="padding:12px 0;color:var(--text3);font-size:13px;text-align:center">Type at least 3 characters</div>
-        </div>
-      </div>
-      <div id="comm-friends-list" class="friends-list"></div>
-    </div>
-
-    <!-- Clubs: all clubs the user is part of -->
-    <div id="comm-clubs" style="display:none">
-      <div style="padding:12px 16px 4px;display:flex;gap:8px;align-items:center">
-        <div class="search-wrap" style="flex:1">
-          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input class="search-input" id="clubsListSearch" placeholder="Search clubs…" oninput="renderClubsList()">
-        </div>
-        <button class="btn-add-collection" onclick="openCreateClubModal()" style="flex-shrink:0;white-space:nowrap">+ Club</button>
-        <button class="btn-add-collection" id="findClubsBtn" onclick="toggleFindClubsPanel()" style="flex-shrink:0;white-space:nowrap">Find</button>
-      </div>
-      <div id="findClubsPanel" style="display:none;padding:4px 16px 10px;border-bottom:1px solid var(--border);">
-        <div class="search-wrap">
-          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input class="search-input" id="clubSearchInput" placeholder="Search clubs by name or keywords…" oninput="debounceClubSearch(this.value)">
-        </div>
-        <div class="find-results" id="findClubResults">
-          <div style="padding:12px 0;color:var(--text3);font-size:13px;text-align:center">Type at least 3 characters</div>
-        </div>
-      </div>
-      <div id="comm-clubs-list" class="friends-list"></div>
-    </div>
-
-    <!-- Requests: friend and club requests (sent and received) -->
-    <div id="comm-requests" style="display:none">
-      <div class="friends-nav" style="padding:12px 16px 4px">
-        <button class="fnav-btn active" id="rqfilt-all" onclick="setRequestFilter('all')">All</button>
-        <button class="fnav-btn" id="rqfilt-received" onclick="setRequestFilter('received')">Received</button>
-        <button class="fnav-btn" id="rqfilt-sent" onclick="setRequestFilter('sent')">Sent</button>
-      </div>
-      <div id="comm-requests-list" class="friends-list"></div>
-    </div>
+    <div id="comm-all"><div id="comm-chats-list" class="friends-list"></div></div>
+    <div id="comm-friends" style="display:none"><div id="comm-friends-list" class="friends-list"></div></div>
+    <div id="comm-clubs" style="display:none"><div id="comm-clubs-list" class="friends-list"></div></div>
+    <div id="comm-requests" style="display:none"><div id="comm-requests-list" class="friends-list"></div></div>
   </div>
 </div>
 
@@ -9669,6 +9670,8 @@ function updateHeaderSpacer() {
   if (subNav) subNav.style.bottom = nh + 'px';
   if (stats)  stats.style.bottom  = (nh + snh) + 'px';
   if (drawer) drawer.style.bottom = (nh + snh + stH) + 'px';
+  const commDrawerEl = document.getElementById('commDrawer');
+  if (commDrawerEl) commDrawerEl.style.bottom = (nh + snh + stH) + 'px';
 
   const totalBottom = nh + snh + stH;
   if (bSpacer) bSpacer.style.height = totalBottom + 'px';
@@ -9677,9 +9680,10 @@ function updateHeaderSpacer() {
   if (currentDiscoverTab === 'find') _setFindPanelHeight();
 }
 
-// Search drawer toggle
+// Search drawer toggle (library/global)
 let _searchDrawerOpen = false;
 window.toggleSearchDrawer = function() {
+  if (currentPage === 'community') { toggleCommDrawer(); return; }
   _searchDrawerOpen = !_searchDrawerOpen;
   const drawer = document.getElementById('subheader');
   const btn    = document.getElementById('searchToggleBtn');
@@ -9688,7 +9692,6 @@ window.toggleSearchDrawer = function() {
   if (btn)    btn.classList.toggle('active', _searchDrawerOpen);
   if (fab)    fab.style.display = _searchDrawerOpen ? 'none' : (['mylibrary','wishlist'].includes(currentPage) ? 'flex' : 'none');
   if (!_searchDrawerOpen) {
-    // Close filter/sort panels when drawer closes
     filterPanelOpen = false; sortPanelOpen = false;
     const fp = document.getElementById('filterPanel');
     const sp = document.getElementById('sortPanel');
@@ -9710,6 +9713,34 @@ function _closeSearchDrawer() {
   document.getElementById('sortPanel')   && (document.getElementById('sortPanel').style.display = 'none');
   document.getElementById('filterBtn')?.classList.remove('active');
   document.getElementById('sortBtn')?.classList.remove('active');
+  updateHeaderSpacer();
+}
+
+// Community search drawer toggle
+let _commDrawerOpen = false;
+window.toggleCommDrawer = function() {
+  _commDrawerOpen = !_commDrawerOpen;
+  const drawer = document.getElementById('commDrawer');
+  const btn    = document.getElementById('searchToggleBtn');
+  if (drawer) drawer.classList.toggle('search-drawer-open', _commDrawerOpen);
+  if (btn)    btn.classList.toggle('active', _commDrawerOpen);
+  if (!_commDrawerOpen) _closeCommInnerPanels();
+};
+
+function _closeCommInnerPanels() {
+  chatFilterOpen = false;
+  document.getElementById('chatFilterPanel') && (document.getElementById('chatFilterPanel').style.display = 'none');
+  document.getElementById('chatFilterBtn')?.classList.remove('active');
+  document.getElementById('findPeoplePanel') && (document.getElementById('findPeoplePanel').style.display = 'none');
+  document.getElementById('findClubsPanel')  && (document.getElementById('findClubsPanel').style.display = 'none');
+}
+
+function _closeCommDrawer() {
+  if (!_commDrawerOpen) return;
+  _commDrawerOpen = false;
+  document.getElementById('commDrawer')?.classList.remove('search-drawer-open');
+  document.getElementById('searchToggleBtn')?.classList.remove('active');
+  _closeCommInnerPanels();
   updateHeaderSpacer();
 }
 
@@ -9837,8 +9868,9 @@ window.setPage = (page) => {
   // Show/hide location filter (only on My Library)
   const locFilter = document.getElementById('locationFilterSection');
   if (locFilter) locFilter.style.display = page === 'mylibrary' ? '' : 'none';
-  // Close search drawer on page change
+  // Close search drawers on page change
   _closeSearchDrawer();
+  _closeCommDrawer();
   // Sub-nav bar: community or discover tabs
   const subNavBar = document.getElementById('subNavBar');
   const subNavC   = document.getElementById('subNavCommunity');
@@ -9846,9 +9878,12 @@ window.setPage = (page) => {
   if (subNavBar) subNavBar.style.display = ['community','discover'].includes(page) ? 'block' : 'none';
   if (subNavC)  subNavC.classList.toggle('snav-active',  page === 'community');
   if (subNavD)  subNavD.classList.toggle('snav-active',  page === 'discover');
-  // Stats bar: library/wishlist show it; discover lets setDiscoverTab control it; community hides it
+  // Stats bar: library/wishlist/community show it; discover lets setDiscoverTab control it
   const statsBar = document.getElementById('statsBar');
-  if (statsBar) statsBar.style.display = ['mylibrary','wishlist'].includes(page) ? 'block' : 'none';
+  if (statsBar) statsBar.style.display = ['mylibrary','wishlist','community'].includes(page) ? 'block' : 'none';
+  // On community, hide stat cards — only the search icon is needed
+  const subheaderStats = document.getElementById('subheaderStats');
+  if (subheaderStats) subheaderStats.style.display = page === 'community' ? 'none' : 'contents';
   updateStatCardLabels(page);
   // FAB
   const showFab = ['mylibrary','wishlist'].includes(page) && !_searchDrawerOpen;
@@ -10965,9 +11000,10 @@ window.setCommunityTab = (tab) => {
     document.getElementById('ctab-' + t)?.classList.toggle('active', t === tab);
     const el = document.getElementById('comm-' + t);
     if (el) el.style.display = t === tab ? '' : 'none';
+    const se = document.getElementById('comm-search-' + t);
+    if (se) se.style.display = t === tab ? '' : 'none';
   });
-  document.getElementById('findPeoplePanel') && (document.getElementById('findPeoplePanel').style.display = 'none');
-  document.getElementById('findClubsPanel') && (document.getElementById('findClubsPanel').style.display = 'none');
+  _closeCommInnerPanels();
   if (tab === 'all') renderChats();
   else if (tab === 'friends') renderFriendsList();
   else if (tab === 'clubs') renderClubsList();
@@ -11248,7 +11284,6 @@ window.toggleChatFilter = () => {
   chatFilterOpen = !chatFilterOpen;
   document.getElementById('chatFilterPanel').style.display = chatFilterOpen ? '' : 'none';
   document.getElementById('chatFilterBtn').classList.toggle('active', chatFilterOpen);
-  requestAnimationFrame(updateHeaderSpacer);
 };
 
 window.setChatReadFilter = (val) => {
@@ -13089,77 +13124,6 @@ document.addEventListener('input', (e) => {
   if (warningId) _modWarnEl(e.target, warningId);
 }, true);
 
-// ── SWIPE TO NAVIGATE ────────────────────────────────────────────────────────
-(function() {
-  // Flat ordered sequence of all pages/subpages
-  const SEQ = [
-    { page: 'mylibrary' },
-    { page: 'wishlist' },
-    { page: 'community', sub: 'all' },
-    { page: 'community', sub: 'friends' },
-    { page: 'community', sub: 'clubs' },
-    { page: 'community', sub: 'requests' },
-    { page: 'discover',  sub: 'find' },
-    { page: 'discover',  sub: 'global' },
-  ];
-
-  function currentIdx() {
-    for (let i = 0; i < SEQ.length; i++) {
-      const s = SEQ[i];
-      if (s.page !== currentPage) continue;
-      if (!s.sub) return i;
-      if (s.page === 'community' && s.sub === communitySubtab) return i;
-      if (s.page === 'discover'  && s.sub === currentDiscoverTab) return i;
-    }
-    return 0;
-  }
-
-  function navigateTo(idx) {
-    const s = SEQ[idx];
-    if (!s) return;
-    if (s.page !== currentPage) {
-      setPage(s.page);
-      if (s.sub && s.page === 'community') setTimeout(() => setCommunityTab(s.sub), 60);
-      if (s.sub && s.page === 'discover')  setTimeout(() => setDiscoverTab(s.sub), 60);
-    } else {
-      if (s.page === 'community') setCommunityTab(s.sub);
-      if (s.page === 'discover')  setDiscoverTab(s.sub);
-    }
-  }
-
-  // Returns true if el or any ancestor is a horizontally scrollable container with overflow
-  function isHScrollable(el) {
-    while (el && el !== document.body) {
-      const ox = getComputedStyle(el).overflowX;
-      if ((ox === 'auto' || ox === 'scroll') && el.scrollWidth > el.clientWidth + 4) return true;
-      el = el.parentElement;
-    }
-    return false;
-  }
-
-  function anyOverlayOpen() {
-    return !!document.querySelector('.modal-overlay.open, .settings-overlay.open, .bulk-overlay.open');
-  }
-
-  let startX = 0, startY = 0, eligible = false;
-
-  document.addEventListener('touchstart', e => {
-    startX = e.touches[0].clientX;
-    startY = e.touches[0].clientY;
-    eligible = !isHScrollable(e.target);
-  }, { passive: true });
-
-  document.addEventListener('touchend', e => {
-    if (!eligible) return;
-    const dx = e.changedTouches[0].clientX - startX;
-    const dy = e.changedTouches[0].clientY - startY;
-    // Must be a clear horizontal swipe: at least 55px and wider than it is tall
-    if (Math.abs(dx) < 55 || Math.abs(dx) < Math.abs(dy) * 1.3) return;
-    if (anyOverlayOpen()) return;
-    const next = currentIdx() + (dx < 0 ? 1 : -1);
-    if (next >= 0 && next < SEQ.length) navigateTo(next);
-  }, { passive: true });
-})();
 
 </script>
 </body>
