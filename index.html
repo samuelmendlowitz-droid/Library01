@@ -1747,9 +1747,19 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
     </div>
     <div id="comm-requests" style="display:none">
       <div style="padding:10px 16px 4px;display:flex;gap:8px;align-items:center">
-        <button class="filter-btn active" id="rqfilt-all" onclick="setRequestFilter('all')">All</button>
-        <button class="filter-btn" id="rqfilt-received" onclick="setRequestFilter('received')">Received</button>
-        <button class="filter-btn" id="rqfilt-sent" onclick="setRequestFilter('sent')">Sent</button>
+        <div class="search-wrap" style="flex:1;min-width:0">
+          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="search-input" id="requestsSearch" placeholder="Search requests…" oninput="renderRequests()">
+        </div>
+        <button class="ctrl-btn" id="requestFilterBtn" onclick="toggleRequestFilterPanel()" title="Filter"><i data-lucide="sliders-horizontal"></i></button>
+      </div>
+      <div id="requestFilterPanel" style="display:none;padding:4px 16px 10px;border-bottom:1px solid var(--border)">
+        <div class="filter-section-label">Direction</div>
+        <div class="filter-row">
+          <button class="filter-btn active" id="rqfilt-all" onclick="setRequestFilter('all')">All</button>
+          <button class="filter-btn" id="rqfilt-received" onclick="setRequestFilter('received')">Received</button>
+          <button class="filter-btn" id="rqfilt-sent" onclick="setRequestFilter('sent')">Sent</button>
+        </div>
       </div>
       <div id="comm-requests-list" class="friends-list"></div>
     </div>
@@ -9711,6 +9721,9 @@ function _closeCommInnerPanels() {
   document.getElementById('chatFilterBtn')?.classList.remove('active');
   document.getElementById('findPeoplePanel') && (document.getElementById('findPeoplePanel').style.display = 'none');
   document.getElementById('findClubsPanel')  && (document.getElementById('findClubsPanel').style.display = 'none');
+  _requestFilterPanelOpen = false;
+  document.getElementById('requestFilterPanel') && (document.getElementById('requestFilterPanel').style.display = 'none');
+  document.getElementById('requestFilterBtn')?.classList.remove('active');
 }
 
 function _closeCommDrawer() { _closeCommInnerPanels(); }
@@ -10920,6 +10933,7 @@ async function loadFriendProfiles() {
 
 // ── COMMUNITY PAGE ────────────────────────────────────────────────────────────
 let requestFilter = 'all';
+let _requestFilterPanelOpen = false;
 let clubsList = [];
 let clubLastMessages = {};
 let currentClubId = null, currentClubData = null, currentClubRole = null;
@@ -11284,6 +11298,12 @@ async function loadLastClubMessages() {
 }
 
 // ── RENDER REQUESTS ───────────────────────────────────────────────────────────
+window.toggleRequestFilterPanel = () => {
+  _requestFilterPanelOpen = !_requestFilterPanelOpen;
+  document.getElementById('requestFilterPanel').style.display = _requestFilterPanelOpen ? '' : 'none';
+  document.getElementById('requestFilterBtn').classList.toggle('active', _requestFilterPanelOpen);
+};
+
 window.setRequestFilter = (f) => {
   requestFilter = f;
   ['all','received','sent'].forEach(v => document.getElementById('rqfilt-' + v)?.classList.toggle('active', v === f));
@@ -11293,9 +11313,11 @@ window.setRequestFilter = (f) => {
 function renderRequests() {
   const el = document.getElementById('comm-requests-list');
   if (!el) return;
+  const q = (document.getElementById('requestsSearch')?.value || '').toLowerCase().trim();
   let list = [];
   if (requestFilter !== 'sent')     list = [...list, ...friendRequests.map(r => ({ ...r, dir:'received' }))];
   if (requestFilter !== 'received') list = [...list, ...sentRequests.map(r => ({ ...r, dir:'sent' }))];
+  if (q) list = list.filter(r => (r.displayName||'').toLowerCase().includes(q) || (r.username||'').toLowerCase().includes(q));
   if (!list.length) {
     el.innerHTML = '<div style="padding:40px 0;text-align:center;color:var(--text3);font-size:13px">No requests</div>';
     return;
