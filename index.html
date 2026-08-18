@@ -314,7 +314,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .hnav-btn .lucide { width: 18px; height: 18px; }
 
 /* SUB-NAV BAR (community/discover, sits right above main nav) */
-#subNavBar { position: fixed; left: 0; right: 0; z-index: 100; background: var(--grain), var(--header-bg); border-top: 1px solid var(--border); display: none; }
+#subNavBar { position: fixed; left: 0; right: 0; z-index: 100; background: var(--grain), linear-gradient(rgba(255,255,255,0.06), rgba(255,255,255,0.06)), var(--header-bg); border-top: 1px solid var(--border); display: none; }
 #subNavCommunity, #subNavDiscover { display: none; }
 #subNavCommunity.snav-active, #subNavDiscover.snav-active { display: flex; }
 
@@ -9779,8 +9779,8 @@ window.setDiscoverTab = (tab) => {
     // Internally treat as global page for all rendering functions
     currentPage = 'global';
     currentSort = _globalSort;
-    // Keep discover nav tab active
-    document.querySelectorAll('.hnav-btn').forEach(b => b.classList.remove('active'));
+    // Keep discover nav tab active (only touch main nav, not sub-nav)
+    document.querySelectorAll('#bottomNav .hnav-btn').forEach(b => b.classList.remove('active'));
     document.getElementById('hnav-discover')?.classList.add('active');
     // Reset filters
     topFilters = ['all']; selectedGenreFilters = []; selectedStatusFilters = [];
@@ -10049,6 +10049,15 @@ window.cycleBookView = () => {
   const icons = { card: 'layout-list', book: 'layout-grid', shelf: 'library-big' };
   const iconEl = document.getElementById('viewBtnIcon');
   if (iconEl) { iconEl.dataset.lucide = icons[currentBookView]; refreshIcons(); }
+  // Close filter/sort panels if open
+  if (filterPanelOpen || sortPanelOpen) {
+    filterPanelOpen = false; sortPanelOpen = false;
+    document.getElementById('filterPanel').style.display = 'none';
+    document.getElementById('sortPanel').style.display = 'none';
+    document.getElementById('filterBtn')?.classList.remove('active');
+    document.getElementById('sortBtn')?.classList.remove('active');
+    updateHeaderSpacer();
+  }
   if (currentPage === 'global') applyGlobalFilters();
   else applyFilters();
 };
