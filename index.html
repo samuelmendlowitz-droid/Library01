@@ -211,7 +211,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 /* HEADER */
 .header {
   background: var(--grain), var(--header-bg);
-  padding: max(env(safe-area-inset-top, 0px), 14px) 16px 0;
+  padding: max(env(safe-area-inset-top, 0px), 14px) 16px 12px;
   border-bottom: 1px solid var(--border);
   position: fixed; top: 0; left: 0; right: 0; z-index: 100;
 }
@@ -9766,7 +9766,7 @@ window.setDiscoverTab = (tab) => {
   if (findPanel) findPanel.style.display = (!isGlobal && tab === 'find') ? '' : 'none';
   // Stats bar + search drawer: only on global tab
   const statsBar = document.getElementById('statsBar');
-  if (statsBar) statsBar.style.display = isGlobal ? '' : 'none';
+  if (statsBar) statsBar.style.display = isGlobal ? 'block' : 'none';
   if (!isGlobal) _closeSearchDrawer();
   // Shared book list elements: only on global tab
   document.getElementById('bookList').style.display = isGlobal ? '' : 'none';
@@ -9842,12 +9842,12 @@ window.setPage = (page) => {
   const subNavBar = document.getElementById('subNavBar');
   const subNavC   = document.getElementById('subNavCommunity');
   const subNavD   = document.getElementById('subNavDiscover');
-  if (subNavBar) subNavBar.style.display = ['community','discover'].includes(page) ? '' : 'none';
+  if (subNavBar) subNavBar.style.display = ['community','discover'].includes(page) ? 'flex' : 'none';
   if (subNavC)  subNavC.classList.toggle('snav-active',  page === 'community');
   if (subNavD)  subNavD.classList.toggle('snav-active',  page === 'discover');
-  // Stats bar: visible on library/wishlist; discover delegates to setDiscoverTab
+  // Stats bar: library/wishlist show it; discover lets setDiscoverTab control it; community hides it
   const statsBar = document.getElementById('statsBar');
-  if (statsBar) statsBar.style.display = ['mylibrary','wishlist'].includes(page) ? '' : (page === 'discover' ? '' : 'none');
+  if (statsBar) statsBar.style.display = ['mylibrary','wishlist'].includes(page) ? 'block' : 'none';
   updateStatCardLabels(page);
   // FAB
   const showFab = ['mylibrary','wishlist'].includes(page) && !_searchDrawerOpen;
