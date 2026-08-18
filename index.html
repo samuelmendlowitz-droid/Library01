@@ -13038,6 +13038,78 @@ document.addEventListener('input', (e) => {
   if (warningId) _modWarnEl(e.target, warningId);
 }, true);
 
+// ── SWIPE TO NAVIGATE ────────────────────────────────────────────────────────
+(function() {
+  // Flat ordered sequence of all pages/subpages
+  const SEQ = [
+    { page: 'mylibrary' },
+    { page: 'wishlist' },
+    { page: 'community', sub: 'all' },
+    { page: 'community', sub: 'friends' },
+    { page: 'community', sub: 'clubs' },
+    { page: 'community', sub: 'requests' },
+    { page: 'discover',  sub: 'find' },
+    { page: 'discover',  sub: 'global' },
+  ];
+
+  function currentIdx() {
+    for (let i = 0; i < SEQ.length; i++) {
+      const s = SEQ[i];
+      if (s.page !== currentPage) continue;
+      if (!s.sub) return i;
+      if (s.page === 'community' && s.sub === communitySubtab) return i;
+      if (s.page === 'discover'  && s.sub === currentDiscoverTab) return i;
+    }
+    return 0;
+  }
+
+  function navigateTo(idx) {
+    const s = SEQ[idx];
+    if (!s) return;
+    if (s.page !== currentPage) {
+      setPage(s.page);
+      if (s.sub && s.page === 'community') setTimeout(() => setCommunityTab(s.sub), 60);
+      if (s.sub && s.page === 'discover')  setTimeout(() => setDiscoverTab(s.sub), 60);
+    } else {
+      if (s.page === 'community') setCommunityTab(s.sub);
+      if (s.page === 'discover')  setDiscoverTab(s.sub);
+    }
+  }
+
+  // Returns true if el or any ancestor is a horizontally scrollable container with overflow
+  function isHScrollable(el) {
+    while (el && el !== document.body) {
+      const ox = getComputedStyle(el).overflowX;
+      if ((ox === 'auto' || ox === 'scroll') && el.scrollWidth > el.clientWidth + 4) return true;
+      el = el.parentElement;
+    }
+    return false;
+  }
+
+  function anyOverlayOpen() {
+    return !!document.querySelector('.modal-overlay.open, .settings-overlay.open, .bulk-overlay.open');
+  }
+
+  let startX = 0, startY = 0, eligible = false;
+
+  document.addEventListener('touchstart', e => {
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    eligible = !isHScrollable(e.target);
+  }, { passive: true });
+
+  document.addEventListener('touchend', e => {
+    if (!eligible) return;
+    const dx = e.changedTouches[0].clientX - startX;
+    const dy = e.changedTouches[0].clientY - startY;
+    // Must be a clear horizontal swipe: at least 55px and wider than it is tall
+    if (Math.abs(dx) < 55 || Math.abs(dx) < Math.abs(dy) * 1.3) return;
+    if (anyOverlayOpen()) return;
+    const next = currentIdx() + (dx < 0 ? 1 : -1);
+    if (next >= 0 && next < SEQ.length) navigateTo(next);
+  }, { passive: true });
+})();
+
 </script>
 </body>
 </html>
