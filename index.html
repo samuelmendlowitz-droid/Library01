@@ -3,7 +3,7 @@
 <head>
 <script>document.documentElement.setAttribute('data-theme',localStorage.getItem('appTheme')||'dark-blue');</script>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Miriam's Library">
@@ -306,7 +306,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
   display: flex; gap: 0; overflow: hidden;
   background: var(--grain), var(--header-bg);
   border-top: 1px solid var(--border);
-  padding-bottom: max(env(safe-area-inset-bottom, 0px), 6px);
+  padding-bottom: max(env(safe-area-inset-bottom, 16px), 16px);
 }
 .hnav-btn { flex: 1 1 0; min-width: 0; text-align: center; padding: 8px 2px 4px; white-space: nowrap; overflow: hidden; border: none; border-top: 2px solid transparent; background: none; color: var(--text3); font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 500; cursor: pointer; transition: all 0.15s; -webkit-tap-highlight-color: transparent; display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .hnav-btn.active { color: var(--accent); border-top-color: var(--accent); font-weight: 600; }
@@ -1594,7 +1594,6 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
   </div>
 
   <div id="headerSpacer"></div>
-  <div id="bottomSpacer"></div>
 
   <!-- Scroll-hiding subheader: search + filter/sort/view controls + stats + discover tabs -->
   <div class="subheader" id="subheader">
@@ -1614,13 +1613,6 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
     <div class="sort-panel" id="sortPanel" style="display:none">
       <div class="sort-options" id="sortOptions"></div>
     </div>
-    <div class="subheader-stats" id="subheaderStats">
-      <div class="stat stat-clickable active" id="statCardAll" onclick="setTopFilter('all')"><div class="stat-num" id="statTotal">0</div><div class="stat-label">Books</div></div>
-      <div class="stat stat-clickable" id="statCardRead" onclick="setTopFilter('read')"><div class="stat-num" id="statRead">0</div><div class="stat-label">Read</div></div>
-      <div class="stat stat-clickable" id="statCardUnread" onclick="setTopFilter('unread')"><div class="stat-num" id="statUnread">0</div><div class="stat-label">Unread</div></div>
-      <div class="stat stat-clickable" id="statCardBorrowed" onclick="setTopFilter('borrowed')"><div class="stat-num" id="statBorrowed">0</div><div class="stat-label">Out</div></div>
-      <div class="stat stat-clickable" id="statCardAllRead" onclick="setTopFilter('allread')"><div class="stat-num" id="statAllRead">0</div><div class="stat-label">All Read</div></div>
-    </div>
     <div class="discover-tabs" id="discoverTabBar" style="display:none">
       <button class="dtab active" id="dtab-find" onclick="setDiscoverTab('find')">Find My Next Book</button>
       <button class="dtab" id="dtab-global" onclick="setDiscoverTab('global')">Global Library</button>
@@ -1634,6 +1626,13 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
       <button class="ctrl-btn" id="filterBtn" onclick="toggleFilterPanel()" title="Filter"><i data-lucide="sliders-horizontal"></i></button>
       <button class="ctrl-btn" id="sortBtn" onclick="toggleSortPanel()" title="Sort"><i data-lucide="arrow-up-down"></i></button>
       <button class="ctrl-btn" id="viewBtn" onclick="cycleBookView()" title="Change view"><i data-lucide="layout-list" id="viewBtnIcon"></i></button>
+    </div>
+    <div class="subheader-stats" id="subheaderStats">
+      <div class="stat stat-clickable active" id="statCardAll" onclick="setTopFilter('all')"><div class="stat-num" id="statTotal">0</div><div class="stat-label">Books</div></div>
+      <div class="stat stat-clickable" id="statCardRead" onclick="setTopFilter('read')"><div class="stat-num" id="statRead">0</div><div class="stat-label">Read</div></div>
+      <div class="stat stat-clickable" id="statCardUnread" onclick="setTopFilter('unread')"><div class="stat-num" id="statUnread">0</div><div class="stat-label">Unread</div></div>
+      <div class="stat stat-clickable" id="statCardBorrowed" onclick="setTopFilter('borrowed')"><div class="stat-num" id="statBorrowed">0</div><div class="stat-label">Out</div></div>
+      <div class="stat stat-clickable" id="statCardAllRead" onclick="setTopFilter('allread')"><div class="stat-num" id="statAllRead">0</div><div class="stat-label">All Read</div></div>
     </div>
   </div>
 
@@ -1756,6 +1755,8 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
     <button class="btn-submit" style="width:100%;margin-top:16px" onclick="submitUsernameSetup()">Save Username</button>
   </div>
 </div>
+
+<div id="bottomSpacer"></div>
 
 <!-- FRIEND LIBRARY MODAL -->
 <div class="modal-overlay" id="notifModal" onclick="closeOnOverlay(event,'notifModal')">
