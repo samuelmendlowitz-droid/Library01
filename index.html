@@ -1664,58 +1664,6 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
     </div>
   </div>
 
-  <!-- Community search drawer (slides up from bottom, same as library drawer) -->
-  <!-- Shows for Friends/Clubs/Requests tabs; All tab has inline search instead -->
-  <div class="subheader" id="commDrawer">
-    <!-- Friends tab: friend search + find people -->
-    <div id="comm-search-friends" style="display:none">
-      <div id="findPeoplePanel" class="filter-panel" style="display:none">
-        <div class="search-wrap" style="margin-bottom:8px">
-          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input class="search-input" id="friendSearchInput" placeholder="Search by username…" oninput="debounceFriendSearch(this.value)">
-        </div>
-        <div class="find-results" id="findResults">
-          <div style="padding:8px 0;color:var(--text3);font-size:13px;text-align:center">Type at least 3 characters</div>
-        </div>
-      </div>
-      <div class="subheader-ctrl">
-        <div class="search-wrap" style="flex:1;min-width:0">
-          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input class="search-input" id="friendsListSearch" placeholder="Search friends…" oninput="renderFriendsList()">
-        </div>
-        <button class="ctrl-btn" id="findPeopleBtn" onclick="toggleFindPeoplePanel()" title="Find People"><i data-lucide="user-plus"></i></button>
-      </div>
-    </div>
-    <!-- Clubs tab: clubs search + find/create -->
-    <div id="comm-search-clubs" style="display:none">
-      <div id="findClubsPanel" class="filter-panel" style="display:none">
-        <div class="search-wrap" style="margin-bottom:8px">
-          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input class="search-input" id="clubSearchInput" placeholder="Search clubs by name or keywords…" oninput="debounceClubSearch(this.value)">
-        </div>
-        <div class="find-results" id="findClubResults">
-          <div style="padding:8px 0;color:var(--text3);font-size:13px;text-align:center">Type at least 3 characters</div>
-        </div>
-      </div>
-      <div class="subheader-ctrl">
-        <div class="search-wrap" style="flex:1;min-width:0">
-          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input class="search-input" id="clubsListSearch" placeholder="Search clubs…" oninput="renderClubsList()">
-        </div>
-        <button class="ctrl-btn" onclick="openCreateClubModal()" title="Create Club"><i data-lucide="plus"></i></button>
-        <button class="ctrl-btn" id="findClubsBtn" onclick="toggleFindClubsPanel()" title="Find Clubs"><i data-lucide="search"></i></button>
-      </div>
-    </div>
-    <!-- Requests tab: filter buttons -->
-    <div id="comm-search-requests" style="display:none">
-      <div class="subheader-ctrl" style="gap:8px">
-        <button class="filter-btn active" id="rqfilt-all" onclick="setRequestFilter('all')">All</button>
-        <button class="filter-btn" id="rqfilt-received" onclick="setRequestFilter('received')">Received</button>
-        <button class="filter-btn" id="rqfilt-sent" onclick="setRequestFilter('sent')">Sent</button>
-      </div>
-    </div>
-  </div>
-
   <!-- Discover page: non-global tab panels (tab bar lives in subheader above) -->
   <div id="page-discover" style="display:none">
     <div id="dtab-panel-find"></div>
@@ -1758,9 +1706,53 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
       </div>
       <div id="comm-chats-list" class="friends-list"></div>
     </div>
-    <div id="comm-friends" style="display:none"><div id="comm-friends-list" class="friends-list"></div></div>
-    <div id="comm-clubs" style="display:none"><div id="comm-clubs-list" class="friends-list"></div></div>
-    <div id="comm-requests" style="display:none"><div id="comm-requests-list" class="friends-list"></div></div>
+    <div id="comm-friends" style="display:none">
+      <div style="padding:10px 16px 4px;display:flex;gap:8px;align-items:center">
+        <div class="search-wrap" style="flex:1;min-width:0">
+          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="search-input" id="friendsListSearch" placeholder="Search friends…" oninput="renderFriendsList()">
+        </div>
+        <button class="ctrl-btn" id="findPeopleBtn" onclick="toggleFindPeoplePanel()" title="Find People"><i data-lucide="user-plus"></i></button>
+      </div>
+      <div id="findPeoplePanel" style="display:none;padding:4px 16px 10px;border-bottom:1px solid var(--border)">
+        <div class="search-wrap">
+          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="search-input" id="friendSearchInput" placeholder="Search by username…" oninput="debounceFriendSearch(this.value)">
+        </div>
+        <div class="find-results" id="findResults">
+          <div style="padding:12px 0;color:var(--text3);font-size:13px;text-align:center">Type at least 3 characters</div>
+        </div>
+      </div>
+      <div id="comm-friends-list" class="friends-list"></div>
+    </div>
+    <div id="comm-clubs" style="display:none">
+      <div style="padding:10px 16px 4px;display:flex;gap:8px;align-items:center">
+        <div class="search-wrap" style="flex:1;min-width:0">
+          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="search-input" id="clubsListSearch" placeholder="Search clubs…" oninput="renderClubsList()">
+        </div>
+        <button class="ctrl-btn" onclick="openCreateClubModal()" title="Create Club"><i data-lucide="plus"></i></button>
+        <button class="ctrl-btn" id="findClubsBtn" onclick="toggleFindClubsPanel()" title="Find Clubs"><i data-lucide="search"></i></button>
+      </div>
+      <div id="findClubsPanel" style="display:none;padding:4px 16px 10px;border-bottom:1px solid var(--border)">
+        <div class="search-wrap">
+          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="search-input" id="clubSearchInput" placeholder="Search clubs by name or keywords…" oninput="debounceClubSearch(this.value)">
+        </div>
+        <div class="find-results" id="findClubResults">
+          <div style="padding:12px 0;color:var(--text3);font-size:13px;text-align:center">Type at least 3 characters</div>
+        </div>
+      </div>
+      <div id="comm-clubs-list" class="friends-list"></div>
+    </div>
+    <div id="comm-requests" style="display:none">
+      <div style="padding:10px 16px 4px;display:flex;gap:8px;align-items:center">
+        <button class="filter-btn active" id="rqfilt-all" onclick="setRequestFilter('all')">All</button>
+        <button class="filter-btn" id="rqfilt-received" onclick="setRequestFilter('received')">Received</button>
+        <button class="filter-btn" id="rqfilt-sent" onclick="setRequestFilter('sent')">Sent</button>
+      </div>
+      <div id="comm-requests-list" class="friends-list"></div>
+    </div>
   </div>
 </div>
 
@@ -9670,8 +9662,6 @@ function updateHeaderSpacer() {
   if (subNav) subNav.style.bottom = nh + 'px';
   if (stats)  stats.style.bottom  = (nh + snh) + 'px';
   if (drawer) drawer.style.bottom = (nh + snh + stH) + 'px';
-  const commDrawerEl = document.getElementById('commDrawer');
-  if (commDrawerEl) commDrawerEl.style.bottom = (nh + snh + stH) + 'px';
 
   const totalBottom = nh + snh + stH;
   if (bSpacer) bSpacer.style.height = totalBottom + 'px';
@@ -9683,7 +9673,6 @@ function updateHeaderSpacer() {
 // Search drawer toggle (library/global)
 let _searchDrawerOpen = false;
 window.toggleSearchDrawer = function() {
-  if (currentPage === 'community') { toggleCommDrawer(); return; }
   _searchDrawerOpen = !_searchDrawerOpen;
   const drawer = document.getElementById('subheader');
   const btn    = document.getElementById('searchToggleBtn');
@@ -9716,17 +9705,6 @@ function _closeSearchDrawer() {
   updateHeaderSpacer();
 }
 
-// Community search drawer toggle
-let _commDrawerOpen = false;
-window.toggleCommDrawer = function() {
-  _commDrawerOpen = !_commDrawerOpen;
-  const drawer = document.getElementById('commDrawer');
-  const btn    = document.getElementById('searchToggleBtn');
-  if (drawer) drawer.classList.toggle('search-drawer-open', _commDrawerOpen);
-  if (btn)    btn.classList.toggle('active', _commDrawerOpen);
-  if (!_commDrawerOpen) _closeCommInnerPanels();
-};
-
 function _closeCommInnerPanels() {
   chatFilterOpen = false;
   document.getElementById('chatFilterPanel') && (document.getElementById('chatFilterPanel').style.display = 'none');
@@ -9735,14 +9713,7 @@ function _closeCommInnerPanels() {
   document.getElementById('findClubsPanel')  && (document.getElementById('findClubsPanel').style.display = 'none');
 }
 
-function _closeCommDrawer() {
-  if (!_commDrawerOpen) return;
-  _commDrawerOpen = false;
-  document.getElementById('commDrawer')?.classList.remove('search-drawer-open');
-  document.getElementById('searchToggleBtn')?.classList.remove('active');
-  _closeCommInnerPanels();
-  updateHeaderSpacer();
-}
+function _closeCommDrawer() { _closeCommInnerPanels(); }
 
 window.addEventListener('resize', updateHeaderSpacer);
 
@@ -9878,12 +9849,11 @@ window.setPage = (page) => {
   if (subNavBar) subNavBar.style.display = ['community','discover'].includes(page) ? 'block' : 'none';
   if (subNavC)  subNavC.classList.toggle('snav-active',  page === 'community');
   if (subNavD)  subNavD.classList.toggle('snav-active',  page === 'discover');
-  // Stats bar: library/wishlist/community show it; discover lets setDiscoverTab control it
+  // Stats bar: library/wishlist show it; discover lets setDiscoverTab control it; community uses inline search
   const statsBar = document.getElementById('statsBar');
-  if (statsBar) statsBar.style.display = ['mylibrary','wishlist','community'].includes(page) ? 'block' : 'none';
-  // On community, hide stat cards — only the search icon is needed
+  if (statsBar) statsBar.style.display = ['mylibrary','wishlist'].includes(page) ? 'block' : 'none';
   const subheaderStats = document.getElementById('subheaderStats');
-  if (subheaderStats) subheaderStats.style.display = page === 'community' ? 'none' : 'contents';
+  if (subheaderStats) subheaderStats.style.display = 'contents';
   updateStatCardLabels(page);
   // FAB
   const showFab = ['mylibrary','wishlist'].includes(page) && !_searchDrawerOpen;
@@ -10979,14 +10949,8 @@ function initCommunityPage() {
     document.getElementById('ctab-' + t)?.classList.toggle('active', t === 'all');
     const el = document.getElementById('comm-' + t);
     if (el) el.style.display = t === 'all' ? '' : 'none';
-    const se = document.getElementById('comm-search-' + t);
-    if (se) se.style.display = t === 'all' ? '' : 'none';
   });
-  // All tab: search is inline, so hide the stats bar (no need for search icon)
-  const statsBar = document.getElementById('statsBar');
-  if (statsBar) statsBar.style.display = 'none';
-  document.getElementById('findPeoplePanel') && (document.getElementById('findPeoplePanel').style.display = 'none');
-  document.getElementById('findClubsPanel') && (document.getElementById('findClubsPanel').style.display = 'none');
+  _closeCommInnerPanels();
   if (_communityLoaded) { renderChats(); return; }
   loadFriends().then(async () => {
     await loadFriendProfiles();
@@ -11005,15 +10969,8 @@ window.setCommunityTab = (tab) => {
     document.getElementById('ctab-' + t)?.classList.toggle('active', t === tab);
     const el = document.getElementById('comm-' + t);
     if (el) el.style.display = t === tab ? '' : 'none';
-    const se = document.getElementById('comm-search-' + t);
-    if (se) se.style.display = t === tab ? '' : 'none';
   });
   _closeCommInnerPanels();
-  // All tab has inline search — hide stats bar; other tabs use the drawer via stats bar icon
-  const statsBar = document.getElementById('statsBar');
-  if (statsBar) statsBar.style.display = tab === 'all' ? 'none' : 'block';
-  if (tab === 'all') _closeCommDrawer();
-  updateHeaderSpacer();
   if (tab === 'all') renderChats();
   else if (tab === 'friends') renderFriendsList();
   else if (tab === 'clubs') renderClubsList();
