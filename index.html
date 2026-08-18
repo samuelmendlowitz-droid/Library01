@@ -1665,25 +1665,8 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
   </div>
 
   <!-- Community search drawer (slides up from bottom, same as library drawer) -->
+  <!-- Shows for Friends/Clubs/Requests tabs; All tab has inline search instead -->
   <div class="subheader" id="commDrawer">
-    <!-- All tab: chat search + read-status filter -->
-    <div id="comm-search-all">
-      <div id="chatFilterPanel" class="filter-panel" style="display:none">
-        <div class="filter-section-label">Read Status</div>
-        <div class="filter-row">
-          <button class="filter-btn active" id="cfilt-read-all" onclick="setChatReadFilter('all')">All</button>
-          <button class="filter-btn" id="cfilt-read-unread" onclick="setChatReadFilter('unread')">Unread</button>
-          <button class="filter-btn" id="cfilt-read-read" onclick="setChatReadFilter('read')">Read</button>
-        </div>
-      </div>
-      <div class="subheader-ctrl">
-        <div class="search-wrap" style="flex:1;min-width:0">
-          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input class="search-input" id="chatSearch" placeholder="Search chats…" oninput="renderChats()">
-        </div>
-        <button class="ctrl-btn" id="chatFilterBtn" onclick="toggleChatFilter()" title="Filter"><i data-lucide="sliders-horizontal"></i></button>
-      </div>
-    </div>
     <!-- Friends tab: friend search + find people -->
     <div id="comm-search-friends" style="display:none">
       <div id="findPeoplePanel" class="filter-panel" style="display:none">
@@ -1757,7 +1740,24 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 
   <button class="fab" id="fabAdd" onclick="openAddModal()" style="display:none"><i data-lucide="plus"></i></button>
   <div id="page-community" style="display:none">
-    <div id="comm-all"><div id="comm-chats-list" class="friends-list"></div></div>
+    <div id="comm-all">
+      <div style="padding:10px 16px 4px;display:flex;gap:8px;align-items:center">
+        <div class="search-wrap" style="flex:1;min-width:0">
+          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="search-input" id="chatSearch" placeholder="Search chats…" oninput="renderChats()">
+        </div>
+        <button class="ctrl-btn" id="chatFilterBtn" onclick="toggleChatFilter()" title="Filter"><i data-lucide="sliders-horizontal"></i></button>
+      </div>
+      <div id="chatFilterPanel" class="filter-panel" style="display:none;padding:10px 16px 12px">
+        <div class="filter-section-label">Read Status</div>
+        <div class="filter-row">
+          <button class="filter-btn active" id="cfilt-read-all" onclick="setChatReadFilter('all')">All</button>
+          <button class="filter-btn" id="cfilt-read-unread" onclick="setChatReadFilter('unread')">Unread</button>
+          <button class="filter-btn" id="cfilt-read-read" onclick="setChatReadFilter('read')">Read</button>
+        </div>
+      </div>
+      <div id="comm-chats-list" class="friends-list"></div>
+    </div>
     <div id="comm-friends" style="display:none"><div id="comm-friends-list" class="friends-list"></div></div>
     <div id="comm-clubs" style="display:none"><div id="comm-clubs-list" class="friends-list"></div></div>
     <div id="comm-requests" style="display:none"><div id="comm-requests-list" class="friends-list"></div></div>
@@ -10979,7 +10979,12 @@ function initCommunityPage() {
     document.getElementById('ctab-' + t)?.classList.toggle('active', t === 'all');
     const el = document.getElementById('comm-' + t);
     if (el) el.style.display = t === 'all' ? '' : 'none';
+    const se = document.getElementById('comm-search-' + t);
+    if (se) se.style.display = t === 'all' ? '' : 'none';
   });
+  // All tab: search is inline, so hide the stats bar (no need for search icon)
+  const statsBar = document.getElementById('statsBar');
+  if (statsBar) statsBar.style.display = 'none';
   document.getElementById('findPeoplePanel') && (document.getElementById('findPeoplePanel').style.display = 'none');
   document.getElementById('findClubsPanel') && (document.getElementById('findClubsPanel').style.display = 'none');
   if (_communityLoaded) { renderChats(); return; }
@@ -11004,6 +11009,11 @@ window.setCommunityTab = (tab) => {
     if (se) se.style.display = t === tab ? '' : 'none';
   });
   _closeCommInnerPanels();
+  // All tab has inline search — hide stats bar; other tabs use the drawer via stats bar icon
+  const statsBar = document.getElementById('statsBar');
+  if (statsBar) statsBar.style.display = tab === 'all' ? 'none' : 'block';
+  if (tab === 'all') _closeCommDrawer();
+  updateHeaderSpacer();
   if (tab === 'all') renderChats();
   else if (tab === 'friends') renderFriendsList();
   else if (tab === 'clubs') renderClubsList();
