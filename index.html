@@ -301,14 +301,21 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .chat-ref-book-row { display: flex; align-items: flex-start; gap: 5px; padding: 5px 7px; border-radius: 8px; cursor: pointer; transition: background 0.1s; }
 .chat-ref-book-row:active { background: var(--surface2); }
 .chat-ref-book-num { font-size: 10px; color: var(--text3); min-width: 18px; flex-shrink: 0; padding-top: 2px; }
-.header-nav { display: flex; gap: 0; margin-top: 8px; overflow: hidden; }
-.hnav-btn { flex: 1 1 0; min-width: 0; text-align: center; padding: 5px 2px; white-space: nowrap; overflow: hidden; border: none; border-bottom: 2px solid transparent; background: none; color: var(--text3); font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.15s; -webkit-tap-highlight-color: transparent; }
-.hnav-btn.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+.header-nav {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+  display: flex; gap: 0; overflow: hidden;
+  background: var(--grain), var(--header-bg);
+  border-top: 1px solid var(--border);
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), 6px);
+}
+.hnav-btn { flex: 1 1 0; min-width: 0; text-align: center; padding: 8px 2px 4px; white-space: nowrap; overflow: hidden; border: none; border-top: 2px solid transparent; background: none; color: var(--text3); font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 500; cursor: pointer; transition: all 0.15s; -webkit-tap-highlight-color: transparent; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.hnav-btn.active { color: var(--accent); border-top-color: var(--accent); font-weight: 600; }
 .hnav-btn:active { opacity: 0.7; }
+.hnav-btn .lucide { width: 18px; height: 18px; }
 
 /* SUBHEADER */
-.subheader { position: fixed; left: 0; right: 0; z-index: 90; background: var(--surface); border-bottom: 1px solid var(--border); padding: 10px 16px; display: flex; flex-direction: column; gap: 10px; transition: transform 0.25s ease; }
-.subheader.hidden { transform: translateY(-110%); }
+.subheader { position: fixed; left: 0; right: 0; z-index: 90; background: var(--surface); border-top: 1px solid var(--border); padding: 10px 16px; display: flex; flex-direction: column; gap: 10px; transition: transform 0.25s ease; }
+.subheader.hidden { transform: translateY(110%); }
 .subheader-stats { display: flex; gap: 8px; }
 .subheader-stats .stat { flex: 1; min-width: 0; }
 .stat { display: flex; flex-direction: column; align-items: center; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 7px 6px; }
@@ -321,7 +328,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .ctrl-btn { width: 36px; height: 36px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface2); color: var(--text2); font-size: 15px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s; flex-shrink: 0; -webkit-tap-highlight-color: transparent; }
 .ctrl-btn.active { background: var(--accent); border-color: var(--accent); color: var(--bg); }
 .ctrl-btn:active { opacity: 0.75; }
-.filter-panel, .sort-panel { padding-top: 10px; border-top: 1px solid var(--border); }
+.filter-panel, .sort-panel { padding-bottom: 10px; border-bottom: 1px solid var(--border); }
 .sort-options { display: flex; flex-wrap: wrap; gap: 8px; padding: 2px 0 4px; }
 .sort-option { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface2); color: var(--text2); font-size: 12px; font-family: 'DM Sans', sans-serif; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all 0.15s; }
 .sort-option.active { background: var(--accent); border-color: var(--accent); color: var(--bg); font-weight: 600; }
@@ -338,7 +345,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .ctab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
 
 /* DISCOVER */
-.discover-tabs { display: flex; border-bottom: 1px solid var(--border); padding: 0 16px; overflow-x: auto; scrollbar-width: none; margin: -10px -16px 0; }
+.discover-tabs { display: flex; border-bottom: 1px solid var(--border); padding: 0 16px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; }
 .discover-tabs::-webkit-scrollbar { display: none; }
 .dtab { flex-shrink: 0; padding: 11px 14px; border: none; border-bottom: 2px solid transparent; background: none; color: var(--text3); font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: color 0.15s, border-color 0.15s; -webkit-tap-highlight-color: transparent; }
 .dtab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
@@ -527,7 +534,6 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .ios-slider:before { content: ''; position: absolute; width: 16px; height: 16px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: 0.2s; }
 .ios-toggle input:checked + .ios-slider { background: var(--accent); }
 .ios-toggle input:checked + .ios-slider:before { transform: translateX(18px); }
-.hnav-btn .lucide { width: 11px; height: 11px; vertical-align: -1px; }
 .flib-tabs { display: flex; border-bottom: 1px solid var(--border); margin: 0 -20px 12px; padding: 0 20px; }
 .fdet-tab-btn { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface2); color: var(--text3); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.15s; flex-shrink: 0; }
 .fdet-tab-btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
@@ -673,7 +679,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .sbs-spine-rating { font-size: 8px; opacity: 0.8; text-align: center; flex-shrink: 0; margin-top: 4px; letter-spacing: -0.5px; }
 
 /* ── Shelf View ──────────────────────────────────────────────────────────────── */
-.shelf-view-root { height: calc(100dvh - var(--total-header-h, 0px)); overflow-y: scroll; scroll-snap-type: y mandatory; background: var(--bg); overscroll-behavior: contain; }
+.shelf-view-root { height: calc(100dvh - var(--total-header-h, 0px) - var(--bottom-bar-h, 0px)); overflow-y: scroll; scroll-snap-type: y mandatory; background: var(--bg); overscroll-behavior: contain; }
 .shelf-shelf { height: 50%; scroll-snap-align: start; display: flex; flex-direction: column; min-height: 0; position: relative; }
 .shelf-location-label { position: absolute; bottom: 0; left: 12px; z-index: 2; height: 20px; display: flex; align-items: center; font-family: 'DM Sans', sans-serif; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: rgba(255,255,255,0.55); pointer-events: none; }
 .shelf-books-row { flex: 1; min-height: 0; overflow-x: auto; overflow-y: hidden; display: flex; flex-direction: row; align-items: flex-end; padding: 6px 12px 0; gap: 3px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
@@ -1341,6 +1347,8 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
   box-shadow: 0 8px 24px rgba(0,0,0,0.35);
   display: none;
 }
+/* Search is at bottom — autocomplete opens upward */
+.subheader .autocomplete-dropdown { top: auto; bottom: calc(100% + 6px); box-shadow: 0 -8px 24px rgba(0,0,0,0.35); }
 
 .autocomplete-item {
   padding: 12px 14px;
@@ -1575,39 +1583,21 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
         <button class="settings-btn" onclick="openSettings()" title="Settings"><i data-lucide="settings"></i></button>
       </div>
     </div>
-    <div class="header-nav">
-      <button class="hnav-btn active" id="hnav-mylibrary" onclick="setPage('mylibrary')"><i data-lucide="book"></i> My Library</button>
-      <button class="hnav-btn" id="hnav-wishlist" onclick="setPage('wishlist')"><i data-lucide="star"></i> Wishlist</button>
-      <button class="hnav-btn" id="hnav-community" onclick="setPage('community')"><i data-lucide="users"></i> Community</button>
-      <button class="hnav-btn" id="hnav-discover" onclick="setPage('discover')"><i data-lucide="compass"></i> Discover</button>
-    </div>
   </div><!-- /.header -->
 
-  <div id="headerSpacer"></div>
+  <!-- Bottom navigation bar -->
+  <div class="header-nav" id="bottomNav">
+    <button class="hnav-btn active" id="hnav-mylibrary" onclick="setPage('mylibrary')"><i data-lucide="book"></i> My Library</button>
+    <button class="hnav-btn" id="hnav-wishlist" onclick="setPage('wishlist')"><i data-lucide="star"></i> Wishlist</button>
+    <button class="hnav-btn" id="hnav-community" onclick="setPage('community')"><i data-lucide="users"></i> Community</button>
+    <button class="hnav-btn" id="hnav-discover" onclick="setPage('discover')"><i data-lucide="compass"></i> Discover</button>
+  </div>
 
-  <!-- Scroll-hiding subheader: discover tabs (when on discover) + stats + search + filter/sort/view controls -->
+  <div id="headerSpacer"></div>
+  <div id="bottomSpacer"></div>
+
+  <!-- Scroll-hiding subheader: search + filter/sort/view controls + stats + discover tabs -->
   <div class="subheader" id="subheader">
-    <div class="discover-tabs" id="discoverTabBar" style="display:none">
-      <button class="dtab active" id="dtab-find" onclick="setDiscoverTab('find')">Find My Next Book</button>
-      <button class="dtab" id="dtab-global" onclick="setDiscoverTab('global')">Global Library</button>
-    </div>
-    <div class="subheader-stats" id="subheaderStats">
-      <div class="stat stat-clickable active" id="statCardAll" onclick="setTopFilter('all')"><div class="stat-num" id="statTotal">0</div><div class="stat-label">Books</div></div>
-      <div class="stat stat-clickable" id="statCardRead" onclick="setTopFilter('read')"><div class="stat-num" id="statRead">0</div><div class="stat-label">Read</div></div>
-      <div class="stat stat-clickable" id="statCardUnread" onclick="setTopFilter('unread')"><div class="stat-num" id="statUnread">0</div><div class="stat-label">Unread</div></div>
-      <div class="stat stat-clickable" id="statCardBorrowed" onclick="setTopFilter('borrowed')"><div class="stat-num" id="statBorrowed">0</div><div class="stat-label">Out</div></div>
-      <div class="stat stat-clickable" id="statCardAllRead" onclick="setTopFilter('allread')"><div class="stat-num" id="statAllRead">0</div><div class="stat-label">All Read</div></div>
-    </div>
-    <div class="subheader-ctrl">
-      <div class="search-wrap" style="flex:1;min-width:0">
-        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input class="search-input" type="text" id="searchInput" placeholder="Search title, author or series…" oninput="handleLibrarySearch()" autocomplete="off">
-        <div class="autocomplete-dropdown" id="librarySearchAc"></div>
-      </div>
-      <button class="ctrl-btn" id="filterBtn" onclick="toggleFilterPanel()" title="Filter"><i data-lucide="sliders-horizontal"></i></button>
-      <button class="ctrl-btn" id="sortBtn" onclick="toggleSortPanel()" title="Sort"><i data-lucide="arrow-up-down"></i></button>
-      <button class="ctrl-btn" id="viewBtn" onclick="cycleBookView()" title="Change view"><i data-lucide="layout-list" id="viewBtnIcon"></i></button>
-    </div>
     <div class="filter-panel" id="filterPanel" style="display:none">
       <div class="filter-section-label">Genre <span class="filter-hint">(tap up to 3)</span></div>
       <div class="filter-row" id="genreFilters"></div>
@@ -1623,6 +1613,27 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
     </div>
     <div class="sort-panel" id="sortPanel" style="display:none">
       <div class="sort-options" id="sortOptions"></div>
+    </div>
+    <div class="subheader-stats" id="subheaderStats">
+      <div class="stat stat-clickable active" id="statCardAll" onclick="setTopFilter('all')"><div class="stat-num" id="statTotal">0</div><div class="stat-label">Books</div></div>
+      <div class="stat stat-clickable" id="statCardRead" onclick="setTopFilter('read')"><div class="stat-num" id="statRead">0</div><div class="stat-label">Read</div></div>
+      <div class="stat stat-clickable" id="statCardUnread" onclick="setTopFilter('unread')"><div class="stat-num" id="statUnread">0</div><div class="stat-label">Unread</div></div>
+      <div class="stat stat-clickable" id="statCardBorrowed" onclick="setTopFilter('borrowed')"><div class="stat-num" id="statBorrowed">0</div><div class="stat-label">Out</div></div>
+      <div class="stat stat-clickable" id="statCardAllRead" onclick="setTopFilter('allread')"><div class="stat-num" id="statAllRead">0</div><div class="stat-label">All Read</div></div>
+    </div>
+    <div class="discover-tabs" id="discoverTabBar" style="display:none">
+      <button class="dtab active" id="dtab-find" onclick="setDiscoverTab('find')">Find My Next Book</button>
+      <button class="dtab" id="dtab-global" onclick="setDiscoverTab('global')">Global Library</button>
+    </div>
+    <div class="subheader-ctrl">
+      <div class="search-wrap" style="flex:1;min-width:0">
+        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input class="search-input" type="text" id="searchInput" placeholder="Search title, author or series…" oninput="handleLibrarySearch()" autocomplete="off">
+        <div class="autocomplete-dropdown" id="librarySearchAc"></div>
+      </div>
+      <button class="ctrl-btn" id="filterBtn" onclick="toggleFilterPanel()" title="Filter"><i data-lucide="sliders-horizontal"></i></button>
+      <button class="ctrl-btn" id="sortBtn" onclick="toggleSortPanel()" title="Sort"><i data-lucide="arrow-up-down"></i></button>
+      <button class="ctrl-btn" id="viewBtn" onclick="cycleBookView()" title="Change view"><i data-lucide="layout-list" id="viewBtnIcon"></i></button>
     </div>
   </div>
 
@@ -8419,8 +8430,9 @@ window._closeRecInside = function(btn) {
 function _setFindPanelHeight() {
   const el = document.getElementById('dtab-panel-find');
   if (!el) return;
-  const sp = document.getElementById('headerSpacer');
-  el.style.height = `calc(100dvh - ${sp ? sp.offsetHeight : 0}px)`;
+  const topH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--total-header-h')) || 0;
+  const botH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--bottom-bar-h')) || 0;
+  el.style.height = `calc(100dvh - ${topH + botH}px)`;
 }
 
 let _recRendering = false;
@@ -9610,17 +9622,27 @@ function seriesIcon(num) {
     + '</svg>';
 }
 
-// ── HEADER SPACER (fixed header + subheader offset) ──────────────────────────
+// ── HEADER / BOTTOM SPACERS ──────────────────────────────────────────────────
 function updateHeaderSpacer() {
   const header = document.getElementById('mainHeader');
-  const sub = document.getElementById('subheader');
   const spacer = document.getElementById('headerSpacer');
-  if (!header || !spacer) return;
-  const hh = header.offsetHeight;
-  if (sub) sub.style.top = hh + 'px';
-  const sh = sub ? sub.offsetHeight : 0;
-  spacer.style.height = (hh + sh) + 'px';
-  document.documentElement.style.setProperty('--total-header-h', (hh + sh) + 'px');
+  if (header && spacer) {
+    const hh = header.offsetHeight;
+    spacer.style.height = hh + 'px';
+    document.documentElement.style.setProperty('--total-header-h', hh + 'px');
+  }
+  // Bottom: position subheader just above nav bar, set bottom spacer
+  const nav = document.getElementById('bottomNav');
+  const sub = document.getElementById('subheader');
+  const bSpacer = document.getElementById('bottomSpacer');
+  if (nav) {
+    const nh = nav.offsetHeight;
+    if (sub) sub.style.bottom = nh + 'px';
+    const sh = (sub && sub.style.display !== 'none') ? sub.offsetHeight : 0;
+    const total = nh + sh;
+    if (bSpacer) bSpacer.style.height = total + 'px';
+    document.documentElement.style.setProperty('--bottom-bar-h', total + 'px');
+  }
   if (currentDiscoverTab === 'find') _setFindPanelHeight();
 }
 
