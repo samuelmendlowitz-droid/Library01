@@ -1937,6 +1937,10 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
           </button>
         </div>
       </div>
+      <div class="form-group">
+        <label class="form-label">Subjects <span style="font-size:11px;color:var(--text3);font-weight:400">(up to 3 total — books, authors, genres, or series)</span></label>
+        <div id="createClubSubjectsEditor"></div>
+      </div>
       <div class="modal-error" id="createClubError"></div>
       <button class="btn-submit" onclick="submitCreateClub()" style="width:100%;margin-top:8px">Create Club</button>
     </div>
@@ -7167,7 +7171,8 @@ function _buildHlRow(cat, catInfo, items, isActive, isClub) {
   const inputHtml = isActive
     ? `<div class="hl-input-row"><input class="form-input" id="${pfx}-input-${cat}" placeholder="${esc(catInfo.placeholder)}" autocomplete="off" style="height:28px;font-size:12px;padding:4px 10px;min-width:130px;" oninput="${isClub?`clubHlInputChange('${cat}',this.value)`:`hlInputChange('${cat}',this.value)`}" onkeydown="${isClub?`clubHlKeydown(event,'${cat}')`:`hlKeydown(event,'${cat}')`}"><div class="hl-ac" id="${pfx}-ac-${cat}" style="display:none;"></div></div>`
     : '';
-  const addBtn = items.length < _HL_MAX
+  const canAdd = isClub ? (_clubSubjectsTotal() < 3) : (items.length < _HL_MAX);
+  const addBtn = canAdd
     ? `<button class="hl-add-btn" onclick="${toggleFn}" title="Add"><i data-lucide="plus"></i></button>`
     : `<div style="width:26px;flex-shrink:0;"></div>`;
   return `<div class="hl-row"><span class="hl-row-label">${catInfo.label}</span><div style="flex:1;display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-width:0;">${chips}${inputHtml}</div>${addBtn}</div>`;
@@ -7359,9 +7364,11 @@ function _renderHlEditor() {
 }
 
 function _renderClubSubjectsEditor() {
-  const el = document.getElementById('club-subjects-editor');
-  if (!el) return;
-  el.innerHTML = _HL_CATS.map(c => _buildHlRow(c.key, c, _clubSubjects[c.key]||[], _clubHlActive === c.key, true)).join('');
+  const html = _HL_CATS.map(c => _buildHlRow(c.key, c, _clubSubjects[c.key]||[], _clubHlActive === c.key, true)).join('');
+  ['club-subjects-editor', 'createClubSubjectsEditor'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = html;
+  });
   refreshIcons();
   if (_clubHlActive) {
     const inp = document.getElementById('chl-input-' + _clubHlActive);
@@ -7392,10 +7399,14 @@ function _addHlItem(cat, val) {
   if (arr.includes(val) || arr.length >= _HL_MAX) return;
   arr.push(val); _hlActiveInput = null; _renderHlEditor();
 }
+function _clubSubjectsTotal() {
+  return (_clubSubjects.books||[]).length + (_clubSubjects.authors||[]).length
+       + (_clubSubjects.genres||[]).length + (_clubSubjects.series||[]).length;
+}
 function _addClubHlItem(cat, val) {
   if (!val?.trim()) return;
   const arr = _clubSubjects[cat] = _clubSubjects[cat]||[];
-  if (arr.includes(val) || arr.length >= _HL_MAX) return;
+  if (arr.includes(val) || _clubSubjectsTotal() >= 3) return;
   arr.push(val); _clubHlActive = null; _renderClubSubjectsEditor();
 }
 
@@ -9944,7 +9955,7 @@ function buildSortOptions() {
       ...(isPersonal ? [{val:'location', label:'Location'}] : []),
       {val:'author',      label:'Author'},
       {val:'genre',       label:'Genre'},
-      {val:'title-alpha', label:'Title A–Z'},
+      {val:'title-alpha', label:'Title'},
     ];
 
     let orderOpts;
@@ -11955,6 +11966,9 @@ window.openCreateClubModal = () => {
   setClubPrivacy('public', 'createClubPrivacyRow');
   renderClubColorRow('createClubColorRow', 'createClubIconPreview', true);
   updateClubIconPreview('createClubIconPreview');
+  _clubSubjects = { books: [], authors: [], genres: [], series: [] };
+  _clubHlActive = null;
+  _renderClubSubjectsEditor();
   document.getElementById('createClubModal').classList.add('open');
   refreshIcons();
 };
@@ -12009,6 +12023,7 @@ window.submitCreateClub = async () => {
     const clubData = {
       name, description: desc, emoji: createClubEmoji, bgColor: createClubColor,
       privacy: createClubPrivacy, isDiscoverable: createClubPrivacy !== 'private',
+      subjects: { books: [...(_clubSubjects.books||[])], authors: [...(_clubSubjects.authors||[])], genres: [...(_clubSubjects.genres||[])], series: [...(_clubSubjects.series||[])] },
       createdBy: currentUser.uid, createdAt: serverTimestamp(),
       memberUids: [currentUser.uid], adminUids: [currentUser.uid], memberCount: 1
     };
@@ -12413,7 +12428,7 @@ async function renderClubSettingsContent() {
       + privOpts.map(o => '<button class="privacy-opt' + (editClubPrivacy === o.val ? ' active' : '') + '" data-val="' + o.val + '" onclick="setClubPrivacy(\'' + o.val + '\',\'editClubPrivacyRow\')">'
         + '<span class="priv-icon">' + o.icon + '</span><span class="priv-label">' + o.label + '</span><span class="priv-desc">' + o.desc + '</span></button>').join('')
       + '</div></div>'
-      + '<div class="form-group" style="margin-bottom:16px"><label class="form-label">Topics <span style="color:var(--text3);font-weight:400;font-size:11px;">(up to 3 per category)</span></label>'
+      + '<div class="form-group" style="margin-bottom:16px"><label class="form-label">Topics <span style="color:var(--text3);font-weight:400;font-size:11px;">(up to 3 total)</span></label>'
       + '<div id="club-subjects-editor"></div>'
       + '</div>'
       + '<button class="btn-submit" style="width:100%;margin-bottom:20px" onclick="saveClubEdit()">Save Changes</button>'
