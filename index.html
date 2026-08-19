@@ -7301,18 +7301,15 @@ function _clubHlUpdateAc(cat, val) {
     return;
   }
 
-  // Books/authors are Google-Books-backed — wait for 2+ characters and don't
-  // fall back to the local cache below that (series still draws from the
-  // downloaded library cache, so it can suggest after just 1 character).
-  if (cat !== 'series' && val.length < 2) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
-  if (cat === 'series' && val.length < 2) {
-    const candidates = _clubHlAcSources('series').filter(s => !existing.has(s) && s.toLowerCase().includes(val.toLowerCase()));
+  if (!val) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
+  if (val.length < 2) {
+    const candidates = _clubHlAcSources(cat).filter(s => !existing.has(s) && s.toLowerCase().includes(val.toLowerCase()));
     const ranked = _rankByQuery(candidates, val, s => s).slice(0, 5);
     _clubHlAcResults[cat] = ranked;
     if (!ranked.length) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
-    acEl.innerHTML = ranked.map((m,i) => `<div class="hl-ac-item" onmousedown="event.preventDefault()" onclick="addClubHlChip('series',${i})">${esc(m)}</div>`).join('');
+    acEl.innerHTML = ranked.map((m,i) => `<div class="hl-ac-item" onmousedown="event.preventDefault()" onclick="addClubHlChip('${cat}',${i})">${esc(m)}</div>`).join('');
     acEl.style.display = '';
-    const inputEl = document.getElementById('chl-input-series');
+    const inputEl = document.getElementById('chl-input-' + cat);
     if (inputEl) _positionAcDropdown(acEl, inputEl);
     return;
   }
@@ -11040,22 +11037,15 @@ function clubMsgTimestamp(cid) {
 function _clubTopicsHtml(subjects) {
   const rawSubj = subjects || {};
   const subj = (!Array.isArray(rawSubj) && typeof rawSubj === 'object') ? rawSubj : {};
-  const cols = [
-    { label: 'Books',   items: (subj.books   || []).slice(0,3) },
-    { label: 'Authors', items: (subj.authors || []).slice(0,3) },
-    { label: 'Genres',  items: (subj.genres  || []).slice(0,3) },
-    { label: 'Series',  items: (subj.series  || []).slice(0,3) },
-  ];
-  if (!cols.some(c => c.items.length > 0)) return '';
-  return '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px 8px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">'
-    + cols.map(col =>
-        '<div style="min-width:0">'
-        + '<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--accent);margin-bottom:3px">' + col.label + '</div>'
-        + (col.items.length
-            ? col.items.map(v => '<div style="font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.5">' + esc(v) + '</div>').join('')
-            : '<div style="font-size:11px;color:var(--text3)">—</div>')
-        + '</div>'
-      ).join('')
+  const all = [
+    ...(subj.books   || []),
+    ...(subj.authors || []),
+    ...(subj.genres  || []),
+    ...(subj.series  || []),
+  ].slice(0, 3);
+  if (!all.length) return '';
+  return '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0;max-width:42%;min-width:0">'
+    + all.map(v => '<div style="font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right;line-height:1.5">' + esc(v) + '</div>').join('')
     + '</div>';
 }
 
@@ -11133,13 +11123,12 @@ function renderChatList(friendsFiltered, clubsFiltered) {
       const clubNotifOn = localStorage.getItem('clubnotif_on_' + item.id) === 'true';
       const clubLastReadMs = parseInt(localStorage.getItem('chat_read_' + item.id) || '0');
       const clubUnread = clubNotifOn && clubLastMsg && !clubFromMe && _chatMsgMs(clubLastMsg) > clubLastReadMs;
-      return '<div class="friend-card' + (clubUnread ? ' chat-unread' : '') + '" data-chat-action="club" data-club-id="' + esc(item.id) + '" style="cursor:pointer;flex-direction:column;align-items:stretch;gap:0">'
-        + '<div style="display:flex;align-items:center;gap:10px">'
+      return '<div class="friend-card' + (clubUnread ? ' chat-unread' : '') + '" data-chat-action="club" data-club-id="' + esc(item.id) + '" style="cursor:pointer;align-items:center;gap:10px">'
         + '<div class="club-avatar" style="background:' + esc(item.bgColor) + ';flex-shrink:0">' + esc(item.emoji) + '</div>'
         + '<div style="flex:1;min-width:0">'
         + '<div class="friend-name">' + esc(item.name) + '</div>'
         + '<div class="friend-username club-privacy-row"><i data-lucide="' + privIcon + '"></i>' + item.memberCount + ' member' + (item.memberCount !== 1 ? 's' : '') + '</div>'
-        + '</div></div>'
+        + '</div>'
         + _clubTopicsHtml(item.subjects)
         + '</div>';
     }
@@ -11234,12 +11223,10 @@ function renderClubsList() {
   el.innerHTML = sorted.map(c => {
     const privIcon    = _privIcon[c.privacy||'public'] || 'lock';
     const memberCount = (c.memberUids||[]).length;
-    return '<div class="friend-card" data-chat-action="club" data-club-id="' + esc(c.id) + '" style="cursor:pointer;flex-direction:column;align-items:stretch;gap:0">'
-      + '<div style="display:flex;align-items:center;gap:10px">'
+    return '<div class="friend-card" data-chat-action="club" data-club-id="' + esc(c.id) + '" style="cursor:pointer;align-items:center;gap:10px">'
       + '<div class="club-avatar" style="background:' + esc(c.bgColor||'#2d2520') + ';flex-shrink:0">' + esc(c.emoji||'📚') + '</div>'
       + '<div style="flex:1;min-width:0"><div class="friend-name">' + esc(c.name) + '</div>'
       + '<div class="friend-username club-privacy-row"><i data-lucide="' + privIcon + '"></i>' + memberCount + ' member' + (memberCount !== 1 ? 's' : '') + '</div></div>'
-      + '</div>'
       + _clubTopicsHtml(c.subjects)
       + '</div>';
   }).join('');
