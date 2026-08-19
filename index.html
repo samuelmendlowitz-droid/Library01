@@ -2822,6 +2822,7 @@ let _hlActiveInput = null;
 let _hlAcResults = {};
 let _clubHlActive = null;
 let _clubHlAcResults = {};
+let _clubSubjAcItems = [];
 let _clubSubjects = { books: [], authors: [], genres: [], series: [] };
 let userUsername = '';
 let friendsList = [], friendRequests = [], sentRequests = [];
@@ -7361,17 +7362,131 @@ function _renderHlEditor() {
 }
 
 function _renderClubSubjectsEditor() {
-  const html = _HL_CATS.map(c => _buildHlRow(c.key, c, _clubSubjects[c.key]||[], _clubHlActive === c.key, true)).join('');
+  const allChips = [
+    ...(_clubSubjects.books||[]).map(v => ({cat:'books',   val:v})),
+    ...(_clubSubjects.authors||[]).map(v => ({cat:'authors', val:v})),
+    ...(_clubSubjects.genres||[]).map(v => ({cat:'genres',  val:v})),
+    ...(_clubSubjects.series||[]).map(v => ({cat:'series',  val:v})),
+  ].slice(0, 3);
+  const chipsHtml = allChips.length
+    ? '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">'
+      + allChips.map((item, i) =>
+          `<span class="hl-chip">`
+          + `<span style="display:flex;align-items:center;color:var(--accent)">${_hlIconHtml(item.cat, item.val)}</span>`
+          + esc(item.val)
+          + `<button class="hl-chip-remove" onmousedown="event.preventDefault()" onclick="_removeClubSubjectByIdx(${i})" title="Remove">×</button></span>`
+        ).join('')
+      + '</div>'
+    : '';
+  const searchHtml = allChips.length < 3
+    ? '<div style="position:relative">'
+      + '<input class="form-input" id="club-subj-search" placeholder="Search books, authors, series, genres…" autocomplete="off" style="height:34px;font-size:13px" '
+      + 'oninput="_clubSubjSearch(this.value)" onfocus="_clubSubjSearchFocus(this)" onblur="_clubSubjSearchBlur()">'
+      + '<div class="hl-ac" id="club-subj-ac" style="display:none;left:0;right:0;min-width:0;max-height:220px;overflow-y:auto"></div>'
+      + '</div>'
+    : '<div style="font-size:11px;color:var(--text3);padding:4px 0">3 subjects selected</div>';
+  const html = chipsHtml + searchHtml;
   ['club-subjects-editor', 'createClubSubjectsEditor'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = html;
   });
   refreshIcons();
-  if (_clubHlActive) {
-    const inp = document.getElementById('chl-input-' + _clubHlActive);
-    if (inp) { inp.focus(); setTimeout(() => _clubHlUpdateAc(_clubHlActive, inp.value || ''), 0); }
+}
+
+window._removeClubSubjectByIdx = (flatIdx) => {
+  const allChips = [
+    ...(_clubSubjects.books||[]).map(v => ({cat:'books',   val:v})),
+    ...(_clubSubjects.authors||[]).map(v => ({cat:'authors', val:v})),
+    ...(_clubSubjects.genres||[]).map(v => ({cat:'genres',  val:v})),
+    ...(_clubSubjects.series||[]).map(v => ({cat:'series',  val:v})),
+  ].slice(0, 3);
+  const item = allChips[flatIdx];
+  if (!item) return;
+  const arr = _clubSubjects[item.cat] || [];
+  const i = arr.indexOf(item.val);
+  if (i !== -1) arr.splice(i, 1);
+  _renderClubSubjectsEditor();
+};
+
+function _clubSubjSearch(val) {
+  const acEl = document.getElementById('club-subj-ac');
+  if (!acEl) return;
+  const q = val.trim().toLowerCase();
+  if (!q) { acEl.style.display = 'none'; acEl.innerHTML = ''; _clubSubjAcItems = []; return; }
+  const allAdded = new Set([
+    ...(_clubSubjects.books||[]), ...(_clubSubjects.authors||[]),
+    ...(_clubSubjects.genres||[]), ...(_clubSubjects.series||[]),
+  ]);
+  const rank = (src, cat) =>
+    _rankByQuery(src.filter(s => !allAdded.has(s) && s.toLowerCase().includes(q)), q, s=>s)
+      .slice(0, 3).map(v => ({cat, val:v, sub:''}));
+  const localItems = [
+    ...rank(_clubHlAcSources('books'),   'books'),
+    ...rank(_clubHlAcSources('authors'), 'authors'),
+    ...rank(_clubHlAcSources('series'),  'series'),
+    ...rank(_clubHlAcSources('genres'),  'genres'),
+  ];
+  _renderClubSubjAc(localItems);
+  if (val.length >= 2) {
+    _gbDebounce('clubSubjSearch', 'intitle', val, results => {
+      const inp = document.getElementById('club-subj-search');
+      if (!inp || inp.value !== val) return;
+      if (!results?.length) return;
+      const addedNow = new Set([
+        ...(_clubSubjects.books||[]), ...(_clubSubjects.authors||[]),
+        ...(_clubSubjects.genres||[]), ...(_clubSubjects.series||[]),
+      ]);
+      const seenT = new Set(), seenA = new Set();
+      const gbBooks = [], gbAuths = [];
+      for (const r of results) {
+        if (r.title  && !addedNow.has(r.title)  && !seenT.has(r.title))  { gbBooks.push({cat:'books',   val:r.title,  sub:r.author||''}); seenT.add(r.title); }
+        if (r.author && !addedNow.has(r.author) && !seenA.has(r.author)) { gbAuths.push({cat:'authors', val:r.author, sub:''}); seenA.add(r.author); }
+      }
+      const cur = _clubSubjAcItems || [];
+      const seenB = new Set(cur.filter(i=>i.cat==='books').map(i=>i.val));
+      const seenAu = new Set(cur.filter(i=>i.cat==='authors').map(i=>i.val));
+      const mergedBooks  = [...cur.filter(i=>i.cat==='books'),   ...gbBooks.filter(i=>!seenB.has(i.val))].slice(0,4);
+      const mergedAuths  = [...cur.filter(i=>i.cat==='authors'), ...gbAuths.filter(i=>!seenAu.has(i.val))].slice(0,4);
+      _renderClubSubjAc([...mergedBooks, ...mergedAuths, ...cur.filter(i=>i.cat==='series'), ...cur.filter(i=>i.cat==='genres')]);
+    });
   }
 }
+
+function _renderClubSubjAc(items) {
+  _clubSubjAcItems = items;
+  const acEl = document.getElementById('club-subj-ac');
+  if (!acEl) return;
+  if (!items.length) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
+  acEl.innerHTML = items.map((item, i) =>
+    `<div class="hl-ac-item" style="display:flex;align-items:center;gap:8px" onmousedown="event.preventDefault()" onclick="_addClubSubjFromAc(${i})">`
+    + `<span style="flex-shrink:0;color:var(--accent);display:flex;align-items:center;width:14px;height:14px">${_hlIconHtml(item.cat, item.val)}</span>`
+    + `<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><span style="font-weight:500">${esc(item.val)}</span>`
+    + (item.sub ? `<span style="color:var(--text3);font-size:11px;margin-left:4px">· ${esc(item.sub)}</span>` : '')
+    + `</span></div>`
+  ).join('');
+  acEl.style.display = '';
+  refreshIcons();
+}
+
+window._addClubSubjFromAc = (idx) => {
+  const item = (_clubSubjAcItems||[])[idx];
+  if (!item) return;
+  _addClubHlItem(item.cat, item.val);
+  const inp = document.getElementById('club-subj-search');
+  if (inp) inp.value = '';
+  _clubSubjAcItems = [];
+  const acEl = document.getElementById('club-subj-ac');
+  if (acEl) { acEl.style.display = 'none'; acEl.innerHTML = ''; }
+};
+
+window._clubSubjSearchFocus = (input) => {
+  setTimeout(() => input.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+  if (input.value) _clubSubjSearch(input.value);
+};
+
+window._clubSubjSearchBlur = () => {
+  setTimeout(() => { const el = document.getElementById('club-subj-ac'); if (el) el.style.display = 'none'; }, 160);
+};
 
 window.toggleHlInput = (cat) => { _hlActiveInput = _hlActiveInput === cat ? null : cat; _renderHlEditor(); };
 window.toggleClubHlInput = (cat) => { _clubHlActive = _clubHlActive === cat ? null : cat; _renderClubSubjectsEditor(); };
@@ -11038,14 +11153,19 @@ function _clubTopicsHtml(subjects) {
   const rawSubj = subjects || {};
   const subj = (!Array.isArray(rawSubj) && typeof rawSubj === 'object') ? rawSubj : {};
   const all = [
-    ...(subj.books   || []),
-    ...(subj.authors || []),
-    ...(subj.genres  || []),
-    ...(subj.series  || []),
+    ...(subj.books   || []).map(v => ({cat:'books',   val:v})),
+    ...(subj.authors || []).map(v => ({cat:'authors', val:v})),
+    ...(subj.genres  || []).map(v => ({cat:'genres',  val:v})),
+    ...(subj.series  || []).map(v => ({cat:'series',  val:v})),
   ].slice(0, 3);
   if (!all.length) return '';
-  return '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0;max-width:42%;min-width:0">'
-    + all.map(v => '<div style="font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right;line-height:1.5">' + esc(v) + '</div>').join('')
+  return '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0;max-width:46%;min-width:0">'
+    + all.map(item =>
+        '<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px 2px 5px;background:var(--surface3);border:1px solid var(--border);border-radius:20px;font-size:11px;color:var(--text2);max-width:100%;overflow:hidden">'
+        + '<span style="flex-shrink:0;display:flex;align-items:center;color:var(--accent)">' + _hlIconHtml(item.cat, item.val) + '</span>'
+        + '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(item.val) + '</span>'
+        + '</span>'
+      ).join('')
     + '</div>';
 }
 
