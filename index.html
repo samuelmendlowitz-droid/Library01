@@ -1416,6 +1416,7 @@ body { font-family: 'DM Sans', sans-serif; background-color: var(--bg); backgrou
 .tag-icon.genre-svg { width: 11px; height: 11px; vertical-align: -1px; flex-shrink: 0; }
 .disc-list-avatar .genre-svg { width: 18px; height: 18px; color: var(--accent); }
 .hl-chip .genre-svg { width: 11px; height: 11px; color: var(--accent); flex-shrink: 0; }
+.club-topic-icon .lucide, .club-topic-icon svg { width: 10px; height: 10px; flex-shrink: 0; color: var(--accent); }
 
 /* ════════════════════════════════════════════════
    LEATHER DARK BLUE THEME — grain + deboss
@@ -7372,7 +7373,7 @@ function _renderClubSubjectsEditor() {
     ? '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">'
       + allChips.map((item, i) =>
           `<span class="hl-chip">`
-          + `<span style="display:flex;align-items:center;color:var(--accent)">${_hlIconHtml(item.cat, item.val)}</span>`
+          + `<span class="club-topic-icon" style="display:flex;align-items:center">${item.cat === 'genres' ? _genreIconHtml(item.val) : _hlIconHtml(item.cat, item.val)}</span>`
           + esc(item.val)
           + `<button class="hl-chip-remove" onmousedown="event.preventDefault()" onclick="_removeClubSubjectByIdx(${i})" title="Remove">×</button></span>`
         ).join('')
@@ -7408,7 +7409,7 @@ window._removeClubSubjectByIdx = (flatIdx) => {
   _renderClubSubjectsEditor();
 };
 
-function _clubSubjSearch(val) {
+const _clubSubjSearch = window._clubSubjSearch = function(val) {
   const acEl = document.getElementById('club-subj-ac');
   if (!acEl) return;
   const q = val.trim().toLowerCase();
@@ -7452,14 +7453,14 @@ function _clubSubjSearch(val) {
   }
 }
 
-function _renderClubSubjAc(items) {
+const _renderClubSubjAc = window._renderClubSubjAc = function(items) {
   _clubSubjAcItems = items;
   const acEl = document.getElementById('club-subj-ac');
   if (!acEl) return;
   if (!items.length) { acEl.style.display = 'none'; acEl.innerHTML = ''; return; }
   acEl.innerHTML = items.map((item, i) =>
     `<div class="hl-ac-item" style="display:flex;align-items:center;gap:8px" onmousedown="event.preventDefault()" onclick="_addClubSubjFromAc(${i})">`
-    + `<span style="flex-shrink:0;color:var(--accent);display:flex;align-items:center;width:14px;height:14px">${_hlIconHtml(item.cat, item.val)}</span>`
+    + `<span class="club-topic-icon" style="flex-shrink:0;display:flex;align-items:center;width:14px;height:14px">${item.cat === 'genres' ? _genreIconHtml(item.val) : _hlIconHtml(item.cat, item.val)}</span>`
     + `<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><span style="font-weight:500">${esc(item.val)}</span>`
     + (item.sub ? `<span style="color:var(--text3);font-size:11px;margin-left:4px">· ${esc(item.sub)}</span>` : '')
     + `</span></div>`
@@ -11162,7 +11163,7 @@ function _clubTopicsHtml(subjects) {
   return '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0;max-width:46%;min-width:0">'
     + all.map(item =>
         '<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px 2px 5px;background:var(--surface3);border:1px solid var(--border);border-radius:20px;font-size:11px;color:var(--text2);max-width:100%;overflow:hidden">'
-        + '<span style="flex-shrink:0;display:flex;align-items:center;color:var(--accent)">' + _hlIconHtml(item.cat, item.val) + '</span>'
+        + '<span class="club-topic-icon" style="flex-shrink:0;display:flex;align-items:center">' + (item.cat === 'genres' ? _genreIconHtml(item.val) : _hlIconHtml(item.cat, item.val)) + '</span>'
         + '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(item.val) + '</span>'
         + '</span>'
       ).join('')
