@@ -1,0 +1,1555 @@
+<title>Sefer Sponsorships</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&family=Frank+Ruhl+Libre:wght@400;500;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
+<style>
+/* Layout: an ivory reading room. Narrow centered column for donor pages, wider working grid for dashboards; deep green bands, gold used only for rules and fine accents. */
+:root {
+  --bg: #F8F3E6;
+  --surface: #FFFCF4;
+  --surface-2: #F1E9D6;
+  --ink: #1F2A23;
+  --muted: #5D685E;
+  --line: #E2D7BF;
+  --brand: #1E4A37;
+  --brand-ink: #1E4A37;
+  --on-brand: #FBF6EA;
+  --brand-soft: #E2EBE2;
+  --gold: #A6812C;
+  --gold-soft: #F3E7C8;
+  --ok: #2E6A44; --ok-soft: #DCEADD;
+  --warn: #8F5410; --warn-soft: #F6E5CB;
+  --bad: #9A2B2B; --bad-soft: #F5DCD7;
+  --info: #2C5274; --info-soft: #DEE7F0;
+  --shadow: 0 1px 2px rgba(40, 34, 20, .06), 0 6px 18px rgba(40, 34, 20, .06);
+  --f-display: "Frank Ruhl Libre", "Times New Roman", serif;
+  --f-body: "Source Serif 4", "Frank Ruhl Libre", Georgia, serif;
+  --f-ui: "Assistant", "Segoe UI", system-ui, sans-serif;
+  --f-he: "Frank Ruhl Libre", "David", "Times New Roman", serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111814; --surface: #17201B; --surface-2: #1E2924; --ink: #ECE6D8; --muted: #A5AEA2; --line: #2F3B34;
+    --brand: #2C6A4D; --brand-ink: #9DCFB1; --on-brand: #F6F1E4; --brand-soft: #1F3329;
+    --gold: #D3B166; --gold-soft: #3A3220;
+    --ok: #8FD0A4; --ok-soft: #1E3326; --warn: #E6B36E; --warn-soft: #3A2D1B; --bad: #EE9A91; --bad-soft: #3B2221; --info: #9EC1E2; --info-soft: #1D2B38;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.25);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111814; --surface: #17201B; --surface-2: #1E2924; --ink: #ECE6D8; --muted: #A5AEA2; --line: #2F3B34;
+  --brand: #2C6A4D; --brand-ink: #9DCFB1; --on-brand: #F6F1E4; --brand-soft: #1F3329;
+  --gold: #D3B166; --gold-soft: #3A3220;
+  --ok: #8FD0A4; --ok-soft: #1E3326; --warn: #E6B36E; --warn-soft: #3A2D1B; --bad: #EE9A91; --bad-soft: #3B2221; --info: #9EC1E2; --info-soft: #1D2B38;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 6px 18px rgba(0,0,0,.25);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 17px; line-height: 1.6; }
+.wrap { max-width: 1120px; margin-inline: auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.narrow { max-width: 880px; }
+h1, h2, h3, h4 { font-family: var(--f-display); font-weight: 500; line-height: 1.2; text-wrap: balance; margin: 0; color: var(--ink); }
+h1 { font-size: clamp(2rem, 4.6vw, 3.1rem); }
+h2 { font-size: clamp(1.45rem, 2.6vw, 1.9rem); }
+h3 { font-size: 1.25rem; }
+p { margin: 0; }
+a { color: var(--brand-ink); }
+[lang="he"] { font-family: var(--f-he); }
+.he { font-family: var(--f-he); direction: rtl; unicode-bidi: isolate; }
+.item-name .he, td .he { display: inline-block; }
+.ui, button, input, select, textarea, label, table, .chip, .eyebrow, .small { font-family: var(--f-ui); }
+.eyebrow { font-size: .78rem; letter-spacing: .12em; text-transform: uppercase; color: var(--gold); font-weight: 700; }
+.muted { color: var(--muted); }
+.small { font-size: .88rem; }
+.stack { display: grid; gap: 16px; }
+.stack-lg { display: grid; gap: 32px; }
+.row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.between { justify-content: space-between; }
+.grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 20px; }
+.grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 20px; }
+.grid-2 > *, .grid-3 > *, .row > *, .stack > *, .stack-lg > * { min-width: 0; }
+.tnum { font-variant-numeric: tabular-nums; }
+
+/* Demo banner + header */
+.demo-banner { background: var(--gold-soft); color: var(--ink); font-family: var(--f-ui); font-size: .86rem; text-align: center; border-bottom: 1px solid var(--line); }
+.demo-banner .wrap { padding-block: 7px; }
+.demo-banner b { color: var(--warn); }
+header.site { background: var(--brand); color: var(--on-brand); }
+header.site .wrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 24px; padding-block: 14px; }
+.brand { display: flex; align-items: baseline; gap: 12px; text-decoration: none; color: var(--on-brand); }
+.brand-mark { font-family: var(--f-display); font-size: 1.7rem; font-weight: 700; letter-spacing: .01em; }
+.brand-mark .he { font-size: 1.25rem; font-weight: 500; opacity: .85; margin-left: 8px; }
+.brand-tag { font-family: var(--f-body); font-style: italic; font-size: .95rem; opacity: .85; }
+nav.main { display: flex; flex-wrap: wrap; gap: 4px 6px; }
+nav.main a { color: var(--on-brand); text-decoration: none; font-family: var(--f-ui); font-size: .95rem; padding: 6px 10px; border-radius: 6px; opacity: .88; }
+nav.main a:hover, nav.main a.on { opacity: 1; background: rgba(255,255,255,.12); }
+nav.main a.on { box-shadow: inset 0 -2px 0 var(--gold); border-radius: 6px 6px 0 0; }
+main { padding-block: 36px 64px; }
+
+/* Buttons & form */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-family: var(--f-ui); font-weight: 600; font-size: 1rem; padding: 10px 18px; border-radius: 8px; border: 1px solid var(--brand); background: var(--brand); color: var(--on-brand); cursor: pointer; text-decoration: none; line-height: 1.2; }
+.btn:hover { filter: brightness(1.08); }
+.btn.ghost { background: transparent; color: var(--brand-ink); border-color: var(--brand-ink); }
+.btn.quiet { background: var(--surface-2); color: var(--ink); border-color: var(--line); }
+.btn.sm { padding: 6px 12px; font-size: .9rem; }
+.btn[disabled] { opacity: .45; cursor: not-allowed; filter: none; }
+:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+label.field { display: grid; gap: 6px; font-size: .95rem; font-weight: 600; }
+label.field .hint { font-weight: 400; color: var(--muted); font-size: .85rem; }
+input[type="text"], input[type="number"], input[type="email"], input[type="date"], select, textarea { font: inherit; font-weight: 400; font-size: 1rem; padding: 9px 11px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); color: var(--ink); width: 100%; min-width: 0; }
+input.he-input { font-family: var(--f-he); font-size: 1.15rem; }
+textarea { min-height: 90px; resize: vertical; }
+.check { display: flex; gap: 10px; align-items: flex-start; font-family: var(--f-ui); font-size: .95rem; }
+.check input { margin-top: 4px; width: 18px; height: 18px; accent-color: var(--brand); flex: none; }
+.errors { background: var(--bad-soft); color: var(--bad); border-radius: 8px; padding: 10px 14px; font-family: var(--f-ui); font-size: .95rem; }
+.errors:empty { display: none; }
+.notice { border: 1px solid var(--line); border-left: 4px solid var(--gold); background: var(--surface); padding: 12px 16px; border-radius: 6px; font-family: var(--f-ui); font-size: .93rem; }
+.notice.demo { border-left-color: var(--warn); background: var(--warn-soft); }
+.notice.green { border-left-color: var(--brand); }
+
+/* Surfaces */
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 22px; }
+.panel.tight { padding: 16px; }
+.rule { height: 1px; background: var(--line); border: 0; margin: 0; }
+.gold-rule { height: 2px; width: 56px; background: var(--gold); border: 0; margin: 0; }
+
+/* Chips / status */
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; font-size: .8rem; font-weight: 600; border: 1px solid transparent; white-space: nowrap; }
+.chip::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.chip.neutral { background: var(--surface-2); color: var(--muted); border-color: var(--line); }
+.chip.ok { background: var(--ok-soft); color: var(--ok); }
+.chip.warn { background: var(--warn-soft); color: var(--warn); }
+.chip.bad { background: var(--bad-soft); color: var(--bad); }
+.chip.info { background: var(--info-soft); color: var(--info); }
+.chip.brand { background: var(--brand-soft); color: var(--brand-ink); }
+.chip.demo { background: var(--gold-soft); color: var(--warn); border-color: var(--line); }
+.chip.demo::before { display: none; }
+.chip-label { font-family: var(--f-ui); font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-inline-end: 4px; }
+
+/* Progress */
+.bar { height: 10px; background: var(--surface-2); border-radius: 999px; overflow: hidden; display: flex; border: 1px solid var(--line); }
+.bar > span { display: block; height: 100%; }
+.bar .full { background: var(--brand); }
+.bar .part { background: repeating-linear-gradient(135deg, var(--gold) 0 4px, var(--gold-soft) 4px 8px); }
+.bar .gen { background: var(--gold); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-family: var(--f-ui); font-size: .82rem; color: var(--muted); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-inline-end: 5px; vertical-align: -1px; }
+.stat { display: grid; gap: 2px; }
+.stat .v { font-family: var(--f-display); font-size: 1.7rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.stat .k { font-family: var(--f-ui); font-size: .84rem; color: var(--muted); }
+
+/* Home */
+.hero { display: grid; gap: 18px; padding-block: 12px 8px; max-width: 760px; }
+.hero h1 { font-size: clamp(2.3rem, 6vw, 3.8rem); }
+.hero .lead { font-size: 1.2rem; color: var(--muted); max-width: 640px; }
+.hero .he-tag { font-family: var(--f-he); font-size: 1.4rem; color: var(--gold); direction: rtl; }
+.action-card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 22px; display: grid; gap: 10px; align-content: start; text-decoration: none; color: inherit; }
+.action-card:hover { border-color: var(--brand-ink); }
+.action-card .num { font-family: var(--f-display); color: var(--gold); font-size: 1rem; }
+.action-card h3 { color: var(--brand-ink); }
+.steps { display: grid; gap: 14px; counter-reset: s; }
+.steps li { list-style: none; display: grid; grid-template-columns: 34px 1fr; gap: 12px; align-items: start; }
+.steps li::before { counter-increment: s; content: counter(s); font-family: var(--f-display); width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--gold); color: var(--gold); display: grid; place-items: center; font-size: .95rem; }
+.steps { padding: 0; margin: 0; }
+
+/* Campaign */
+.camp-head { display: grid; gap: 14px; }
+.meta-list { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; font-family: var(--f-ui); font-size: .95rem; }
+.meta-list dt { color: var(--muted); }
+.meta-list dd { margin: 0; min-width: 0; }
+.dedication-line { font-style: italic; font-size: 1.1rem; }
+.item-card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: grid; gap: 12px; }
+.item-top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.item-top > div { min-width: 0; }
+.item-top .price { flex: none; white-space: nowrap; }
+.item-name { font-family: var(--f-display); font-size: 1.3rem; }
+.item-name .he { font-size: 1.1rem; color: var(--muted); margin-left: 10px; }
+.price { font-family: var(--f-display); font-size: 1.3rem; font-variant-numeric: tabular-nums; }
+.price small { font-family: var(--f-ui); font-size: .8rem; color: var(--muted); }
+.counts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; font-family: var(--f-ui); }
+.counts div { background: var(--surface-2); border-radius: 8px; padding: 6px 8px; }
+.counts b { display: block; font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+.counts span { font-size: .78rem; color: var(--muted); }
+@media (max-width: 480px) { .counts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.partial-list { display: grid; gap: 8px; }
+.partial-row { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: space-between; padding: 10px 12px; border: 1px dashed var(--gold); border-radius: 8px; background: var(--gold-soft); font-family: var(--f-ui); font-size: .95rem; }
+.story { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 760px) { .story { grid-template-columns: 1fr; } }
+.story svg { width: 100%; height: auto; border-radius: 12px; display: block; }
+.supporter-card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 10px; text-decoration: none; color: inherit; }
+.supporter-card:hover { border-color: var(--brand-ink); }
+.mono { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--brand-soft); color: var(--brand-ink); font-family: var(--f-display); font-size: 1.1rem; flex: none; }
+
+/* Sponsor flow */
+.options { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 12px; }
+.opt { position: relative; display: grid; gap: 4px; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); cursor: pointer; font-family: var(--f-ui); }
+.opt input { position: absolute; opacity: 0; pointer-events: none; }
+.opt b { font-size: 1rem; }
+.opt span { font-size: .86rem; color: var(--muted); }
+.opt.on { border-color: var(--brand-ink); box-shadow: inset 0 0 0 1px var(--brand-ink); background: var(--brand-soft); }
+.opt:focus-within { outline: 3px solid var(--gold); outline-offset: 2px; }
+.flow { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 28px; align-items: start; }
+@media (max-width: 860px) { .flow { grid-template-columns: 1fr; } }
+.side-sticky { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); display: grid; gap: 16px; }
+@media (max-width: 860px) { .side-sticky { position: static; } }
+.fields-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 14px; }
+.tag-undecided { display: inline-block; font-family: var(--f-ui); font-size: .75rem; font-weight: 700; color: var(--warn); background: var(--warn-soft); border-radius: 4px; padding: 1px 7px; letter-spacing: .02em; }
+
+/* Dedication sticker */
+.sticker { background: #FFFDF6; color: #1F2A23; border: 1px solid #CDBB8E; border-radius: 6px; padding: 22px 20px 18px; text-align: center; display: grid; gap: 6px; position: relative; box-shadow: var(--shadow); font-family: "Source Serif 4", Georgia, serif; }
+.sticker::before { content: ""; position: absolute; inset: 7px; border: 1px solid #C8AD63; border-radius: 3px; pointer-events: none; }
+.sticker .orn { color: #A6812C; font-size: 1rem; letter-spacing: .4em; }
+.sticker .st-he { font-family: var(--f-he); direction: rtl; font-size: 1.05rem; color: #3C4A40; }
+.sticker .st-he-name { font-family: var(--f-he); direction: rtl; font-size: 1.55rem; font-weight: 500; line-height: 1.3; }
+.sticker .st-en { font-style: italic; color: #4A574D; font-size: .95rem; }
+.sticker .st-name { font-family: "Frank Ruhl Libre", serif; font-size: 1.3rem; line-height: 1.25; }
+.sticker .st-sep { width: 60%; height: 1px; background: #C8AD63; margin: 6px auto; }
+.sticker .st-small { font-size: .86rem; color: #4A574D; }
+.sticker .st-inst { font-family: "Frank Ruhl Libre", serif; font-size: 1rem; color: #1E4A37; }
+.sticker .st-ref { font-family: "Assistant", sans-serif; font-size: .7rem; color: #7A816F; letter-spacing: .03em; }
+.sticker .st-up { font-family: "Assistant", sans-serif; font-size: .72rem; color: #8F5410; }
+.sticker .ph { color: #9A9886; }
+.sticker-caption { font-family: var(--f-ui); font-size: .8rem; color: var(--muted); text-align: center; }
+
+/* Tables */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+th, td { padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: .76rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 700; background: var(--surface-2); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+tfoot td { font-weight: 700; background: var(--surface-2); }
+
+/* Dashboards */
+.dash { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 860px) { .dash { grid-template-columns: 1fr; } }
+.tabs { display: grid; gap: 2px; }
+@media (max-width: 860px) { .tabs { display: flex; flex-wrap: wrap; gap: 6px; } }
+.tabs button { text-align: left; background: transparent; border: 1px solid transparent; border-radius: 8px; padding: 8px 12px; font-size: .95rem; color: var(--ink); cursor: pointer; }
+.tabs button.on { background: var(--surface); border-color: var(--line); color: var(--brand-ink); font-weight: 700; box-shadow: inset 3px 0 0 var(--gold); }
+@media (max-width: 860px) { .tabs button { border-color: var(--line); background: var(--surface); } .tabs button.on { box-shadow: inset 0 -3px 0 var(--gold); } }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); gap: 14px; }
+.kpis .panel { padding: 14px 16px; }
+.stage-track { display: flex; gap: 4px; flex-wrap: wrap; }
+.stage-track span { font-family: var(--f-ui); font-size: .76rem; padding: 2px 8px; border-radius: 4px; background: var(--surface-2); color: var(--muted); }
+.stage-track span.done { background: var(--brand-soft); color: var(--brand-ink); }
+.stage-track span.cur { background: var(--brand); color: var(--on-brand); font-weight: 700; }
+
+/* Confirmation */
+.test-stamp { display: inline-block; border: 2px solid var(--warn); color: var(--warn); font-family: var(--f-ui); font-weight: 700; letter-spacing: .12em; text-transform: uppercase; padding: 4px 12px; border-radius: 6px; transform: rotate(-2deg); font-size: .9rem; }
+footer.site { border-top: 1px solid var(--line); background: var(--surface-2); font-family: var(--f-ui); font-size: .88rem; color: var(--muted); }
+footer.site .wrap { padding-block: 22px; display: flex; flex-wrap: wrap; gap: 12px 24px; justify-content: space-between; align-items: center; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); background: var(--brand); color: var(--on-brand); font-family: var(--f-ui); padding: 10px 18px; border-radius: 8px; box-shadow: var(--shadow); z-index: 30; max-width: calc(100% - 32px); }
+ul.clean { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+@media (prefers-reduced-motion: no-preference) { .btn, .opt, .action-card { transition: border-color .15s, background-color .15s, filter .15s; } }
+</style>
+
+<div class="demo-banner"><div class="wrap"><b>Demonstration prototype.</b> All institutions, campaigns, donors, orders and figures are sample data. No payment is taken and nothing is saved beyond this browser tab.</div></div>
+<header class="site">
+  <div class="wrap">
+    <a class="brand" href="#home"><span class="brand-mark">Sefer<span class="he" lang="he">ספר</span></span><span class="brand-tag">Give learning a lasting home.</span></a>
+    <nav class="main" id="nav" aria-label="Main">
+      <a href="#home" data-nav="home">Home</a>
+      <a href="#campaign" data-nav="campaign">Campaign</a>
+      <a href="#institution-beis-avraham" data-nav="institution">Institutions</a>
+      <a href="#organizer" data-nav="organizer">Organizer</a>
+      <a href="#operations" data-nav="operations">Operations</a>
+      <a href="#roadmap" data-nav="roadmap">Plan</a>
+    </nav>
+  </div>
+</header>
+<main id="app" class="wrap"></main>
+<footer class="site">
+  <div class="wrap">
+    <span>Sefer (working name) · Demonstration prototype · No real payments, receipts, registrations or emails.</span>
+    <span class="row"><span id="demo-date"></span><button class="btn quiet sm" data-action="reset" type="button">Reset demo data</button></span>
+  </div>
+</footer>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+'use strict';
+/* =========================================================================
+   Sefer: sefarim sponsorship prototype.
+   All money is stored in integer cents. All progress figures are derived from
+   the contribution ledger (S.contributions); nothing is hardcoded per screen.
+   ========================================================================= */
+
+const DEMO_TODAY = '2026-10-29';
+const FUND_STATUSES = ['Draft', 'Scheduled', 'Open', 'Closed'];
+const DED_STATUSES = ['Awaiting text', 'Awaiting approval', 'Approved', 'Correction needed'];
+const STAGES = ['Funded', 'Ordered', 'Prepared', 'Shipped', 'Delivered'];
+const FREE_SHIP_THRESHOLD = 50000; // proposed: $500 combined delivery, eligible regions only
+
+const MEMORIAL_EXAMPLE = { en: 'Shimon ben Avraham Ezriel', he: 'שמעון בן אברהם עזריאל' };
+
+const PRODUCTS = {
+  chumash:  { id: 'chumash',  name: 'Chumash',            he: 'חומש',        desc: 'Hebrew–English Chumash, full-size shul edition', price: 4000, wholesale: 2400 },
+  siddur:   { id: 'siddur',   name: 'Siddur',             he: 'סידור',       desc: 'Hebrew–English weekday and Shabbos siddur',        price: 2000, wholesale: 1200 },
+  tehillim: { id: 'tehillim', name: 'Tehillim',           he: 'תהלים',       desc: 'Tehillim with English translation',                price: 1500, wholesale: 800 },
+  gemara:   { id: 'gemara',   name: 'Gemara Berachos',    he: 'גמרא ברכות',  desc: 'Student-size Gemara, Maseches Berachos',           price: 3500, wholesale: 2100 },
+  mb:       { id: 'mb',       name: 'Mishnah Berurah, vol. 1', he: 'משנה ברורה', desc: 'Mishnah Berurah, first volume',                 price: 3000, wholesale: 1800 },
+};
+
+/* Demonstration cost assumptions for the operations P&L. None are confirmed. */
+const COST_ASSUMPTIONS = {
+  stickerPerBook: 35,      // printing one dedication sticker
+  laborPerBook: 50,        // applying sticker, inspection
+  packagingPerBook: 25,
+  shippingPerBook: 90,     // average if platform pays shipping
+  feePct: 0.029, feeFixed: 30, // placeholder card-processing rate; processor not chosen
+};
+
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const sum = (arr, f = x => x) => arr.reduce((s, x) => s + f(x), 0);
+function money(c) {
+  const neg = c < 0; c = Math.abs(Math.round(c));
+  const s = (c / 100).toLocaleString('en-US', { minimumFractionDigits: c % 100 ? 2 : 0, maximumFractionDigits: 2 });
+  return (neg ? '−' : '') + '$' + s;
+}
+function parseMoney(str) {
+  const t = String(str ?? '').replace(/[$,\s]/g, '');
+  if (!/^\d+(\.\d{1,2})?$/.test(t)) return NaN;
+  return Math.round(parseFloat(t) * 100);
+}
+const pctFloor = (a, b) => (b ? Math.floor((a / b) * 100) : 0);
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso + 'T12:00:00');
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+const plural = (n, one, many) => `${n.toLocaleString('en-US')} ${n === 1 ? one : (many || one + 's')}`;
+
+/* ---------------- Demonstration seed data ---------------- */
+let S;
+function seed() {
+  S = {
+    ui: { orgTab: 'profile', opsTab: 'products', instReqSent: false },
+    settings: { referralApproved: false, referralOnStickers: false },
+    institutions: {
+      'beis-avraham': {
+        id: 'beis-avraham', name: 'Congregation Beis Avraham', he: 'קהילת בית אברהם', type: 'Shul',
+        city: 'Springfield, NJ', address: '100 Example Street, Springfield, NJ (sample address)',
+        about: 'A growing kehillah of about 140 families with a busy beis medrash, daily minyanim and evening shiurim. Many of the shul’s Chumashim and siddurim are worn through, and new families keep arriving.',
+        rep: 'Rabbi Yaakov Feldman', repRole: 'Rav and registered representative',
+      },
+      'darchei-noam': {
+        id: 'darchei-noam', name: 'Talmud Torah Darchei Noam', he: 'תלמוד תורה דרכי נועם', type: 'School',
+        city: 'Springfield, NJ', address: '220 Sample Road, Springfield, NJ (sample address)',
+        about: 'An elementary school of 310 talmidim. The school is building a classroom library and wants sefarim for student use, first-grade siddur gifts and Mishnayos-contest prizes.',
+        rep: 'Mrs. Chana Rubin', repRole: 'Principal and registered representative',
+      },
+    },
+    needs: [
+      { id: 'n1', inst: 'beis-avraham', productId: 'chumash', qty: 100, category: 'Shul use', note: 'Replace worn Chumashim in the main sanctuary', status: 'Approved', source: 'Representative', campaign: true },
+      { id: 'n2', inst: 'beis-avraham', productId: 'siddur', qty: 120, category: 'Shul use', note: 'Siddurim for every seat', status: 'Approved', source: 'Representative', campaign: true },
+      { id: 'n3', inst: 'beis-avraham', productId: 'tehillim', qty: 50, category: 'Shul use', note: 'Tehillim for the women’s section and beis medrash', status: 'Approved', source: 'Representative', campaign: true },
+      { id: 'n4', inst: 'beis-avraham', productId: 'gemara', qty: 30, category: 'Learning program', note: 'Night seder chavrusa program', status: 'Approved', source: 'Representative', campaign: true },
+      { id: 'n5', inst: 'beis-avraham', productId: 'mb', qty: 10, category: 'Beis medrash library', note: 'Requested by a member for the daf halacha shiur', status: 'Approved', source: 'Community member (Eli B.)', campaign: false },
+      { id: 'n6', inst: 'beis-avraham', productId: 'tehillim', qty: 20, category: 'Shul use', note: 'Large-print Tehillim for older members', status: 'Pending approval', source: 'Community member (Moshe P.)', campaign: false },
+      { id: 'n7', inst: 'darchei-noam', productId: 'mb', qty: 12, category: 'Library', note: 'Reference set for the 8th-grade library corner', status: 'Approved', source: 'Representative', campaign: false },
+      { id: 'n8', inst: 'darchei-noam', productId: 'chumash', qty: 60, category: 'Student use', note: 'Classroom Chumashim for grades 3–5', status: 'Approved', source: 'Representative', campaign: false },
+      { id: 'n9', inst: 'darchei-noam', productId: 'siddur', qty: 45, category: 'Gifts', note: 'First-grade siddur party', status: 'Approved', source: 'Representative', campaign: false },
+      { id: 'n10', inst: 'darchei-noam', productId: 'tehillim', qty: 25, category: 'Prizes', note: 'Prizes for the Mishnayos contest', status: 'Approved', source: 'Representative', campaign: false },
+      { id: 'n11', inst: 'darchei-noam', productId: 'gemara', qty: 20, category: 'Student use', note: 'Gemara for the new 6th-grade shiur', status: 'Pending approval', source: 'Community member (parent volunteer)', campaign: false },
+    ],
+    campaign: {
+      id: 'every-seat', title: 'A Chumash and Siddur for Every Seat', inst: 'beis-avraham',
+      dedication: { en: 'Dedicated in the merit of everyone who davens and learns at Beis Avraham', he: 'לזכות כל המתפללים והלומדים' },
+      destination: 'Congregation Beis Avraham, main sanctuary and beis medrash — 100 Example Street, Springfield, NJ (sample address)',
+      start: '2026-10-22', end: '2026-11-05', status: 'Open',
+      lines: [
+        { productId: 'chumash', requested: 100 },
+        { productId: 'siddur', requested: 120 },
+        { productId: 'tehillim', requested: 50 },
+        { productId: 'gemara', requested: 30 },
+      ],
+      story: [
+        'When Beis Avraham opened its doors, a few families brought sefarim from home. Twenty years later the shul has grown to fill two minyanim on Shabbos, and many of those original Chumashim and siddurim are held together with tape.',
+        'This campaign asks for 300 new sefarim: Chumashim and siddurim for every seat, Tehillim for the women’s section, and Gemaros for the night seder chavrusa program. Each sponsored sefer arrives with a dedication sticker, ready for use.',
+        'Sponsor a whole sefer with a personal dedication, join with others toward a copy, or give toward wherever the need is greatest.',
+      ],
+      closing: null,
+    },
+    supporters: [
+      { id: 'rivka', name: 'Rivka Stein', relation: 'Daughter of founding members', goal: 100000, message: 'My parents carried boxes of sefarim into the first Beis Avraham minyan in their living room. Please help me put a new Chumash and siddur in front of every person who davens there now.' },
+      { id: 'dovid', name: 'Dovid & Miri Klein', relation: 'Members since 2015', goal: 75000, message: 'Our kids learned to daven from the shul’s siddurim. We’d love for the next group of kids to have ones with all their pages.' },
+      { id: 'yossi', name: 'Yossi Adler', relation: 'Bar mitzvah, Parshas Vayeitzei', goal: 50000, message: 'For my bar mitzvah I’m raising money for Gemaros for the night seder program and siddurim for the shul. Thank you for being part of it!' },
+    ],
+    invites: [
+      { name: 'Miriam Hoffman', status: 'Invited — page not yet created' },
+    ],
+    contributions: [],
+    seq: 1001,
+    draft: null,
+    lastOrderId: null,
+  };
+  const SEED = [
+    { date: '2026-10-22', kind: 'whole', productId: 'chumash', qty: 24, donorName: 'The Goldberg Family', dedMode: 'honor', honoree: 'our children and grandchildren', honoreeHe: '', status: 'Approved', stage: 'Shipped', shipDate: '2026-10-28' },
+    { date: '2026-10-22', kind: 'whole', productId: 'siddur', qty: 40, donorName: 'Anonymous', anonymous: true, dedMode: 'none', status: 'Approved', stage: 'Delivered', shipDate: '2026-10-25', deliverDate: '2026-10-27' },
+    { date: '2026-10-23', kind: 'whole', productId: 'siddur', qty: 20, donorName: 'Katz Hardware & Supply', dedMode: 'none', status: 'Awaiting approval', stage: 'Funded' },
+    { date: '2026-10-23', kind: 'whole', productId: 'tehillim', qty: 18, donorName: 'Rachel & Sam Weiss', dedMode: 'honor', honoree: 'the bar mitzvah of our son Ari', honoreeHe: '', status: 'Correction needed', stage: 'Funded', supporterId: 'dovid', correction: 'Donor asked to add the Hebrew name; awaiting their spelling.' },
+    { date: '2026-10-24', kind: 'copy', productId: 'chumash', amount: '20', donorName: 'Leah Fried', supporterId: 'rivka' },
+    { date: '2026-10-24', kind: 'type', productId: 'gemara', amount: '50', donorName: 'Menachem Adler', supporterId: 'yossi' },
+    { date: '2026-10-25', kind: 'whole', productId: 'siddur', qty: 15, donorName: 'Bubby & Zaidy Adler', dedMode: 'later', status: 'Awaiting text', stage: 'Funded', supporterId: 'yossi' },
+    { date: '2026-10-25', kind: 'general', amount: '180', donorName: 'Friends of Beis Avraham' },
+    { date: '2026-10-26', kind: 'whole', productId: 'gemara', qty: 6, donorName: 'Dr. Ezra Levi', dedMode: 'honor', honoree: 'my chavrusas, past and present', honoreeHe: '', status: 'Approved', stage: 'Ordered' },
+    { date: '2026-10-26', kind: 'whole', productId: 'chumash', qty: 12, donorName: 'The Klein Family', dedMode: 'honor', honoree: 'our parents', honoreeHe: '', status: 'Approved', stage: 'Prepared', supporterId: 'dovid' },
+    { date: '2026-10-27', kind: 'copy', productId: 'siddur', amount: '10', donorName: 'Shira M.', supporterId: 'rivka' },
+    { date: '2026-10-27', kind: 'type', productId: 'tehillim', amount: '25', donorName: 'Anonymous', anonymous: true },
+    { date: '2026-10-28', kind: 'whole', productId: 'chumash', qty: 8, donorName: 'The Stein Family', dedMode: 'honor', honoree: 'our grandchildren', honoreeHe: '', status: 'Awaiting approval', stage: 'Funded', supporterId: 'rivka' },
+    { date: '2026-10-28', kind: 'general', amount: '36', donorName: 'Avi R.', supporterId: 'dovid' },
+    { date: '2026-10-29', kind: 'copy', productId: 'chumash', amount: '15', donorName: 'B. Cohen' },
+  ];
+  for (const x of SEED) {
+    const d = Object.assign(newDraft(x.kind, x.productId, x.supporterId || ''), x);
+    if (x.amount) d.amountStr = x.amount;
+    d.verified = true;
+    const r = placeOrder(d, { seed: true });
+    if (!r.ok) console.error('Seed failed', x, r.errors);
+    const c = S.contributions[S.contributions.length - 1];
+    if (c.dedication && x.status) c.dedication.status = x.status;
+    if (x.correction) c.dedication.correction = x.correction;
+    if (x.stage) c.stage = x.stage;
+    if (x.shipDate) c.shipDate = x.shipDate;
+    if (x.deliverDate) c.deliverDate = x.deliverDate;
+  }
+}
+
+/* ---------------- Derived figures (single source of truth) ---------------- */
+const campaignLine = pid => S.campaign.lines.find(l => l.productId === pid);
+function copiesOf(pid) {
+  const l = campaignLine(pid);
+  const arr = Array.from({ length: l.requested }, (_, i) => ({ no: i + 1, funded: 0, parts: [] }));
+  for (const c of S.contributions) for (const a of c.allocations) {
+    if (a.productId !== pid) continue;
+    const cp = arr[a.copyNo - 1];
+    if (cp) { cp.funded += a.amount; cp.parts.push({ cid: c.id, amount: a.amount }); }
+  }
+  return arr;
+}
+function lineStats(pid) {
+  const p = PRODUCTS[pid], l = campaignLine(pid), copies = copiesOf(pid);
+  const full = copies.filter(x => x.funded >= p.price).length;
+  const partials = copies.filter(x => x.funded > 0 && x.funded < p.price);
+  const unfunded = copies.filter(x => x.funded === 0).length;
+  const funded = sum(copies, x => x.funded);
+  const goal = l.requested * p.price;
+  return { p, requested: l.requested, copies, full, partials, unfunded, funded, goal, remaining: goal - funded, highestUsed: Math.max(0, ...copies.filter(x => x.funded > 0).map(x => x.no)) };
+}
+function campaignStats() {
+  const lines = S.campaign.lines.map(l => lineStats(l.productId));
+  const general = sum(S.contributions.filter(c => c.kind === 'general'), c => c.amount);
+  const lineFunded = sum(lines, x => x.funded);
+  const goal = sum(lines, x => x.goal);
+  return {
+    lines, general, goal, lineFunded,
+    raised: sum(S.contributions, c => c.amount),
+    requested: sum(lines, x => x.requested),
+    full: sum(lines, x => x.full),
+    partialCopies: sum(lines, x => x.partials.length),
+    unfunded: sum(lines, x => x.unfunded),
+    remainingNeed: goal - lineFunded - general,
+    gifts: S.contributions.length,
+  };
+}
+function supporterStats(sid) {
+  const cs = S.contributions.filter(c => c.supporterId === sid);
+  return { cs, raised: sum(cs, c => c.amount), count: cs.length };
+}
+/* The fulfillment stage of each fully funded copy. A copy funded entirely by one
+   whole-item order follows that order; copies completed from combined partial
+   gifts wait as "Funded" until the campaign closes and they are purchased. */
+function stageCounts(pid) {
+  const counts = Object.fromEntries(STAGES.map(s => [s, 0]));
+  const p = PRODUCTS[pid];
+  for (const cp of copiesOf(pid)) {
+    if (cp.funded < p.price) continue;
+    const c = cp.parts.length === 1 ? S.contributions.find(x => x.id === cp.parts[0].cid) : null;
+    counts[c && c.kind === 'whole' ? c.stage : 'Funded']++;
+  }
+  const cl = S.campaign.closing;
+  if (cl) { const r = cl.rows.find(r => r.pid === pid); if (r) counts.Funded += r.combined + r.completed + r.bought; }
+  return counts;
+}
+
+/* ---------------- Closing allocation (disclosed policy) ----------------
+   1. Within each sefer, partial gifts are combined into as many complete copies as possible.
+   2. Unrestricted gifts complete the remaining partial copies, nearest to completion first.
+   3. Remaining unrestricted money buys whole copies in the campaign's priority order
+      (the order sefarim are listed), as many as the balance allows.
+   4. Any balance too small to buy another requested sefer needs a final policy (undecided). */
+function computeClosing() {
+  const st = campaignStats();
+  let G = st.general;
+  const rows = st.lines.map(x => {
+    const partialSum = sum(x.partials, c => c.funded);
+    const combined = Math.floor(partialSum / x.p.price);
+    return { pid: x.p.id, price: x.p.price, requested: x.requested, fullBefore: x.full, partialSum, combined, leftover: partialSum - combined * x.p.price, completed: 0, generalToComplete: 0, bought: 0, generalToBuy: 0 };
+  });
+  const generalStart = G;
+  [...rows].filter(r => r.leftover > 0).sort((a, b) => (a.price - a.leftover) - (b.price - b.leftover)).forEach(r => {
+    const need = r.price - r.leftover;
+    if (G >= need) { G -= need; r.completed = 1; r.generalToComplete = need; r.leftover = 0; }
+  });
+  for (const r of rows) {
+    const slots = r.requested - r.fullBefore - r.combined - r.completed - (r.leftover > 0 ? 1 : 0);
+    const n = Math.max(0, Math.min(slots, Math.floor(G / r.price)));
+    r.bought = n; r.generalToBuy = n * r.price; G -= n * r.price;
+  }
+  rows.forEach(r => { r.finalFull = r.fullBefore + r.combined + r.completed + r.bought; r.unfunded = r.requested - r.finalFull; });
+  const finalFull = sum(rows, r => r.finalFull), requested = sum(rows, r => r.requested);
+  return { rows, generalStart, generalLeft: G, partialLeft: sum(rows, r => r.leftover), leftoverTotal: G + sum(rows, r => r.leftover), finalFull, requested, unfunded: requested - finalFull, date: DEMO_TODAY };
+}
+
+/* ---------------- Sponsorship drafts, validation, allocation ---------------- */
+function newDraft(kind = 'whole', productId = 'chumash', supporterId = '') {
+  return { kind, productId, qty: 1, amountStr: '', copyNo: 'new', supporterId, donorName: '', donorNameHe: '', anonymous: false, email: '',
+    dedMode: 'memory', honoree: '', honoreeHe: '', honorSupporter: !!supporterId, binding: false, gold: false, verified: false };
+}
+function draftAmount(d) {
+  if (d.kind === 'whole') return (Number.isInteger(d.qty) ? d.qty : 0) * PRODUCTS[d.productId].price;
+  const a = parseMoney(d.amountStr);
+  return Number.isFinite(a) ? a : 0;
+}
+function copyTarget(d) {
+  const st = lineStats(d.productId);
+  if (d.copyNo === 'new') return st.copies.find(c => c.funded === 0) || null;
+  return st.copies[Number(d.copyNo) - 1] || null;
+}
+function hasDedicationText(d) { return d.kind === 'whole' && (d.dedMode === 'memory' || d.dedMode === 'honor'); }
+function validateDraft(d, { forReview = false, seed = false } = {}) {
+  const errs = [];
+  if (!seed && S.campaign.status !== 'Open') errs.push(`Fundraising for this campaign is ${S.campaign.status.toLowerCase()}, so new sponsorships can’t be accepted.`);
+  const p = PRODUCTS[d.productId];
+  if (d.kind === 'whole') {
+    const st = lineStats(d.productId);
+    if (!Number.isInteger(d.qty) || d.qty < 1) errs.push('Enter how many copies you’d like to sponsor (at least 1).');
+    else if (d.qty > st.unfunded) errs.push(st.unfunded === 0 ? `Every ${p.name} copy already has funding. You can complete a partially sponsored copy or give where needed most.` : `Only ${plural(st.unfunded, p.name + ' copy', p.name + ' copies')} still need a sponsor. Lower the quantity to ${st.unfunded} or fewer.`);
+  } else {
+    const a = parseMoney(d.amountStr);
+    if (!Number.isFinite(a) || a <= 0) errs.push('Enter an amount in dollars, for example 25 or 18.50.');
+    else if (d.kind === 'type') {
+      const st = lineStats(d.productId);
+      if (a > st.remaining) errs.push(`${p.name} needs ${money(st.remaining)} more in total. Enter ${money(st.remaining)} or less.`);
+    } else if (d.kind === 'copy') {
+      const cp = copyTarget(d);
+      if (!cp) errs.push(`No ${p.name} copy is available for a partial gift.`);
+      else if (cp.funded >= p.price) errs.push(`${p.name} copy #${cp.no} is already fully sponsored. Choose another copy.`);
+      else if (a > p.price - cp.funded) errs.push(`${p.name} copy #${cp.no} needs only ${money(p.price - cp.funded)} more. Enter ${money(p.price - cp.funded)} or less.`);
+    } else if (d.kind === 'general') {
+      const need = campaignStats().remainingNeed;
+      if (a > need) errs.push(`The campaign’s remaining need is ${money(need)}. Enter ${money(need)} or less.`);
+    }
+  }
+  if (forReview) {
+    if (!d.donorName.trim() && !d.anonymous) errs.push('Enter your name or company, or choose to give anonymously.');
+    if (hasDedicationText(d) && !d.honoree.trim() && !d.honoreeHe.trim()) errs.push(`Enter the name of the person you are ${d.dedMode === 'memory' ? 'remembering' : 'honoring'}, in English, Hebrew or both. Or choose “Add the dedication later.”`);
+  }
+  return errs;
+}
+function planAllocations(d) {
+  const p = PRODUCTS[d.productId];
+  if (d.kind === 'general') return [];
+  const copies = copiesOf(d.productId);
+  if (d.kind === 'whole') return copies.filter(c => c.funded === 0).slice(0, d.qty).map(c => ({ productId: p.id, copyNo: c.no, amount: p.price }));
+  const amount = parseMoney(d.amountStr);
+  if (d.kind === 'copy') { const cp = copyTarget(d); return [{ productId: p.id, copyNo: cp.no, amount }]; }
+  // kind === 'type': fill partially funded copies nearest completion first, then new copies.
+  const out = []; let left = amount;
+  const partials = copies.filter(c => c.funded > 0 && c.funded < p.price).sort((a, b) => (p.price - a.funded) - (p.price - b.funded) || a.no - b.no);
+  for (const c of [...partials, ...copies.filter(c => c.funded === 0)]) {
+    if (left <= 0) break;
+    const take = Math.min(left, p.price - c.funded);
+    out.push({ productId: p.id, copyNo: c.no, amount: take }); left -= take;
+  }
+  return out;
+}
+/* Re-validates against the current ledger at the moment of placing, so the same
+   draft can’t be applied twice or overfund a copy. */
+function placeOrder(d, { seed = false } = {}) {
+  const errs = validateDraft(d, { forReview: true, seed });
+  if (!seed && hasDedicationText(d) && !d.verified) errs.push('Please confirm that you have checked the spelling of every name.');
+  if (errs.length) return { ok: false, errors: errs };
+  const allocations = planAllocations(d);
+  const id = (seed ? 'D-' : 'TEST-') + (S.seq++);
+  const supporter = S.supporters.find(s => s.id === d.supporterId);
+  S.contributions.push({
+    id, date: d.date || DEMO_TODAY, kind: d.kind, productId: d.kind === 'general' ? null : d.productId,
+    qty: d.kind === 'whole' ? d.qty : null, amount: draftAmount(d), allocations,
+    donor: { name: d.anonymous ? 'Anonymous' : d.donorName.trim(), nameHe: d.anonymous ? '' : d.donorNameHe.trim(), anonymous: !!d.anonymous },
+    supporterId: supporter ? supporter.id : '',
+    dedication: d.kind === 'whole' ? {
+      mode: d.dedMode, honoree: d.honoree.trim(), honoreeHe: d.honoreeHe.trim(),
+      honorSupporter: !!(supporter && d.honorSupporter),
+      status: d.dedMode === 'later' ? 'Awaiting text' : 'Awaiting approval', correction: '',
+    } : null,
+    upgrades: d.kind === 'whole' ? { binding: !!d.binding, gold: !!d.gold } : null,
+    stage: d.kind === 'whole' ? 'Funded' : null,
+    test: !seed,
+  });
+  return { ok: true, id };
+}
+
+/* ---------------- Shared view helpers ---------------- */
+const inst = id => S.institutions[id];
+const prodLabel = (pid, cls = '') => `${esc(PRODUCTS[pid].name)} <span class="he ${cls}" lang="he">${esc(PRODUCTS[pid].he)}</span>`;
+function chipFund(s) { const m = { Draft: 'neutral', Scheduled: 'info', Open: 'ok', Closed: 'neutral' }; return `<span class="chip ${m[s]}"><span class="chip-label">Fundraising</span>${esc(s)}</span>`; }
+function chipDed(s) { const m = { 'Awaiting text': 'warn', 'Awaiting approval': 'info', 'Approved': 'ok', 'Correction needed': 'bad' }; return `<span class="chip ${m[s]}">${esc(s)}</span>`; }
+function chipStage(s) { const m = { Funded: 'brand', Ordered: 'info', Prepared: 'info', Shipped: 'warn', Delivered: 'ok' }; return `<span class="chip ${m[s]}">${esc(s)}</span>`; }
+function stageTrack(s) { const i = STAGES.indexOf(s); return `<span class="stage-track" aria-label="Fulfillment: ${esc(s)}">${STAGES.map((x, j) => `<span class="${j < i ? 'done' : j === i ? 'cur' : ''}">${x}</span>`).join('')}</span>`; }
+const demoChip = (t = 'Demo data') => `<span class="chip demo">${esc(t)}</span>`;
+function progressBar(full, part, gen, total) {
+  const w = v => (total ? Math.max(0, Math.min(100, (v / total) * 100)) : 0).toFixed(2) + '%';
+  return `<div class="bar" role="img" aria-label="${pctFloor(full, total)}% fully funded"><span class="full" style="width:${w(full)}"></span><span class="part" style="width:${w(part)}"></span>${gen ? `<span class="gen" style="width:${w(gen)}"></span>` : ''}</div>`;
+}
+const copyPctText = (funded, price) => `${pctFloor(funded, price)}% sponsored — ${money(price - funded)} remaining`;
+function kindLabel(k) { return { whole: 'Whole sefarim', type: 'Toward a sefer type', copy: 'Partial copy', general: 'Unrestricted gift' }[k]; }
+function describeContribution(c) {
+  if (c.kind === 'general') return 'Unrestricted gift to the campaign';
+  const p = PRODUCTS[c.productId];
+  if (c.kind === 'whole') { const nos = c.allocations.map(a => a.copyNo); return `${plural(c.qty, p.name + ' copy', p.name + ' copies')} (#${rangeText(nos)})`; }
+  return c.allocations.map(a => `${money(a.amount)} toward ${p.name} copy #${a.copyNo}`).join('; ');
+}
+function rangeText(nums) {
+  const out = []; let s = null, prev = null;
+  for (const n of nums) { if (s === null) { s = prev = n; continue; } if (n === prev + 1) { prev = n; continue; } out.push(s === prev ? `${s}` : `${s}–${prev}`); s = prev = n; }
+  if (s !== null) out.push(s === prev ? `${s}` : `${s}–${prev}`);
+  return out.join(', ');
+}
+
+/* Dedication sticker preview. `d` uses draft-shaped fields. */
+function stickerHTML(d) {
+  const c = S.campaign, i = inst(c.inst);
+  const supporter = S.supporters.find(s => s.id === d.supporterId);
+  const lines = [];
+  lines.push(`<div class="orn" aria-hidden="true">❦</div>`);
+  if (d.dedMode === 'memory' || d.dedMode === 'honor') {
+    const heLbl = d.dedMode === 'memory' ? 'לעילוי נשמת' : 'לכבוד';
+    const enLbl = d.dedMode === 'memory' ? 'In loving memory of' : 'In honor of';
+    const ph = !d.honoree.trim() && !d.honoreeHe.trim();
+    lines.push(`<div class="st-he" lang="he">${heLbl}</div>`);
+    if (d.honoreeHe.trim() || ph) lines.push(`<div class="st-he-name ${ph ? 'ph' : ''}" lang="he">${esc(d.honoreeHe.trim() || 'שם בעברית')}</div>`);
+    lines.push(`<div class="st-en">${enLbl}</div>`);
+    if (d.honoree.trim() || ph) lines.push(`<div class="st-name ${ph ? 'ph' : ''}">${esc(d.honoree.trim() || 'Name in English')}</div>`);
+    lines.push(`<div class="st-sep"></div>`);
+  } else if (d.dedMode === 'later') {
+    lines.push(`<div class="st-en">Personal dedication to follow</div><div class="st-sep"></div>`);
+  }
+  const donor = d.anonymous ? '' : d.donorName.trim();
+  const donorHe = d.anonymous ? '' : d.donorNameHe.trim();
+  if (donor || donorHe) {
+    lines.push(`<div class="st-small">Donated by</div>`);
+    if (donorHe) lines.push(`<div class="st-he" lang="he">נדבת ${esc(donorHe)}</div>`);
+    if (donor) lines.push(`<div class="st-name" style="font-size:1.08rem">${esc(donor)}</div>`);
+  } else if (d.anonymous) {
+    lines.push(`<div class="st-small">Donated anonymously</div>`);
+  } else {
+    lines.push(`<div class="st-small">Donated by</div><div class="st-name" style="font-size:1.08rem;color:#9A9886">Your name or company</div>`);
+  }
+  if (supporter && d.honorSupporter) lines.push(`<div class="st-small">In honor of ${esc(supporter.name)}</div>`);
+  lines.push(`<div class="st-sep"></div>`);
+  lines.push(`<div class="st-he" lang="he">${esc(c.dedication.he)}</div>`);
+  lines.push(`<div class="st-small" style="font-style:italic">${esc(c.dedication.en)}</div>`);
+  lines.push(`<div class="st-inst">${esc(i.name)} · <span class="he" lang="he">${esc(i.he)}</span></div>`);
+  if (d.binding || d.gold) lines.push(`<div class="st-up">Upgrade requested: ${[d.binding && 'premium binding', d.gold && 'gold stamping'].filter(Boolean).join(' + ')} (price not yet decided)</div>`);
+  if (S.settings.referralApproved && S.settings.referralOnStickers) lines.push(`<div class="st-ref">Sponsored through Sefer · [platform link]</div>`);
+  return `<div class="sticker">${lines.join('')}</div>`;
+}
+function draftFromContribution(c) {
+  return { kind: c.kind, productId: c.productId, supporterId: c.supporterId, donorName: c.donor.anonymous ? '' : c.donor.name, donorNameHe: c.donor.nameHe, anonymous: c.donor.anonymous,
+    dedMode: c.dedication ? c.dedication.mode : 'none', honoree: c.dedication?.honoree || '', honoreeHe: c.dedication?.honoreeHe || '', honorSupporter: c.dedication?.honorSupporter || false,
+    binding: c.upgrades?.binding, gold: c.upgrades?.gold };
+}
+
+/* Inline campaign illustration: a shelf of new sefarim. */
+function shelfSVG() {
+  const spines = [];
+  const cols = ['var(--brand)', '#5B2A2A', 'var(--brand)', '#26384F', '#5B2A2A', 'var(--brand)', '#3B3024', 'var(--brand)', '#26384F', '#5B2A2A', 'var(--brand)', '#3B3024', 'var(--brand)', '#5B2A2A'];
+  let x = 34;
+  cols.forEach((col, i) => {
+    const w = 26 + ((i * 7) % 12), h = 150 + ((i * 23) % 46);
+    spines.push(`<rect x="${x}" y="${232 - h}" width="${w}" height="${h}" rx="2" fill="${col}"/>`);
+    spines.push(`<rect x="${x + 4}" y="${232 - h + 18}" width="${w - 8}" height="2" fill="#C8AD63"/><rect x="${x + 4}" y="${232 - h + 24}" width="${w - 8}" height="1" fill="#C8AD63"/>`);
+    spines.push(`<rect x="${x + 4}" y="${226}" width="${w - 8}" height="1.5" fill="#C8AD63"/>`);
+    x += w + 3;
+  });
+  return `<svg viewBox="0 0 520 300" role="img" aria-label="Illustration: a shelf of new sefarim">
+    <rect width="520" height="300" fill="var(--surface-2)"/>
+    <rect x="0" y="0" width="520" height="300" fill="none" stroke="var(--line)"/>
+    ${spines.join('')}
+    <rect x="20" y="232" width="480" height="12" fill="#8A6A3B"/><rect x="20" y="244" width="480" height="5" fill="#6B5230"/>
+    <text x="260" y="282" text-anchor="middle" font-family="Assistant, sans-serif" font-size="13" fill="var(--muted)">Campaign image placeholder — organizer uploads a photo</text>
+  </svg>`;
+}
+
+/* ---------------- Pages ---------------- */
+function pageHome() {
+  const st = campaignStats(), c = S.campaign, i = inst(c.inst);
+  return `<div class="stack-lg">
+    <section class="hero">
+      <div class="eyebrow">Sefer · sefarim for shuls, schools and Jewish organizations</div>
+      <h1>Give learning a lasting home.</h1>
+      <div class="he-tag" lang="he">ספרים לבתי כנסת, לבתי ספר ולמוסדות</div>
+      <p class="lead">Create a campaign to provide sefarim to your shul or school. Invite others to participate. We handle the sefarim, personal dedications, and delivery.</p>
+    </section>
+
+    <section class="grid-3" aria-label="Get started">
+      <a class="action-card" href="#campaign"><span class="eyebrow">For donors</span><h3>Sponsor sefarim</h3><p class="muted">Choose a sefer an institution has asked for, add a personal dedication, and we deliver it ready to use.</p><span class="btn sm" style="justify-self:start">Sponsor sefarim</span></a>
+      <a class="action-card" href="#start-campaign"><span class="eyebrow">For organizers</span><h3>Start a campaign</h3><p class="muted">Pick the sefarim your shul or school needs, set the dates, and invite family and friends to raise with you.</p><span class="btn sm ghost" style="justify-self:start">Start a campaign</span></a>
+      <a class="action-card" href="#register"><span class="eyebrow">For institutions</span><h3>Register an institution</h3><p class="muted">Shuls, schools and organizations register a representative who approves every need before it’s published.</p><span class="btn sm ghost" style="justify-self:start">Register an institution</span></a>
+    </section>
+
+    <section class="grid-2">
+      <div class="panel stack">
+        <h2>How it works</h2>
+        <ol class="steps">
+          <li><div><b class="ui">The institution lists its needs.</b><br><span class="muted">Its registered representative approves every request, including ones community members submit.</span></div></li>
+          <li><div><b class="ui">Donors sponsor sefarim.</b><br><span class="muted">Whole copies with a personal dedication, a share of a copy, or a gift where it’s needed most.</span></div></li>
+          <li><div><b class="ui">We source, prepare and deliver.</b><br><span class="muted">We buy the sefarim, print and apply the dedication stickers, and ship them ready for use.</span></div></li>
+        </ol>
+      </div>
+      <a class="panel stack" href="#campaign" style="text-decoration:none;color:inherit">
+        <div class="row between">${chipFund(c.status)}${demoChip('Sample campaign')}</div>
+        <h2 style="color:var(--brand-ink)">${esc(c.title)}</h2>
+        <p class="muted ui">${esc(i.name)} · ${esc(i.city)} · ${fmtDate(c.start)} – ${fmtDate(c.end)}</p>
+        ${progressBar(st.full, st.partialCopies, 0, st.requested)}
+        <div class="row between ui"><span><b class="tnum">${st.full}</b> of ${st.requested} sefarim fully funded</span><span class="tnum"><b>${money(st.raised)}</b> raised of ${money(st.goal)}</span></div>
+        <span class="btn sm" style="justify-self:start">View campaign</span>
+      </a>
+    </section>
+
+    <section class="notice">Institution verification, donor accounts and payments are not live in this prototype. See the <a href="#roadmap">plan</a> for what has to be decided and built before real sponsorships are accepted.</section>
+  </div>`;
+}
+
+function itemCard(x, opts = {}) {
+  const open = S.campaign.status === 'Open';
+  const sid = opts.supporterId || '';
+  const p = x.p;
+  const stc = stageCounts(p.id);
+  return `<article class="item-card" id="item-${p.id}">
+    <div class="item-top">
+      <div><div class="item-name">${esc(p.name)}<span class="he" lang="he">${esc(p.he)}</span></div><div class="small muted">${esc(p.desc)}</div></div>
+      <div class="price">${money(p.price)} <small>per copy</small></div>
+    </div>
+    ${progressBar(x.full, x.partials.length, 0, x.requested)}
+    <div class="counts">
+      <div><b>${x.requested}</b><span>Requested</span></div>
+      <div><b>${x.full}</b><span>Fully funded</span></div>
+      <div><b>${x.partials.length}</b><span>Partly funded</span></div>
+      <div><b>${x.unfunded}</b><span>Still needed</span></div>
+    </div>
+    <div class="small muted tnum">${money(x.funded)} of ${money(x.goal)} · ${money(x.remaining)} remaining${stc.Delivered || stc.Shipped ? ` · ${stc.Delivered} delivered, ${stc.Shipped} shipped` : ''}</div>
+    <div class="row">
+      <button class="btn" type="button" data-action="sponsor" data-kind="whole" data-product="${p.id}" data-supporter="${sid}" ${open && x.unfunded ? '' : 'disabled'}>Sponsor ${esc(p.name)}</button>
+      <button class="btn ghost sm" type="button" data-action="sponsor" data-kind="type" data-product="${p.id}" data-supporter="${sid}" ${open && x.remaining ? '' : 'disabled'}>Give toward ${esc(p.name)}</button>
+    </div>
+    ${x.partials.length ? `<div class="partial-list">${x.partials.map(cp => `<div class="partial-row"><span><b>${esc(p.name)} copy #${cp.no}</b> · ${copyPctText(cp.funded, p.price)}</span><button class="btn sm" type="button" data-action="sponsor" data-kind="copy" data-product="${p.id}" data-copy="${cp.no}" data-supporter="${sid}" ${open ? '' : 'disabled'}>Complete this copy</button></div>`).join('')}</div>` : ''}
+  </article>`;
+}
+
+function pageCampaign() {
+  const c = S.campaign, i = inst(c.inst), st = campaignStats(), cl = c.closing;
+  const open = c.status === 'Open';
+  return `<div class="stack-lg">
+    <section class="camp-head">
+      <div class="row">${chipFund(c.status)}${demoChip('Sample campaign — demonstration data')}</div>
+      <h1>${esc(c.title)}</h1>
+      <p class="dedication-line">${esc(c.dedication.en)} · <span class="he" lang="he">${esc(c.dedication.he)}</span></p>
+      <dl class="meta-list">
+        <dt>Receiving</dt><dd><a href="#institution-${i.id}">${esc(i.name)}</a> <span class="he" lang="he">${esc(i.he)}</span></dd>
+        <dt>Delivery to</dt><dd>${esc(c.destination)}</dd>
+        <dt>Fundraising</dt><dd>${fmtDate(c.start)} – ${fmtDate(c.end)} ${open ? `<span class="muted">(closes at the end date)</span>` : ''}</dd>
+      </dl>
+    </section>
+
+    <section class="panel stack" aria-label="Campaign progress">
+      <div class="kpis">
+        <div class="stat"><span class="v">${money(st.raised)}</span><span class="k">raised of ${money(st.goal)}</span></div>
+        <div class="stat"><span class="v">${st.full} / ${st.requested}</span><span class="k">sefarim fully funded (${pctFloor(st.full, st.requested)}%)</span></div>
+        <div class="stat"><span class="v">${st.partialCopies}</span><span class="k">copies partly funded</span></div>
+        <div class="stat"><span class="v">${money(st.remainingNeed)}</span><span class="k">remaining need</span></div>
+      </div>
+      ${progressBar(st.full, st.partialCopies, 0, st.requested)}
+      <div class="legend"><span><i style="background:var(--brand)"></i>Fully funded copies</span><span><i style="background:var(--gold)"></i>Partly funded copies</span><span>${money(st.general)} in unrestricted gifts, allocated at closing</span></div>
+      ${cl ? closingSummaryHTML(cl) : ''}
+      <p class="small muted">Funded is not the same as delivered. Delivered so far: <b>${sum(st.lines, x => stageCounts(x.p.id).Delivered)}</b> sefarim. Fully funded copies are purchased, prepared with dedications and shipped in batches.</p>
+    </section>
+
+    <section class="stack" aria-labelledby="h-sefarim">
+      <div class="row between"><h2 id="h-sefarim">Requested sefarim</h2>
+        <button class="btn ghost" type="button" data-action="sponsor" data-kind="general" data-supporter="" ${open && st.remainingNeed > 0 ? '' : 'disabled'}>Give where needed most</button></div>
+      ${open ? '' : `<div class="notice">Fundraising is ${esc(c.status.toLowerCase())}. Sponsor buttons are turned off.</div>`}
+      <div class="grid-2">${st.lines.map(x => itemCard(x)).join('')}</div>
+      <p class="small muted">Whole-copy sponsors may add a personal dedication sticker. Partial and pooled gifts are combined with others and do not receive individual named stickers.</p>
+    </section>
+
+    <section class="stack" aria-labelledby="h-sup">
+      <div class="row between"><h2 id="h-sup">Supporter fundraising pages</h2><span class="small muted">Gifts through a supporter page count once toward this campaign.</span></div>
+      <div class="grid-3">${S.supporters.map(s => supporterCard(s)).join('')}</div>
+    </section>
+
+    <section class="story" aria-labelledby="h-story">
+      <div class="stack"><h2 id="h-story">The story</h2>${c.story.map(p => `<p>${esc(p)}</p>`).join('')}</div>
+      ${shelfSVG()}
+    </section>
+
+    <section class="panel stack" aria-labelledby="h-pol">
+      <h3 id="h-pol">How this campaign closes</h3>
+      ${closingPolicyHTML()}
+      <h3>Shipping</h3>
+      <p class="small">Proposed: combined campaign deliveries of ${money(FREE_SHIP_THRESHOLD)} or more ship free in eligible regions. Smaller deliveries may be paid by the donor or recipient. <span class="tag-undecided">Regions, timing and final rules not decided</span></p>
+    </section>
+  </div>`;
+}
+function closingPolicyHTML() {
+  return `<ol class="ui small" style="margin:0;padding-left:1.3em;display:grid;gap:4px">
+    <li>Fundraising closes at the end date. The campaign is fulfilled even if it doesn’t reach its full goal.</li>
+    <li>Partial gifts toward the same sefer are combined into as many complete copies as possible.</li>
+    <li>Unrestricted gifts first complete the remaining partly funded copies, nearest to completion first.</li>
+    <li>Remaining unrestricted money buys whole copies in the campaign’s listed order of priority.</li>
+    <li>A copy counts as funded only when its full price is covered.</li>
+    <li>Any balance too small to buy another requested sefer: <span class="tag-undecided">Requires a final policy</span></li>
+  </ol>`;
+}
+function closingSummaryHTML(cl) {
+  return `<div class="notice green stack" style="gap:8px">
+    <b>Closing result (demonstration, ${fmtDate(cl.date)})</b>
+    <span><b class="tnum">${cl.finalFull}</b> of ${cl.requested} sefarim funded (${pctFloor(cl.finalFull, cl.requested)}% of quantity) · <b class="tnum">${cl.unfunded}</b> unfunded. Funded sefarim will be supplied; none are delivered until they ship and arrive.</span>
+    <span>Balance too small to buy another sefer: <b>${money(cl.leftoverTotal)}</b> <span class="tag-undecided">Requires a final policy</span></span>
+  </div>`;
+}
+function supporterCard(s) {
+  const ss = supporterStats(s.id);
+  const initials = s.name.split(/\s|&/).filter(Boolean).map(w => w[0]).slice(0, 2).join('');
+  return `<a class="supporter-card" href="#supporter-${s.id}">
+    <div class="row" style="flex-wrap:nowrap"><span class="mono" aria-hidden="true">${esc(initials)}</span><div style="min-width:0"><b class="ui">${esc(s.name)}</b><div class="small muted">${esc(s.relation)}</div></div></div>
+    ${progressBar(Math.min(ss.raised, s.goal), 0, 0, s.goal)}
+    <div class="small ui tnum"><b>${money(ss.raised)}</b> of ${money(s.goal)} · ${plural(ss.count, 'gift')}</div>
+  </a>`;
+}
+
+function pageSupporter(sid) {
+  const s = S.supporters.find(x => x.id === sid);
+  if (!s) return notFound();
+  const ss = supporterStats(s.id), c = S.campaign, st = campaignStats();
+  const initials = s.name.split(/\s|&/).filter(Boolean).map(w => w[0]).slice(0, 2).join('');
+  return `<div class="stack-lg narrow" style="margin-inline:auto">
+    <div class="row">${demoChip('Sample supporter page')}${chipFund(c.status)}</div>
+    <section class="row" style="flex-wrap:nowrap;align-items:flex-start;gap:18px">
+      <span class="mono" style="width:64px;height:64px;font-size:1.5rem" aria-hidden="true">${esc(initials)}</span>
+      <div class="stack" style="gap:8px;min-width:0">
+        <h1 style="font-size:clamp(1.7rem,4vw,2.4rem)">${esc(s.name)} is raising for ${esc(inst(c.inst).name)}</h1>
+        <p class="muted ui">${esc(s.relation)} · Part of <a href="#campaign">${esc(c.title)}</a></p>
+      </div>
+    </section>
+    <blockquote class="panel" style="margin:0;font-size:1.1rem;font-style:italic">“${esc(s.message)}”</blockquote>
+    <section class="panel stack">
+      <div class="kpis">
+        <div class="stat"><span class="v">${money(ss.raised)}</span><span class="k">raised through this page</span></div>
+        <div class="stat"><span class="v">${money(s.goal)}</span><span class="k">personal goal</span></div>
+        <div class="stat"><span class="v">${ss.count}</span><span class="k">gifts</span></div>
+      </div>
+      ${progressBar(Math.min(ss.raised, s.goal), 0, 0, s.goal)}
+      <p class="small muted">Every gift through this page counts once in the main campaign total (now ${money(st.raised)}) and is credited to ${esc(s.name)}’s page.</p>
+    </section>
+    <section class="stack">
+      <h2>Sponsor through ${esc(s.name.split(' ')[0])}’s page</h2>
+      <div class="grid-2">${st.lines.map(x => itemCard(x, { supporterId: s.id })).join('')}</div>
+      <button class="btn ghost" style="justify-self:start" type="button" data-action="sponsor" data-kind="general" data-supporter="${s.id}" ${c.status === 'Open' && st.remainingNeed > 0 ? '' : 'disabled'}>Give where needed most</button>
+    </section>
+    <section class="stack">
+      <h3>Gifts through this page</h3>
+      ${ss.cs.length ? `<div class="table-wrap"><table><thead><tr><th>Date</th><th>From</th><th>Gift</th><th class="num">Amount</th></tr></thead><tbody>
+      ${ss.cs.map(x => `<tr><td>${fmtDate(x.date)}</td><td>${esc(x.donor.name)}</td><td>${esc(describeContribution(x))}</td><td class="num">${money(x.amount)}</td></tr>`).join('')}
+      </tbody></table></div>` : `<p class="muted">No gifts yet. Be the first.</p>`}
+    </section>
+  </div>`;
+}
+
+function pageInstitution(id) {
+  const i = inst(id);
+  if (!i) return notFound();
+  const needs = S.needs.filter(n => n.inst === id && n.status === 'Approved');
+  const pending = S.needs.filter(n => n.inst === id && n.status === 'Pending approval').length;
+  const camps = S.campaign.inst === id ? [S.campaign] : [];
+  const other = Object.values(S.institutions).filter(x => x.id !== id);
+  return `<div class="stack-lg">
+    <div class="row">${demoChip('Sample institution')}<span class="chip neutral">Verification: not performed (demo)</span>${other.map(o => `<a class="small ui" href="#institution-${o.id}">View ${esc(o.name)} →</a>`).join('')}</div>
+    <section class="stack" style="gap:10px">
+      <span class="eyebrow">${esc(i.type)} · ${esc(i.city)}</span>
+      <h1>${esc(i.name)}</h1>
+      <div class="he" lang="he" style="font-size:1.5rem;color:var(--muted)">${esc(i.he)}</div>
+      <p style="max-width:68ch">${esc(i.about)}</p>
+      <dl class="meta-list"><dt>Location</dt><dd>${esc(i.address)}</dd><dt>Representative</dt><dd>${esc(i.rep)} — ${esc(i.repRole)}</dd></dl>
+    </section>
+
+    <section class="stack">
+      <h2>Approved needs</h2>
+      <div class="table-wrap"><table><thead><tr><th>Sefer</th><th>Purpose</th><th class="num">Quantity</th><th class="num">Price</th><th>Status</th></tr></thead><tbody>
+        ${needs.map(n => `<tr><td>${prodLabel(n.productId)}</td><td>${esc(n.category)}<div class="small muted">${esc(n.note)}</div></td><td class="num">${n.qty}</td><td class="num">${money(PRODUCTS[n.productId].price)}</td><td>${n.campaign ? '<span class="chip ok">In campaign</span>' : '<span class="chip neutral">Approved — not in a campaign yet</span>'}</td></tr>`).join('')}
+      </tbody></table></div>
+      <p class="small muted">${i.type === 'School' ? 'Schools can request sefarim for libraries, student use, gifts and prizes. ' : ''}${pending ? `${plural(pending, 'community request')} awaiting the representative’s approval ${pending === 1 ? 'is' : 'are'} not shown publicly.` : ''}</p>
+    </section>
+
+    <section class="stack">
+      <h2>Campaigns</h2>
+      ${camps.length ? camps.map(c => { const st = campaignStats(); return `<a class="panel stack" href="#campaign" style="text-decoration:none;color:inherit"><div class="row">${chipFund(c.status)}</div><h3 style="color:var(--brand-ink)">${esc(c.title)}</h3><p class="small muted">${fmtDate(c.start)} – ${fmtDate(c.end)} · ${st.full} of ${st.requested} fully funded · ${money(st.raised)} raised</p></a>`; }).join('')
+      : `<div class="panel stack"><p>No campaign yet. The representative can turn approved needs into a campaign.</p><a class="btn ghost sm" style="justify-self:start" href="#start-campaign">Start a campaign</a></div>`}
+    </section>
+
+    <section class="panel stack" aria-labelledby="h-req">
+      <h3 id="h-req">Request sefarim for ${esc(i.name)}</h3>
+      <p class="small muted">Community members can suggest needs. ${esc(i.rep)} must approve a request before it is published.</p>
+      <form id="inst-req" class="fields-2" data-inst="${i.id}">
+        <label class="field">Sefer<select id="req-product">${Object.values(PRODUCTS).map(p => `<option value="${p.id}">${esc(p.name)} — ${money(p.price)}</option>`).join('')}</select></label>
+        <label class="field">Quantity<input id="req-qty" type="number" min="1" step="1" value="10"></label>
+        <label class="field">Purpose<select id="req-cat">${(i.type === 'School' ? ['Library', 'Student use', 'Gifts', 'Prizes'] : ['Shul use', 'Beis medrash library', 'Learning program']).map(x => `<option>${x}</option>`).join('')}</select></label>
+        <label class="field">Your name<input id="req-name" type="text" autocomplete="name" placeholder="e.g. Moshe P."></label>
+        <label class="field" style="grid-column:1/-1">Why is it needed?<input id="req-note" type="text" placeholder="e.g. Large-print siddurim for older members"></label>
+        <div class="row" style="grid-column:1/-1"><button class="btn" type="submit">Send for approval</button><span class="small muted">Demo: no email is sent. The request appears in the organizer dashboard.</span></div>
+        <div id="req-err" class="errors" style="grid-column:1/-1"></div>
+      </form>
+    </section>
+  </div>`;
+}
+
+/* ---------- Sponsorship flow ---------- */
+function startSponsor(kind, productId, copyNo, supporterId) {
+  const prev = S.draft;
+  S.draft = newDraft(kind, productId || (prev && prev.productId) || 'chumash', supporterId || '');
+  if (prev) Object.assign(S.draft, { donorName: prev.donorName, donorNameHe: prev.donorNameHe, email: prev.email, anonymous: prev.anonymous });
+  if (copyNo) S.draft.copyNo = Number(copyNo);
+  if (kind === 'copy' && copyNo) { const cp = copyTarget(S.draft); if (cp) S.draft.amountStr = String((PRODUCTS[productId].price - cp.funded) / 100); }
+  go('sponsor');
+}
+function pageSponsor() {
+  if (!S.draft) S.draft = newDraft();
+  const d = S.draft, c = S.campaign;
+  const st = lineStats(d.productId), p = st.p;
+  const supporter = S.supporters.find(s => s.id === d.supporterId);
+  const opt = (k, t, sub) => `<label class="opt ${d.kind === k ? 'on' : ''}"><input type="radio" name="kind" value="${k}" id="kind-${k}" ${d.kind === k ? 'checked' : ''}><b>${t}</b><span>${sub}</span></label>`;
+  const productSelect = `<label class="field">Sefer<select id="f-product">${S.campaign.lines.map(l => { const x = lineStats(l.productId); return `<option value="${l.productId}" ${l.productId === d.productId ? 'selected' : ''}>${esc(x.p.name)} — ${money(x.p.price)} (${x.unfunded} still need a sponsor)</option>`; }).join('')}</select></label>`;
+  let details = '';
+  if (d.kind === 'whole') {
+    details = `<div class="fields-2">${productSelect}
+      <label class="field">Number of copies<input id="f-qty" type="number" min="1" max="${st.unfunded}" step="1" value="${Number.isInteger(d.qty) ? d.qty : ''}" inputmode="numeric"><span class="hint">${plural(st.unfunded, 'copy', 'copies')} still need a sponsor</span></label></div>`;
+  } else if (d.kind === 'type') {
+    details = `<div class="fields-2">${productSelect}
+      <label class="field">Amount (USD)<input id="f-amount" type="text" inputmode="decimal" value="${esc(d.amountStr)}" placeholder="e.g. 25"><span class="hint">${esc(p.name)} still needs ${money(st.remaining)}. Your gift fills partly funded copies first, nearest to completion.</span></label></div>`;
+  } else if (d.kind === 'copy') {
+    const fresh = st.copies.find(x => x.funded === 0);
+    const cp = copyTarget(d);
+    details = `<div class="fields-2">${productSelect}
+      <label class="field">Copy<select id="f-copy">
+        ${st.partials.map(x => `<option value="${x.no}" ${String(d.copyNo) === String(x.no) ? 'selected' : ''}>Copy #${x.no} — ${copyPctText(x.funded, p.price)}</option>`).join('')}
+        ${fresh ? `<option value="new" ${d.copyNo === 'new' ? 'selected' : ''}>Start a new copy (#${fresh.no}) — ${money(p.price)} remaining</option>` : ''}
+      </select></label>
+      <label class="field">Amount (USD)<input id="f-amount" type="text" inputmode="decimal" value="${esc(d.amountStr)}" placeholder="e.g. 10">
+        <span class="hint">${cp ? `Copy #${cp.no}: ${copyPctText(cp.funded, p.price)}. ` : ''}<button type="button" class="btn quiet sm" data-action="fill-copy" style="margin-top:4px">Complete this copy${cp ? ` (${money(p.price - cp.funded)})` : ''}</button></span></label></div>`;
+  } else {
+    const need = campaignStats().remainingNeed;
+    details = `<label class="field">Amount (USD)<input id="f-amount" type="text" inputmode="decimal" value="${esc(d.amountStr)}" placeholder="e.g. 54"><span class="hint">The campaign’s remaining need is ${money(need)}. Unrestricted gifts are allocated at closing under the disclosed policy.</span></label>`;
+  }
+  const supSel = `<label class="field">Supporter page that brought you here<select id="f-supporter"><option value="">None — give to the main campaign</option>${S.supporters.map(s => `<option value="${s.id}" ${s.id === d.supporterId ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}</select><span class="hint">Your gift counts once in the campaign total and is credited to this page.</span></label>`;
+  const ded = d.kind === 'whole' ? `
+    <section class="panel stack" aria-labelledby="h-ded">
+      <h2 id="h-ded">Dedication sticker</h2>
+      <p class="small muted">One standard sticker goes inside each sponsored copy. It is printed and applied before delivery.</p>
+      <div class="options">
+        ${[['memory', 'In memory of', 'לעילוי נשמת'], ['honor', 'In honor of', 'לכבוד'], ['none', 'No personal dedication', 'Your name and the campaign dedication'], ['later', 'Add the dedication later', 'We’ll hold the sticker until you send it']].map(([k, t, sub]) => `<label class="opt ${d.dedMode === k ? 'on' : ''}"><input type="radio" name="dedmode" value="${k}" id="ded-${k}" ${d.dedMode === k ? 'checked' : ''}><b>${t}</b><span ${/[֐-׿]/.test(sub) ? 'class="he" lang="he"' : ''}>${sub}</span></label>`).join('')}
+      </div>
+      ${hasDedicationText(d) ? `<div class="fields-2">
+        <label class="field">Name in English<input id="f-honoree" type="text" dir="auto" value="${esc(d.honoree)}" placeholder="e.g. ${esc(MEMORIAL_EXAMPLE.en)}"></label>
+        <label class="field"><span>Name in Hebrew <span class="hint">optional</span></span><input id="f-honoree-he" class="he-input" type="text" dir="rtl" lang="he" value="${esc(d.honoreeHe)}" placeholder="${esc(MEMORIAL_EXAMPLE.he)}"></label>
+      </div>
+      ${d.dedMode === 'memory' ? `<button type="button" class="btn quiet sm" style="justify-self:start" data-action="memorial-example">Use the memorial example: ${esc(MEMORIAL_EXAMPLE.en)}</button>` : ''}` : ''}
+      ${supporter ? `<label class="check"><input type="checkbox" id="f-honor-sup" ${d.honorSupporter ? 'checked' : ''}><span>Add “In honor of ${esc(supporter.name)}” to the sticker</span></label>` : ''}
+      <div class="stack" style="gap:8px">
+        <b class="ui">Optional upgrades</b>
+        <label class="check"><input type="checkbox" id="f-binding" ${d.binding ? 'checked' : ''}><span>Premium binding <span class="tag-undecided">Price not yet decided</span></span></label>
+        <label class="check"><input type="checkbox" id="f-gold" ${d.gold ? 'checked' : ''}><span>Gold stamping of the dedication on the cover <span class="tag-undecided">Price not yet decided</span></span></label>
+        <span class="small muted">Upgrades are recorded as requests. They are not added to your total until a price is set and you approve it.</span>
+      </div>
+    </section>` : `<div class="notice">Partial and pooled gifts are combined with other gifts to buy complete sefarim. They don’t receive individual named stickers.</div>`;
+
+  return `<div class="stack-lg">
+    <div class="stack" style="gap:8px"><a class="small ui" href="${supporter ? '#supporter-' + supporter.id : '#campaign'}">← Back to ${supporter ? esc(supporter.name) + '’s page' : 'the campaign'}</a>
+      <h1>Sponsor sefarim</h1><p class="muted ui">${esc(c.title)} · ${esc(inst(c.inst).name)}</p></div>
+    <div class="flow">
+      <form id="sponsor-form" class="stack-lg" novalidate>
+        <section class="stack" aria-labelledby="h-kind"><h2 id="h-kind">How would you like to give?</h2>
+          <div class="options">
+            ${opt('whole', 'Whole sefarim', 'One or more complete copies, with a dedication')}
+            ${opt('type', 'Toward a sefer', 'Any amount toward one kind of sefer')}
+            ${opt('copy', 'Part of a copy', 'Help complete one particular copy')}
+            ${opt('general', 'Where needed most', 'An unrestricted gift to the campaign')}
+          </div>
+          ${details}
+        </section>
+        <section class="panel stack" aria-labelledby="h-you"><h2 id="h-you">Your details</h2>
+          <div class="fields-2">
+            <label class="field">Your name or company<input id="f-donor" type="text" dir="auto" autocomplete="name" value="${esc(d.donorName)}" ${d.anonymous ? 'disabled' : ''}></label>
+            <label class="field"><span>Name in Hebrew <span class="hint">optional, for the sticker</span></span><input id="f-donor-he" class="he-input" type="text" dir="rtl" lang="he" value="${esc(d.donorNameHe)}" ${d.anonymous ? 'disabled' : ''}></label>
+            <label class="field"><span>Email <span class="hint">demo only — nothing is sent</span></span><input id="f-email" type="email" autocomplete="email" value="${esc(d.email)}"></label>
+            ${supSel}
+          </div>
+          <label class="check"><input type="checkbox" id="f-anon" ${d.anonymous ? 'checked' : ''}><span>Give anonymously (your name won’t appear on stickers or pages)</span></label>
+        </section>
+        ${ded}
+        <div id="flow-errors" class="errors" role="alert"></div>
+        <div class="row"><button class="btn" type="submit">Review sponsorship</button><a class="btn quiet" href="#campaign">Cancel</a></div>
+      </form>
+      <aside class="side-sticky" aria-label="Summary">
+        <div class="panel stack" id="summary-box">${summaryHTML(d)}</div>
+        ${d.kind === 'whole' ? `<div class="stack" style="gap:6px"><div id="preview-box">${stickerHTML(d)}</div><div class="sticker-caption">Live preview — the printed sticker is proofed and approved before production.</div></div>` : ''}
+      </aside>
+    </div>
+  </div>`;
+}
+function summaryHTML(d) {
+  const p = PRODUCTS[d.productId], amt = draftAmount(d);
+  let what = '';
+  if (d.kind === 'whole') what = Number.isInteger(d.qty) && d.qty > 0 ? `${plural(d.qty, p.name + ' copy', p.name + ' copies')} × ${money(p.price)}` : `${p.name} × ?`;
+  else if (d.kind === 'type') what = `Toward ${p.name} (fills partly funded copies first)`;
+  else if (d.kind === 'copy') { const cp = copyTarget(d); what = cp ? `Toward ${p.name} copy #${cp.no}` : p.name; if (cp && amt > 0 && amt <= p.price - cp.funded) what += `<div class="small muted">After your gift: ${amt === p.price - cp.funded ? '<b>fully funded</b>' : copyPctText(cp.funded + amt, p.price)}</div>`; }
+  else what = 'Unrestricted gift — allocated at closing';
+  return `<span class="eyebrow">Your sponsorship</span>
+    <div class="ui">${what}</div>
+    <hr class="rule">
+    <div class="row between ui"><span>Total</span><b class="price">${money(amt)}</b></div>
+    ${d.binding || d.gold ? `<div class="small muted">Plus requested upgrades — price not yet decided, not included.</div>` : ''}
+    <div class="small muted">Demonstration only. No card is collected and nothing is charged.</div>`;
+}
+function readSponsorForm() {
+  const d = S.draft; if (!d) return;
+  const v = id => { const el = document.getElementById(id); return el ? el : null; };
+  if (v('f-qty')) { const n = Number(v('f-qty').value); d.qty = v('f-qty').value === '' ? NaN : n; }
+  if (v('f-amount')) d.amountStr = v('f-amount').value;
+  if (v('f-donor')) d.donorName = v('f-donor').value;
+  if (v('f-donor-he')) d.donorNameHe = v('f-donor-he').value;
+  if (v('f-email')) d.email = v('f-email').value;
+  if (v('f-honoree')) d.honoree = v('f-honoree').value;
+  if (v('f-honoree-he')) d.honoreeHe = v('f-honoree-he').value;
+  if (v('f-honor-sup')) d.honorSupporter = v('f-honor-sup').checked;
+  if (v('f-binding')) d.binding = v('f-binding').checked;
+  if (v('f-gold')) d.gold = v('f-gold').checked;
+  if (v('f-anon')) d.anonymous = v('f-anon').checked;
+}
+function refreshSponsorSide() {
+  const d = S.draft;
+  const sb = $('#summary-box'); if (sb) sb.innerHTML = summaryHTML(d);
+  const pb = $('#preview-box'); if (pb) pb.innerHTML = stickerHTML(d);
+  const fe = $('#flow-errors'); if (fe && fe.dataset.shown) fe.innerHTML = listErrors(validateDraft(d, { forReview: true }));
+}
+const listErrors = errs => errs.length ? `<ul class="clean">${errs.map(e => `<li>${esc(e)}</li>`).join('')}</ul>` : '';
+
+function pageReview() {
+  const d = S.draft;
+  if (!d) return `<div class="panel stack"><p>There’s no sponsorship to review.</p><a class="btn" href="#campaign">Go to the campaign</a></div>`;
+  const c = S.campaign, i = inst(c.inst), p = PRODUCTS[d.productId];
+  const errs = validateDraft(d, { forReview: true });
+  const allocs = errs.length ? [] : planAllocations(d);
+  const amt = draftAmount(d);
+  const supporter = S.supporters.find(s => s.id === d.supporterId);
+  const itemsText = d.kind === 'general' ? 'Unrestricted gift to the campaign' : d.kind === 'whole' ? `${plural(d.qty, p.name + ' copy', p.name + ' copies')} (copies #${rangeText(allocs.map(a => a.copyNo))})` : allocs.map(a => `${money(a.amount)} toward ${p.name} copy #${a.copyNo}`).join('<br>');
+  const cs = campaignStats();
+  return `<div class="stack-lg narrow" style="margin-inline:auto">
+    <div class="stack" style="gap:8px"><a class="small ui" href="#sponsor">← Edit sponsorship</a><h1>Review your sponsorship</h1>
+      <div class="notice demo"><b>Test checkout.</b> This is a demonstration. No payment details are collected and no charge is made.</div></div>
+    ${errs.length ? `<div class="errors">${listErrors(errs)}</div>` : ''}
+    <section class="panel stack">
+      <dl class="meta-list">
+        <dt>Gift type</dt><dd>${kindLabel(d.kind)}</dd>
+        <dt>Items</dt><dd>${itemsText || '—'}</dd>
+        <dt>From</dt><dd>${d.anonymous ? 'Anonymous' : esc(d.donorName)}${d.donorNameHe && !d.anonymous ? ` · <span class="he" lang="he">${esc(d.donorNameHe)}</span>` : ''}</dd>
+        <dt>Supporter page</dt><dd>${supporter ? esc(supporter.name) : 'None'}</dd>
+        <dt>Campaign</dt><dd>${esc(c.title)}</dd>
+        <dt>Destination</dt><dd>${esc(i.name)} — ${esc(c.destination)}</dd>
+        <dt>Total</dt><dd><b class="price">${money(amt)}</b>${d.binding || d.gold ? ' <span class="tag-undecided">+ upgrades, price not yet decided</span>' : ''}</dd>
+        <dt>Shipping</dt><dd class="small">This campaign’s combined delivery is ${money(cs.raised)} so far. Proposed policy: free shipping for combined deliveries of ${money(FREE_SHIP_THRESHOLD)} or more in eligible regions. <span class="tag-undecided">Not final</span></dd>
+      </dl>
+    </section>
+    ${d.kind === 'whole' ? `<section class="grid-2">
+      <div class="stack"><h2>Dedication</h2>
+        <p class="small">${d.dedMode === 'later' ? 'You chose to send the dedication later. The sticker stays on hold until you do.' : d.dedMode === 'none' ? 'Standard sticker with your name, the campaign dedication and the receiving institution.' : 'Please read every name carefully, in English and Hebrew. Stickers are printed exactly as entered.'}</p>
+        ${hasDedicationText(d) || d.donorName ? `<label class="check"><input type="checkbox" id="f-verified" ${d.verified ? 'checked' : ''}><span>I have checked the spelling of every name in English and Hebrew.</span></label>` : ''}
+        <p class="small muted">Before printing, the institution’s representative reviews the dedication. One sticker is applied in each of your ${d.qty} copies.</p>
+      </div>
+      <div>${stickerHTML(d)}</div></section>` : `<p class="small muted">Partial and pooled gifts don’t receive individual named stickers.</p>`}
+    <section class="panel stack small ui">
+      <b>Before real checkout can open</b>
+      <span>We still have to decide who legally receives payments and what receipt donors get. This prototype makes no promise that a gift is tax-deductible.</span>
+    </section>
+    <div id="review-errors" class="errors" role="alert"></div>
+    <div class="row"><button class="btn" type="button" data-action="place" ${errs.length ? 'disabled' : ''}>Place test sponsorship — no charge</button><a class="btn quiet" href="#sponsor">Edit</a></div>
+  </div>`;
+}
+
+function pageConfirmation() {
+  const c = S.contributions.find(x => x.id === S.lastOrderId);
+  if (!c) return `<div class="panel stack"><p>No test sponsorship has been placed in this session.</p><a class="btn" href="#campaign">Go to the campaign</a></div>`;
+  const camp = S.campaign, i = inst(camp.inst);
+  const p = c.productId ? PRODUCTS[c.productId] : null;
+  const completed = c.kind === 'copy' || c.kind === 'type' ? c.allocations.filter(a => copiesOf(a.productId)[a.copyNo - 1].funded >= PRODUCTS[a.productId].price) : [];
+  const supporter = S.supporters.find(s => s.id === c.supporterId);
+  return `<div class="stack-lg narrow" style="margin-inline:auto">
+    <div class="stack" style="gap:12px">
+      <span class="test-stamp">Test confirmation · no charge</span>
+      <h1>Thank you${c.donor.anonymous ? '' : ', ' + esc(c.donor.name)}.</h1>
+      <p class="ui">Test order <b>${esc(c.id)}</b> · ${fmtDate(c.date)} · ${money(c.amount)} · <span class="muted">Demonstration only. No payment was taken, no receipt was issued and no email was sent.</span></p>
+    </div>
+    <section class="panel stack">
+      <dl class="meta-list">
+        <dt>Items</dt><dd>${esc(describeContribution(c))}</dd>
+        ${completed.length ? `<dt>Copy status</dt><dd><b>${completed.map(a => `${PRODUCTS[a.productId].name} copy #${a.copyNo}`).join(', ')} now fully funded.</b></dd>` : ''}
+        ${c.kind !== 'whole' && c.kind !== 'general' && !completed.length ? `<dt>Copy status</dt><dd>${c.allocations.map(a => { const cp = copiesOf(a.productId)[a.copyNo - 1]; return `${p.name} copy #${a.copyNo}: ${copyPctText(cp.funded, p.price)}`; }).join('<br>')}</dd>` : ''}
+        <dt>Supporter page</dt><dd>${supporter ? `Credited to <a href="#supporter-${supporter.id}">${esc(supporter.name)}</a>` : 'None'}</dd>
+        <dt>Destination</dt><dd>${esc(i.name)} — ${esc(camp.destination)}</dd>
+        <dt>Status</dt><dd class="row" style="gap:6px">${chipFund(camp.status)}${c.dedication ? `<span class="chip-label">Dedication</span>${chipDed(c.dedication.status)}` : ''}${c.stage ? `<span class="chip-label">Fulfillment</span>${chipStage(c.stage)}` : ''}</dd>
+      </dl>
+    </section>
+    ${c.dedication ? `<section class="grid-2"><div class="stack"><h2>Your dedication</h2><p class="small">Placed in each of your ${c.qty} copies. ${c.upgrades.binding || c.upgrades.gold ? 'Upgrade requests are recorded; we’ll confirm prices before anything is added.' : ''}</p></div>${stickerHTML(draftFromContribution(c))}</section>` : `<p class="small muted">This gift is combined with others and does not receive an individual named sticker.</p>`}
+    <section class="panel stack">
+      <h2>What happens next</h2>
+      <ol class="steps">
+        ${c.dedication ? `<li><div>${c.dedication.status === 'Awaiting text' ? 'Send your dedication text so we can prepare a proof.' : 'The institution’s representative reviews your dedication. If anything needs correcting, we contact you before printing.'}</div></li>` : ''}
+        <li><div>Fundraising closes on ${fmtDate(camp.end)}. ${c.kind === 'whole' ? 'Your copies are already fully funded.' : 'Partial and unrestricted gifts are combined into complete sefarim under the campaign’s closing policy.'}</div></li>
+        <li><div>We purchase the sefarim, ${c.dedication ? 'print and apply the stickers, ' : ''}and pack them for delivery.</div></li>
+        <li><div>The sefarim ship to ${esc(i.name)}. They count as delivered only once they arrive.</div></li>
+      </ol>
+    </section>
+    <div class="row"><a class="btn" href="#campaign">Back to the campaign</a><a class="btn ghost" href="#organizer" data-action="org-tab" data-tab="dedications">See it in the organizer dashboard</a></div>
+  </div>`;
+}
+
+function pageStartCampaign() {
+  const insts = Object.values(S.institutions);
+  return `<div class="stack-lg narrow" style="margin-inline:auto">
+    <div class="stack" style="gap:8px"><span class="eyebrow">For organizers</span><h1>Start a campaign</h1>
+      <p class="muted">Choose an institution, pick from its approved needs, set the dates and invite supporters.</p>
+      <div class="notice demo">Demonstration form. Nothing is saved or sent. A real version needs organizer accounts and institution approval.</div></div>
+    <form id="start-form" class="panel stack">
+      <div class="fields-2">
+        <label class="field">Institution<select id="sc-inst">${insts.map(i => `<option value="${i.id}">${esc(i.name)}</option>`).join('')}</select></label>
+        <label class="field">Campaign title<input id="sc-title" type="text" value="Sefarim for our classrooms"></label>
+        <label class="field">Fundraising opens<input id="sc-start" type="date" value="2026-11-10"></label>
+        <label class="field">Fundraising closes<input id="sc-end" type="date" value="2026-11-24"><span class="hint">Usually one or two weeks</span></label>
+        <label class="field" style="grid-column:1/-1">Campaign dedication<input id="sc-ded" type="text" placeholder="e.g. In honor of our graduating class"></label>
+      </div>
+      <div id="sc-needs"></div>
+      <div class="row"><button class="btn" type="submit">Preview draft campaign</button></div>
+      <div id="sc-result"></div>
+    </form>
+  </div>`;
+}
+function startNeedsHTML(instId) {
+  const needs = S.needs.filter(n => n.inst === instId && n.status === 'Approved');
+  return `<b class="ui">Approved needs to include</b><div class="table-wrap" style="margin-top:8px"><table><thead><tr><th></th><th>Sefer</th><th>Purpose</th><th class="num">Qty</th><th class="num">Subtotal</th></tr></thead><tbody>
+    ${needs.map(n => `<tr><td><input type="checkbox" class="sc-need" value="${n.id}" ${n.campaign ? 'disabled' : 'checked'} aria-label="Include ${esc(PRODUCTS[n.productId].name)}"></td><td>${prodLabel(n.productId)}</td><td>${esc(n.category)}${n.campaign ? ' <span class="small muted">(already in a campaign)</span>' : ''}</td><td class="num">${n.qty}</td><td class="num">${money(n.qty * PRODUCTS[n.productId].price)}</td></tr>`).join('')}
+  </tbody></table></div>`;
+}
+
+function pageRegister() {
+  return `<div class="stack-lg narrow" style="margin-inline:auto">
+    <div class="stack" style="gap:8px"><span class="eyebrow">For institutions</span><h1>Register an institution</h1>
+      <p class="muted">Shuls, schools and Jewish organizations register a representative. The representative approves every need, including requests from community members, before it’s published.</p>
+      <div class="notice demo">Demonstration form. Registration and verification are not live. Nothing you enter is submitted.</div></div>
+    <form id="reg-form" class="panel stack">
+      <div class="fields-2">
+        <label class="field">Institution name<input id="rg-name" type="text"></label>
+        <label class="field"><span>Name in Hebrew <span class="hint">optional</span></span><input id="rg-he" class="he-input" type="text" dir="rtl" lang="he"></label>
+        <label class="field">Type<select id="rg-type"><option>Shul</option><option>School</option><option>Yeshiva</option><option>Kollel</option><option>Other organization</option></select></label>
+        <label class="field">City and state<input id="rg-city" type="text"></label>
+        <label class="field">Delivery address<input id="rg-addr" type="text"></label>
+        <label class="field">Representative’s name<input id="rg-rep" type="text"></label>
+        <label class="field">Representative’s role<input id="rg-role" type="text" placeholder="e.g. Rav, principal, executive director"></label>
+      </div>
+      <div class="small muted">Verification steps are still to be defined (for example: confirming the representative’s authority and the delivery address).</div>
+      <div class="row"><button class="btn" type="submit">Preview registration</button></div>
+      <div id="rg-result"></div>
+    </form>
+  </div>`;
+}
+
+/* ---------- Organizer dashboard ---------- */
+const ORG_TABS = [['profile', 'Institution profile'], ['needs', 'Needs & requests'], ['campaign', 'Campaign dates & goals'], ['supporters', 'Supporters'], ['funding', 'Funding progress'], ['dedications', 'Dedications'], ['delivery', 'Delivery'], ['stickers', 'Sticker settings']];
+function pageOrganizer() {
+  const t = S.ui.orgTab, c = S.campaign, i = inst(c.inst);
+  return `<div class="stack-lg">
+    <div class="stack" style="gap:8px"><div class="row">${demoChip('Demonstration dashboard')}${chipFund(c.status)}</div><h1>Organizer dashboard</h1>
+      <p class="muted ui">Signed in as ${esc(i.rep)} (sample) · ${esc(i.name)} · Changes last only until you reload the page.</p></div>
+    <div class="dash">
+      <nav class="tabs" aria-label="Organizer sections">${ORG_TABS.map(([k, l]) => `<button type="button" class="${t === k ? 'on' : ''}" data-action="org-tab" data-tab="${k}">${l}</button>`).join('')}</nav>
+      <div class="stack" style="min-width:0">${orgPanel(t)}</div>
+    </div>
+  </div>`;
+}
+function orgPanel(t) {
+  const c = S.campaign, i = inst(c.inst), st = campaignStats();
+  if (t === 'profile') return `<form id="org-profile" class="panel stack"><h2>Institution profile</h2>
+    <div class="fields-2">
+      <label class="field">Name<input id="op-name" type="text" value="${esc(i.name)}"></label>
+      <label class="field">Name in Hebrew<input id="op-he" class="he-input" type="text" dir="rtl" lang="he" value="${esc(i.he)}"></label>
+      <label class="field">City<input id="op-city" type="text" value="${esc(i.city)}"></label>
+      <label class="field">Delivery address<input id="op-addr" type="text" value="${esc(i.address)}"></label>
+      <label class="field" style="grid-column:1/-1">About<textarea id="op-about">${esc(i.about)}</textarea></label>
+    </div><div class="row"><button class="btn" type="submit">Save profile</button><a href="#institution-${i.id}" class="small ui">View public page</a></div></form>`;
+  if (t === 'needs') {
+    const needs = S.needs.filter(n => n.inst === i.id);
+    return `<div class="stack"><h2>Needs and community requests</h2><p class="small muted">Requests from community members stay hidden until you approve them.</p>
+    <div class="table-wrap"><table><thead><tr><th>Sefer</th><th>Purpose</th><th class="num">Qty</th><th>Submitted by</th><th>Status</th><th></th></tr></thead><tbody>
+    ${needs.map(n => `<tr><td>${prodLabel(n.productId)}</td><td>${esc(n.category)}<div class="small muted">${esc(n.note)}</div></td><td class="num">${n.qty}</td><td>${esc(n.source)}</td><td>${n.status === 'Approved' ? `<span class="chip ok">Approved</span>` : n.status === 'Declined' ? `<span class="chip neutral">Declined</span>` : `<span class="chip warn">Pending approval</span>`}${n.campaign ? ' <span class="chip brand">In campaign</span>' : ''}</td>
+    <td>${n.status === 'Pending approval' ? `<div class="row" style="gap:6px;flex-wrap:nowrap"><button class="btn sm" type="button" data-action="need" data-id="${n.id}" data-to="Approved">Approve</button><button class="btn quiet sm" type="button" data-action="need" data-id="${n.id}" data-to="Declined">Decline</button></div>` : ''}</td></tr>`).join('')}
+    </tbody></table></div></div>`;
+  }
+  if (t === 'campaign') return `<div class="stack">
+    <form id="org-camp" class="panel stack"><h2>Campaign dates and goals</h2>
+      <div class="fields-2">
+        <label class="field">Fundraising opens<input id="oc-start" type="date" value="${c.start}"></label>
+        <label class="field">Fundraising closes<input id="oc-end" type="date" value="${c.end}"></label>
+        <label class="field">Fundraising status<select id="oc-status" ${c.status === 'Closed' ? 'disabled' : ''}>${FUND_STATUSES.filter(s => s !== 'Closed').map(s => `<option ${s === c.status ? 'selected' : ''}>${s}</option>`).join('')}${c.status === 'Closed' ? '<option selected>Closed</option>' : ''}</select><span class="hint">In a live system, status follows the dates automatically.</span></label>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>Sefer</th><th class="num">Price</th><th class="num">Copies with funding</th><th class="num">Requested</th></tr></thead><tbody>
+      ${st.lines.map(x => `<tr><td>${prodLabel(x.p.id)}</td><td class="num">${money(x.p.price)}</td><td class="num">${x.full + x.partials.length}</td><td class="num"><input type="number" class="oc-qty" data-pid="${x.p.id}" min="${x.highestUsed}" value="${x.requested}" style="width:90px;text-align:right" aria-label="Requested ${esc(x.p.name)}" ${c.status === 'Closed' ? 'disabled' : ''}></td></tr>`).join('')}
+      </tbody><tfoot><tr><td>Total</td><td></td><td class="num">${st.full + st.partialCopies}</td><td class="num">${st.requested} · ${money(st.goal)}</td></tr></tfoot></table></div>
+      <div id="oc-err" class="errors"></div>
+      <div class="row"><button class="btn" type="submit" ${c.status === 'Closed' ? 'disabled' : ''}>Save campaign</button></div>
+    </form>
+    <section class="panel stack"><h2>Close fundraising</h2>
+      ${closingPolicyHTML()}
+      ${closingTableHTML(c.closing || computeClosing(), !c.closing)}
+      <div class="row">${c.closing ? `<button class="btn quiet" type="button" data-action="reopen">Reopen (demo)</button>` : `<button class="btn" type="button" data-action="close-campaign">Close fundraising now (demo)</button>`}</div>
+    </section></div>`;
+  if (t === 'supporters') return `<div class="stack"><h2>Supporter pages and invitations</h2>
+    <div class="table-wrap"><table><thead><tr><th>Supporter</th><th class="num">Raised</th><th class="num">Goal</th><th class="num">Gifts</th><th></th></tr></thead><tbody>
+    ${S.supporters.map(s => { const ss = supporterStats(s.id); return `<tr><td><b>${esc(s.name)}</b><div class="small muted">${esc(s.relation)}</div></td><td class="num">${money(ss.raised)}</td><td class="num">${money(s.goal)}</td><td class="num">${ss.count}</td><td><a href="#supporter-${s.id}" class="small ui">View page</a></td></tr>`; }).join('')}
+    </tbody><tfoot><tr><td>Through supporter pages</td><td class="num">${money(sum(S.supporters, s => supporterStats(s.id).raised))}</td><td></td><td class="num">${sum(S.supporters, s => supporterStats(s.id).count)}</td><td></td></tr></tfoot></table></div>
+    <p class="small muted">Each gift counts once in the campaign total (${money(st.raised)}); supporter pages show the share they brought in.</p>
+    <h3>Invitations</h3>
+    <ul class="clean">${S.invites.map(v => `<li>${esc(v.name)} — <span class="muted">${esc(v.status)}</span></li>`).join('')}</ul>
+    <form id="org-invite" class="panel stack"><div class="fields-2"><label class="field">Name<input id="oi-name" type="text"></label><label class="field">Email or phone<input id="oi-contact" type="text"></label></div>
+      <div class="row"><button class="btn" type="submit">Add invitation</button><span class="small muted">Demo: no invitation is actually sent.</span></div><div id="oi-err" class="errors"></div></form></div>`;
+  if (t === 'funding') return `<div class="stack"><h2>Funding progress</h2>${demoChip('Computed from the demo ledger')}
+    <div class="table-wrap"><table><thead><tr><th>Sefer</th><th class="num">Requested</th><th class="num">Fully funded</th><th class="num">Partly funded</th><th class="num">Unfunded</th><th class="num">Raised</th><th class="num">Remaining</th></tr></thead><tbody>
+    ${st.lines.map(x => `<tr><td>${prodLabel(x.p.id)}</td><td class="num">${x.requested}</td><td class="num">${x.full}</td><td class="num">${x.partials.length}</td><td class="num">${x.unfunded}</td><td class="num">${money(x.funded)}</td><td class="num">${money(x.remaining)}</td></tr>`).join('')}
+    <tr><td>Unrestricted gifts</td><td></td><td></td><td></td><td></td><td class="num">${money(st.general)}</td><td></td></tr>
+    </tbody><tfoot><tr><td>Total</td><td class="num">${st.requested}</td><td class="num">${st.full}</td><td class="num">${st.partialCopies}</td><td class="num">${st.unfunded}</td><td class="num">${money(st.raised)}</td><td class="num">${money(st.remainingNeed)}</td></tr></tfoot></table></div>
+    <h3>All gifts</h3>${ledgerTable(S.contributions)}</div>`;
+  if (t === 'dedications') {
+    const ds = S.contributions.filter(x => x.dedication);
+    return `<div class="stack"><h2>Dedication approvals</h2><p class="small muted">Review each sticker before it is printed. Approving here stands in for the institution’s sign-off.</p>
+    ${ds.slice().reverse().map(x => `<div class="panel stack"><div class="grid-2" style="align-items:start">
+      <div class="stack" style="gap:8px"><div class="row">${chipDed(x.dedication.status)}${x.test ? '<span class="chip demo">Test order</span>' : ''}</div>
+        <b class="ui">${esc(x.id)} · ${esc(x.donor.name)}</b><span class="small">${esc(describeContribution(x))}</span>
+        ${x.dedication.correction ? `<span class="small" style="color:var(--bad)">${esc(x.dedication.correction)}</span>` : ''}
+        <div class="row" style="gap:6px">
+          ${x.dedication.status === 'Awaiting approval' ? `<button class="btn sm" type="button" data-action="ded" data-id="${x.id}" data-to="Approved">Approve</button><button class="btn quiet sm" type="button" data-action="ded" data-id="${x.id}" data-to="Correction needed">Request correction</button>` : ''}
+          ${x.dedication.status === 'Correction needed' ? `<button class="btn quiet sm" type="button" data-action="ded" data-id="${x.id}" data-to="Awaiting approval">Mark corrected</button>` : ''}
+          ${x.dedication.status === 'Awaiting text' ? `<span class="small muted">Waiting for the donor’s text.</span>` : ''}
+        </div></div>
+      <div>${stickerHTML(draftFromContribution(x))}</div></div></div>`).join('')}</div>`;
+  }
+  if (t === 'delivery') return `<div class="stack"><h2>Delivery progress</h2>
+    <p class="small muted">Funded, ordered, prepared, shipped and delivered are separate stages. A campaign can stay open while some orders ship.</p>
+    ${stageTable()}
+    <h3>Whole-copy orders</h3>${ordersStageTable(false)}</div>`;
+  if (t === 'stickers') return `<div class="stack"><h2>Sticker settings</h2>
+    <div class="panel stack">
+      <label class="check"><input type="checkbox" id="ss-approved" ${S.settings.referralApproved ? 'checked' : ''}><span><b>The institution approves a platform referral link on stickers.</b><br><span class="small muted">Off by default. The link is small and discreet, and never appears without this approval.</span></span></label>
+      <label class="check"><input type="checkbox" id="ss-show" ${S.settings.referralOnStickers ? 'checked' : ''} ${S.settings.referralApproved ? '' : 'disabled'}><span>Show the referral link on this campaign’s stickers</span></label>
+    </div>
+    <div style="max-width:380px">${stickerHTML({ dedMode: 'memory', honoree: MEMORIAL_EXAMPLE.en, honoreeHe: MEMORIAL_EXAMPLE.he, donorName: 'Sample donor', donorNameHe: '', supporterId: '', anonymous: false })}<div class="sticker-caption">Sample sticker with current settings</div></div></div>`;
+  return '';
+}
+function closingTableHTML(cl, preview) {
+  return `<p class="small"><b>${preview ? 'If fundraising closed now' : 'Closed'}:</b> ${cl.finalFull} of ${cl.requested} sefarim funded (${pctFloor(cl.finalFull, cl.requested)}% of quantity), ${cl.unfunded} unfunded.</p>
+  <div class="table-wrap"><table><thead><tr><th>Sefer</th><th class="num">Funded before</th><th class="num">From combined partials</th><th class="num">Completed with unrestricted</th><th class="num">Bought with unrestricted</th><th class="num">Funded at close</th><th class="num">Unfunded</th><th class="num">Partial balance left</th></tr></thead><tbody>
+  ${cl.rows.map(r => `<tr><td>${esc(PRODUCTS[r.pid].name)}</td><td class="num">${r.fullBefore}</td><td class="num">${r.combined}</td><td class="num">${r.completed}${r.completed ? ` <span class="small muted">(${money(r.generalToComplete)})</span>` : ''}</td><td class="num">${r.bought}${r.bought ? ` <span class="small muted">(${money(r.generalToBuy)})</span>` : ''}</td><td class="num"><b>${r.finalFull}</b> / ${r.requested}</td><td class="num">${r.unfunded}</td><td class="num">${money(r.leftover)}</td></tr>`).join('')}
+  </tbody><tfoot><tr><td>Total</td><td class="num">${sum(cl.rows, r => r.fullBefore)}</td><td class="num">${sum(cl.rows, r => r.combined)}</td><td class="num">${sum(cl.rows, r => r.completed)}</td><td class="num">${sum(cl.rows, r => r.bought)}</td><td class="num">${cl.finalFull} / ${cl.requested}</td><td class="num">${cl.unfunded}</td><td class="num">${money(cl.partialLeft)}</td></tr></tfoot></table></div>
+  <p class="small">Unrestricted gifts: ${money(cl.generalStart)}; unspent ${money(cl.generalLeft)}. Total balance too small to buy another sefer: <b>${money(cl.leftoverTotal)}</b> <span class="tag-undecided">Requires a final policy</span></p>`;
+}
+function ledgerTable(list) {
+  return `<div class="table-wrap"><table><thead><tr><th>Order</th><th>Date</th><th>Donor</th><th>Type</th><th>Allocation</th><th>Supporter</th><th class="num">Amount</th></tr></thead><tbody>
+  ${list.slice().reverse().map(x => `<tr><td>${esc(x.id)}${x.test ? ' <span class="chip demo">Test</span>' : ''}</td><td>${fmtDate(x.date)}</td><td>${esc(x.donor.name)}</td><td>${kindLabel(x.kind)}</td><td class="small">${esc(describeContribution(x))}</td><td>${esc(S.supporters.find(s => s.id === x.supporterId)?.name || '—')}</td><td class="num">${money(x.amount)}</td></tr>`).join('')}
+  </tbody><tfoot><tr><td colspan="6">Total (${list.length} gifts)</td><td class="num">${money(sum(list, x => x.amount))}</td></tr></tfoot></table></div>`;
+}
+function stageTable() {
+  const rows = S.campaign.lines.map(l => ({ p: PRODUCTS[l.productId], c: stageCounts(l.productId) }));
+  return `<div class="table-wrap"><table><thead><tr><th>Sefer</th>${STAGES.map(s => `<th class="num">${s}</th>`).join('')}<th class="num">Total funded</th></tr></thead><tbody>
+  ${rows.map(r => `<tr><td>${esc(r.p.name)}</td>${STAGES.map(s => `<td class="num">${r.c[s]}</td>`).join('')}<td class="num">${sum(STAGES, s => r.c[s])}</td></tr>`).join('')}
+  </tbody><tfoot><tr><td>Total</td>${STAGES.map(s => `<td class="num">${sum(rows, r => r.c[s])}</td>`).join('')}<td class="num">${sum(rows, r => sum(STAGES, s => r.c[s]))}</td></tr></tfoot></table></div>
+  <p class="small muted">“Funded” copies from combined partial gifts are purchased after fundraising closes.</p>`;
+}
+function ordersStageTable(ops) {
+  const ws = S.contributions.filter(x => x.kind === 'whole');
+  return `<div class="table-wrap"><table><thead><tr><th>Order</th><th>Donor</th><th>Items</th><th>Dedication</th><th>Fulfillment</th>${ops ? '<th></th>' : ''}</tr></thead><tbody>
+  ${ws.slice().reverse().map(x => { const i = STAGES.indexOf(x.stage); const next = STAGES[i + 1]; const blocked = next === 'Prepared' && x.dedication.status !== 'Approved';
+    return `<tr><td>${esc(x.id)}</td><td>${esc(x.donor.name)}</td><td class="small">${esc(describeContribution(x))}</td><td>${chipDed(x.dedication.status)}</td><td>${stageTrack(x.stage)}${x.shipDate ? `<div class="small muted">Shipped ${fmtDate(x.shipDate)}${x.deliverDate ? ` · delivered ${fmtDate(x.deliverDate)}` : ''}</div>` : ''}</td>
+    ${ops ? `<td>${next ? `<button class="btn sm ${blocked ? 'quiet' : ''}" type="button" data-action="advance" data-id="${x.id}" ${blocked ? 'disabled title="Dedication must be approved before preparation"' : ''}>Mark ${next.toLowerCase()}</button>${blocked ? '<div class="small muted">Needs approved dedication</div>' : ''}` : ''}</td>` : ''}</tr>`; }).join('')}
+  </tbody></table></div>`;
+}
+
+/* ---------- Operations dashboard ---------- */
+const OPS_TABS = [['products', 'Products & costs'], ['orders', 'Orders & allocations'], ['proofing', 'Dedication proofing'], ['purchasing', 'Purchasing'], ['preparation', 'Preparation'], ['shipments', 'Shipments'], ['finances', 'Revenue & costs']];
+function pageOperations() {
+  const t = S.ui.opsTab;
+  return `<div class="stack-lg">
+    <div class="stack" style="gap:8px"><div class="row">${demoChip('Demonstration dashboard — sample figures')}</div><h1>Operations</h1>
+      <p class="muted ui">We are the retailer and fulfillment operator. These screens show how orders become delivered sefarim. Records are not stored.</p></div>
+    <div class="dash">
+      <nav class="tabs" aria-label="Operations sections">${OPS_TABS.map(([k, l]) => `<button type="button" class="${t === k ? 'on' : ''}" data-action="ops-tab" data-tab="${k}">${l}</button>`).join('')}</nav>
+      <div class="stack" style="min-width:0">${opsPanel(t)}</div>
+    </div>
+  </div>`;
+}
+function opsPanel(t) {
+  const st = campaignStats();
+  if (t === 'products') return `<div class="stack"><h2>Products</h2>
+    <div class="table-wrap"><table><thead><tr><th>Product</th><th class="num">Retail</th><th class="num">Wholesale (approx.)</th><th class="num">Gross margin</th><th class="num">Margin %</th></tr></thead><tbody>
+    ${Object.values(PRODUCTS).map(p => `<tr><td>${prodLabel(p.id)}<div class="small muted">${esc(p.desc)}</div></td><td class="num">${money(p.price)}</td><td class="num">${money(p.wholesale)}</td><td class="num">${money(p.price - p.wholesale)}</td><td class="num">${Math.round((p.price - p.wholesale) / p.price * 100)}%</td></tr>`).join('')}
+    <tr><td>Premium binding (upgrade)</td><td class="num" colspan="4"><span class="tag-undecided">Price and cost not yet decided</span></td></tr>
+    <tr><td>Gold stamping (upgrade)</td><td class="num" colspan="4"><span class="tag-undecided">Price and cost not yet decided</span></td></tr>
+    </tbody></table></div>
+    <p class="small muted">Example: a sefer that retails for $20 and costs about $12 wholesale leaves $8 of gross margin, before stickers, labor, packaging, shipping and processing fees. All prices are demonstration values.</p></div>`;
+  if (t === 'orders') return `<div class="stack"><h2>Sponsorship orders and allocations</h2>${ledgerTable(S.contributions)}
+    <h3>Partly funded copies</h3>
+    <div class="table-wrap"><table><thead><tr><th>Copy</th><th class="num">Funded</th><th class="num">Remaining</th><th>Contributions</th></tr></thead><tbody>
+    ${st.lines.flatMap(x => x.partials.map(cp => `<tr><td>${esc(x.p.name)} #${cp.no}</td><td class="num">${money(cp.funded)} (${pctFloor(cp.funded, x.p.price)}%)</td><td class="num">${money(x.p.price - cp.funded)}</td><td class="small">${cp.parts.map(pt => `${esc(pt.cid)}: ${money(pt.amount)}`).join(', ')}</td></tr>`)).join('') || '<tr><td colspan="4" class="muted">None</td></tr>'}
+    </tbody></table></div></div>`;
+  if (t === 'proofing') { const ds = S.contributions.filter(x => x.dedication);
+    return `<div class="stack"><h2>Dedication proofing</h2>
+    <div class="kpis">${DED_STATUSES.map(s => `<div class="panel"><div class="stat"><span class="v">${ds.filter(x => x.dedication.status === s).length}</span><span class="k">${s}</span></div></div>`).join('')}</div>
+    <div class="table-wrap"><table><thead><tr><th>Order</th><th>Donor</th><th>Dedication text</th><th class="num">Stickers</th><th>Status</th><th></th></tr></thead><tbody>
+    ${ds.slice().reverse().map(x => `<tr><td>${esc(x.id)}</td><td>${esc(x.donor.name)}</td><td class="small">${x.dedication.mode === 'memory' ? 'In memory of ' : x.dedication.mode === 'honor' ? 'In honor of ' : ''}${esc(x.dedication.honoree)}${x.dedication.honoreeHe ? ` · <span class="he" lang="he">${esc(x.dedication.honoreeHe)}</span>` : ''}${x.dedication.mode === 'none' ? 'Standard sticker' : x.dedication.mode === 'later' ? '<i>Text not yet received</i>' : ''}</td><td class="num">${x.qty}</td><td>${chipDed(x.dedication.status)}</td>
+      <td>${x.dedication.status === 'Awaiting text' ? `<button class="btn quiet sm" type="button" data-action="remind" data-id="${x.id}">Send reminder (demo)</button>` : x.dedication.status === 'Awaiting approval' ? `<span class="small muted">With institution</span>` : ''}</td></tr>`).join('')}
+    </tbody></table></div></div>`; }
+  if (t === 'purchasing') {
+    const rows = st.lines.map(x => ({ p: x.p, c: stageCounts(x.p.id) }));
+    return `<div class="stack"><h2>Purchasing</h2>
+    <p class="small muted">Funded copies not yet ordered from the supplier. Copies from combined partial gifts are ordered after closing.</p>
+    <div class="table-wrap"><table><thead><tr><th>Product</th><th class="num">To order now (whole-copy orders)</th><th class="num">Pending closing</th><th class="num">Ordered</th><th class="num">Wholesale cost to order now</th></tr></thead><tbody>
+    ${rows.map(r => { const now = sum(S.contributions.filter(x => x.kind === 'whole' && x.productId === r.p.id && x.stage === 'Funded'), x => x.qty); return `<tr><td>${esc(r.p.name)}</td><td class="num">${now}</td><td class="num">${r.c.Funded - now}</td><td class="num">${r.c.Ordered}</td><td class="num">${money(now * r.p.wholesale)}</td></tr>`; }).join('')}
+    </tbody></table></div></div>`;
+  }
+  if (t === 'preparation') return `<div class="stack"><h2>Preparation</h2><p class="small muted">Print stickers, apply them, inspect and pack. An order can’t be marked prepared until its dedication is approved.</p>${ordersStageTable(true)}</div>`;
+  if (t === 'shipments') { const sh = S.contributions.filter(x => x.kind === 'whole' && (x.stage === 'Shipped' || x.stage === 'Delivered'));
+    return `<div class="stack"><h2>Shipments and delivery</h2>
+    <div class="table-wrap"><table><thead><tr><th>Order</th><th>Contents</th><th>Destination</th><th>Shipped</th><th>Status</th></tr></thead><tbody>
+    ${sh.map(x => `<tr><td>${esc(x.id)}</td><td class="small">${esc(describeContribution(x))}</td><td class="small">${esc(inst(S.campaign.inst).name)}</td><td>${fmtDate(x.shipDate)}</td><td>${chipStage(x.stage)}${x.deliverDate ? `<div class="small muted">${fmtDate(x.deliverDate)}</div>` : ''}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">No shipments yet</td></tr>'}
+    </tbody></table></div>
+    <p class="small muted">Carrier, regions and timing are not decided. Proposed: free shipping for combined deliveries of ${money(FREE_SHIP_THRESHOLD)} or more in eligible regions.</p></div>`; }
+  if (t === 'finances') {
+    const A = COST_ASSUMPTIONS;
+    const books = st.full;
+    const wholesale = sum(st.lines, x => x.full * x.p.wholesale);
+    const stickers = sum(S.contributions.filter(x => x.kind === 'whole'), x => x.qty) * A.stickerPerBook;
+    const labor = books * A.laborPerBook, pack = books * A.packagingPerBook, ship = books * A.shippingPerBook;
+    const fees = Math.round(st.raised * A.feePct) + st.gifts * A.feeFixed;
+    const allocated = sum(st.lines, x => x.full * x.p.price);
+    const costs = wholesale + stickers + labor + pack + ship + fees;
+    const row = (k, v, note = '') => `<tr><td>${k}${note ? `<div class="small muted">${note}</div>` : ''}</td><td class="num">${v}</td></tr>`;
+    return `<div class="stack"><h2>Campaign revenue and direct costs</h2>${demoChip('Assumed costs — not real figures')}
+    <div class="table-wrap"><table><tbody>
+      ${row('Total raised', money(st.raised), `${st.gifts} gifts`)}
+      ${row('Revenue on fully funded copies', money(allocated), `${books} copies at retail`)}
+      ${row('Not yet tied to complete copies', money(st.raised - allocated), 'Partial and unrestricted gifts, allocated at closing')}
+      <tr><th colspan="2">Direct costs on ${books} fully funded copies</th></tr>
+      ${row('Wholesale purchases', money(wholesale))}
+      ${row('Sticker printing', money(stickers), `${money(A.stickerPerBook)} per personal-dedication copy (assumed)`)}
+      ${row('Labor', money(labor), `${money(A.laborPerBook)} per copy (assumed)`)}
+      ${row('Packaging', money(pack), `${money(A.packagingPerBook)} per copy (assumed)`)}
+      ${row('Shipping', money(ship), `${money(A.shippingPerBook)} per copy if we pay shipping (assumed)`)}
+      ${row('Payment processing fees', money(fees), `Placeholder ${(A.feePct * 100).toFixed(1)}% + ${money(A.feeFixed)} per gift; processor not chosen`)}
+      ${row('Upgrades (binding, gold stamping)', '<span class="tag-undecided">Not priced</span>')}
+    </tbody><tfoot><tr><td>Revenue on funded copies less direct costs</td><td class="num">${money(allocated - costs)}</td></tr></tfoot></table></div>
+    <p class="small muted">Shown before overhead. Real figures need actual supplier costs, a chosen payment processor and a final shipping policy.</p></div>`;
+  }
+  return '';
+}
+
+/* ---------- Plan / launch boundaries ---------- */
+function pageRoadmap() {
+  return `<div class="stack-lg narrow" style="margin-inline:auto">
+    <div class="stack" style="gap:8px"><span class="eyebrow">Project plan</span><h1>What works, what’s demo, what’s next</h1></div>
+    <section class="panel stack"><h2>Demonstration only in this prototype</h2><ul class="clean">
+      <li>Payments: no card is collected and no charge is made. Confirmations are labeled as tests.</li>
+      <li>Tax receipts: none are issued. Nothing here promises tax deductibility.</li>
+      <li>Institution registration and verification, organizer and donor accounts.</li>
+      <li>Email: invitations, confirmations, proofs and reminders are not sent.</li>
+      <li>Records: every change lives only in the open browser tab and resets on reload.</li>
+      <li>All institutions, campaigns, donors, orders, prices and costs are sample data.</li>
+    </ul></section>
+    <section class="panel stack"><h2>Required before accepting real sponsorships</h2><ul class="clean">
+      <li>Decide who legally receives payment (the platform as retailer, the institution, or a fiscal sponsor) and what receipt is issued. Get legal and tax advice.</li>
+      <li>Choose a payment processor; build real checkout with refunds and failed-payment handling.</li>
+      <li>A database with accounts, roles (donor, supporter, organizer, institution representative, operations) and an audit trail.</li>
+      <li>Institution verification and representative approval.</li>
+      <li>Transactional email for confirmations, dedication proofs, approvals and shipping notices.</li>
+      <li>Server-side enforcement of funding limits so two donors can’t fund the same copy at once.</li>
+      <li>Real product catalog with supplier pricing; final upgrade prices.</li>
+      <li>Terms, privacy policy, and refund policy for unfunded or cancelled campaigns.</li>
+    </ul></section>
+    <section class="panel stack"><h2>Open policy decisions</h2><ul class="clean">
+      <li>Leftover balances too small to buy another sefer at closing.</li>
+      <li>Shipping: eligible regions, timing, who pays below ${money(FREE_SHIP_THRESHOLD)}.</li>
+      <li>Upgrade pricing for binding and gold stamping.</li>
+      <li>Who absorbs payment-processing fees.</li>
+      <li>How partial contributors are recognized, if at all, beyond the campaign page.</li>
+    </ul></section>
+    <section class="panel stack"><h2>Future features (not in this build)</h2><ul class="clean">
+      <li>Donors pre-fund quantities for institutions to claim, with limits per institution.</li>
+      <li>Sefer Torah sponsorships: letters, words, dapim, parshiyos, entire sefarim, accessories and celebration expenses.</li>
+      <li>Libraries, furnishings, mikvaos, catering and communal projects.</li>
+      <li>Vendors arranged by the platform, or chosen by the organizer.</li>
+      <li>A separate marketplace for pre-owned and antique sefarim: fixed-price sales, auctions and free giveaways.</li>
+      <li>Paid marketplace sellers give 20%–100% of proceeds to a chosen eligible organization. <span class="tag-undecided">Calculation basis and fees undecided</span></li>
+      <li>Verified individual assistance requests with privacy protections.</li>
+    </ul></section>
+  </div>`;
+}
+function notFound() { return `<div class="panel stack"><h2>Page not found</h2><a class="btn" href="#home">Go home</a></div>`; }
+
+/* ---------------- Router & events ---------------- */
+function currentRoute() { return (location.hash || '#home').slice(1) || 'home'; }
+function go(name) { if (currentRoute() === name) render(); else location.hash = name; }
+function render() {
+  const r = currentRoute();
+  const app = $('#app');
+  let html;
+  if (r === 'home') html = pageHome();
+  else if (r === 'campaign') html = pageCampaign();
+  else if (r.startsWith('institution-')) html = pageInstitution(r.slice(12));
+  else if (r.startsWith('supporter-')) html = pageSupporter(r.slice(10));
+  else if (r === 'sponsor') html = pageSponsor();
+  else if (r === 'review') html = pageReview();
+  else if (r === 'confirmation') html = pageConfirmation();
+  else if (r === 'start-campaign') html = pageStartCampaign();
+  else if (r === 'register') html = pageRegister();
+  else if (r === 'organizer') html = pageOrganizer();
+  else if (r === 'operations') html = pageOperations();
+  else if (r === 'roadmap') html = pageRoadmap();
+  else html = notFound();
+  const focusId = document.activeElement && document.activeElement.id;
+  app.innerHTML = html;
+  if (r === 'start-campaign') $('#sc-needs').innerHTML = startNeedsHTML($('#sc-inst').value);
+  if (focusId && r === lastRoute) { const el = document.getElementById(focusId); if (el) el.focus({ preventScroll: true }); }
+  const navKey = r.startsWith('institution-') ? 'institution' : r.startsWith('supporter-') || ['sponsor', 'review', 'confirmation'].includes(r) ? 'campaign' : r;
+  $$('#nav a').forEach(a => a.classList.toggle('on', a.dataset.nav === navKey));
+  if (r !== lastRoute) window.scrollTo(0, 0);
+  lastRoute = r;
+}
+let lastRoute = null;
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(() => { t.hidden = true; }, 2600); }
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-action]'); if (!b) return;
+  const a = b.dataset.action;
+  if (a === 'sponsor') { startSponsor(b.dataset.kind, b.dataset.product, b.dataset.copy, b.dataset.supporter); }
+  else if (a === 'memorial-example') { readSponsorForm(); S.draft.honoree = MEMORIAL_EXAMPLE.en; S.draft.honoreeHe = MEMORIAL_EXAMPLE.he; render(); }
+  else if (a === 'fill-copy') { readSponsorForm(); const cp = copyTarget(S.draft); if (cp) { S.draft.amountStr = String((PRODUCTS[S.draft.productId].price - cp.funded) / 100); render(); } }
+  else if (a === 'place') {
+    readVerified();
+    if (b.disabled) return;
+    b.disabled = true; // guard against a double click placing the order twice
+    const r = placeOrder(S.draft);
+    if (!r.ok) { b.disabled = false; $('#review-errors').innerHTML = listErrors(r.errors); return; }
+    S.lastOrderId = r.id;
+    const keep = { donorName: S.draft.donorName, donorNameHe: S.draft.donorNameHe, email: S.draft.email, anonymous: S.draft.anonymous };
+    S.draft = Object.assign(newDraft(), keep);
+    go('confirmation');
+  }
+  else if (a === 'org-tab') { S.ui.orgTab = b.dataset.tab; if (currentRoute() === 'organizer') { e.preventDefault(); render(); } }
+  else if (a === 'ops-tab') { S.ui.opsTab = b.dataset.tab; render(); }
+  else if (a === 'need') { const n = S.needs.find(x => x.id === b.dataset.id); n.status = b.dataset.to; toast(b.dataset.to === 'Approved' ? 'Request approved and published on the institution page' : 'Request declined'); render(); }
+  else if (a === 'ded') { const c = S.contributions.find(x => x.id === b.dataset.id); c.dedication.status = b.dataset.to; c.dedication.correction = b.dataset.to === 'Correction needed' ? 'Correction requested by the institution (demo).' : ''; toast(`Dedication ${c.id}: ${b.dataset.to}`); render(); }
+  else if (a === 'advance') { const c = S.contributions.find(x => x.id === b.dataset.id); const next = STAGES[STAGES.indexOf(c.stage) + 1]; if (next === 'Prepared' && c.dedication.status !== 'Approved') return; c.stage = next; if (next === 'Shipped') c.shipDate = DEMO_TODAY; if (next === 'Delivered') c.deliverDate = DEMO_TODAY; toast(`${c.id} marked ${next.toLowerCase()}`); render(); }
+  else if (a === 'remind') toast('Demo: a reminder would be emailed. Nothing was sent.');
+  else if (a === 'close-campaign') { S.campaign.closing = computeClosing(); S.campaign.status = 'Closed'; toast('Fundraising closed (demo). Allocation applied.'); render(); }
+  else if (a === 'reopen') { S.campaign.closing = null; S.campaign.status = 'Open'; toast('Fundraising reopened (demo)'); render(); }
+  else if (a === 'reset') { seed(); toast('Demo data reset'); render(); }
+});
+function readVerified() { const v = $('#f-verified'); if (v && S.draft) S.draft.verified = v.checked; }
+
+document.addEventListener('input', e => {
+  if (currentRoute() !== 'sponsor' || !e.target.id.startsWith('f-')) return;
+  if (['f-qty', 'f-amount', 'f-donor', 'f-donor-he', 'f-email', 'f-honoree', 'f-honoree-he'].includes(e.target.id)) { readSponsorForm(); refreshSponsorSide(); }
+});
+document.addEventListener('change', e => {
+  const t = e.target, r = currentRoute();
+  if (r === 'sponsor') {
+    readSponsorForm();
+    const d = S.draft;
+    if (t.name === 'kind') { d.kind = t.value; d.amountStr = ''; d.copyNo = 'new'; if (d.kind === 'copy') { const pl = lineStats(d.productId).partials[0]; if (pl) d.copyNo = pl.no; } render(); }
+    else if (t.name === 'dedmode') { d.dedMode = t.value; render(); }
+    else if (t.id === 'f-product') { d.productId = t.value; d.copyNo = 'new'; if (d.kind === 'copy') { const pl = lineStats(d.productId).partials[0]; if (pl) d.copyNo = pl.no; } render(); }
+    else if (t.id === 'f-copy') { d.copyNo = t.value === 'new' ? 'new' : Number(t.value); render(); }
+    else if (t.id === 'f-supporter') { d.supporterId = t.value; d.honorSupporter = !!t.value; render(); }
+    else if (t.id === 'f-anon') render();
+    else refreshSponsorSide();
+  } else if (r === 'review' && t.id === 'f-verified') { S.draft.verified = t.checked; }
+  else if (r === 'start-campaign' && t.id === 'sc-inst') { $('#sc-needs').innerHTML = startNeedsHTML(t.value); }
+  else if (r === 'organizer' && t.id === 'ss-approved') { S.settings.referralApproved = t.checked; if (!t.checked) S.settings.referralOnStickers = false; render(); }
+  else if (r === 'organizer' && t.id === 'ss-show') { S.settings.referralOnStickers = t.checked && S.settings.referralApproved; render(); }
+});
+document.addEventListener('submit', e => {
+  e.preventDefault();
+  const f = e.target;
+  if (f.id === 'sponsor-form') {
+    readSponsorForm();
+    const errs = validateDraft(S.draft, { forReview: true });
+    const fe = $('#flow-errors'); fe.dataset.shown = '1';
+    if (errs.length) { fe.innerHTML = listErrors(errs); fe.scrollIntoView({ block: 'center' }); return; }
+    S.draft.verified = false;
+    go('review');
+  } else if (f.id === 'inst-req') {
+    const qty = Number($('#req-qty').value), name = $('#req-name').value.trim();
+    const errs = [];
+    if (!Number.isInteger(qty) || qty < 1) errs.push('Enter a quantity of at least 1.');
+    if (!name) errs.push('Enter your name so the representative knows who asked.');
+    if (errs.length) { $('#req-err').innerHTML = listErrors(errs); return; }
+    S.needs.push({ id: 'n' + (S.needs.length + 1) + '-' + Date.now(), inst: f.dataset.inst, productId: $('#req-product').value, qty, category: $('#req-cat').value, note: $('#req-note').value.trim() || '—', status: 'Pending approval', source: `Community member (${name})`, campaign: false });
+    toast('Request sent to the representative for approval (demo)');
+    render();
+  } else if (f.id === 'org-profile') {
+    const i = inst(S.campaign.inst);
+    Object.assign(i, { name: $('#op-name').value.trim() || i.name, he: $('#op-he').value.trim(), city: $('#op-city').value.trim(), address: $('#op-addr').value.trim(), about: $('#op-about').value.trim() });
+    toast('Profile saved for this session (demo)'); render();
+  } else if (f.id === 'org-camp') {
+    const errs = [], start = $('#oc-start').value, end = $('#oc-end').value;
+    if (!start || !end || end < start) errs.push('The closing date must be on or after the opening date.');
+    const qtys = $$('.oc-qty').map(inp => ({ pid: inp.dataset.pid, n: Number(inp.value), min: Number(inp.min) }));
+    for (const q of qtys) if (!Number.isInteger(q.n) || q.n < q.min || q.n < 1) errs.push(`${PRODUCTS[q.pid].name}: requested quantity can’t be below ${Math.max(1, q.min)} (copies that already have funding).`);
+    if (errs.length) { $('#oc-err').innerHTML = listErrors(errs); return; }
+    Object.assign(S.campaign, { start, end, status: $('#oc-status').value });
+    qtys.forEach(q => { campaignLine(q.pid).requested = q.n; });
+    toast('Campaign saved for this session (demo)'); render();
+  } else if (f.id === 'org-invite') {
+    const name = $('#oi-name').value.trim();
+    if (!name) { $('#oi-err').innerHTML = listErrors(['Enter the supporter’s name.']); return; }
+    S.invites.push({ name, status: 'Invited (demo — not sent)' }); toast('Invitation added (demo, not sent)'); render();
+  } else if (f.id === 'start-form') {
+    const ids = $$('.sc-need:checked').map(x => x.value), needs = S.needs.filter(n => ids.includes(n.id));
+    const total = sum(needs, n => n.qty * PRODUCTS[n.productId].price), qty = sum(needs, n => n.qty);
+    const start = $('#sc-start').value, end = $('#sc-end').value;
+    const errs = [];
+    if (!needs.length) errs.push('Choose at least one approved need.');
+    if (!start || !end || end < start) errs.push('The closing date must be on or after the opening date.');
+    $('#sc-result').innerHTML = errs.length ? `<div class="errors">${listErrors(errs)}</div>` : `<div class="notice green stack" style="gap:6px"><b>Draft campaign preview — not saved</b><span>${esc($('#sc-title').value)} · ${esc(inst($('#sc-inst').value).name)}</span><span>${plural(qty, 'sefer', 'sefarim')} · goal ${money(total)} · ${fmtDate(start)} – ${fmtDate(end)}</span><span>${chipFund(start > DEMO_TODAY ? 'Scheduled' : 'Draft')}</span><span class="small muted">In the live system, the institution’s representative approves the campaign before it opens.</span></div>`;
+  } else if (f.id === 'reg-form') {
+    const name = $('#rg-name').value.trim(), rep = $('#rg-rep').value.trim();
+    $('#rg-result').innerHTML = !name || !rep ? `<div class="errors">${listErrors([!name && 'Enter the institution’s name.', !rep && 'Enter the representative’s name.'].filter(Boolean))}</div>`
+      : `<div class="notice demo stack" style="gap:6px"><b>Not submitted — demonstration only</b><span>${esc(name)}${$('#rg-he').value.trim() ? ` · <span class="he" lang="he">${esc($('#rg-he').value.trim())}</span>` : ''} (${esc($('#rg-type').value)}), representative ${esc(rep)}.</span><span class="small">In the live version this would start verification. Nothing was saved or sent.</span></div>`;
+  }
+});
+
+window.addEventListener('hashchange', render);
+seed();
+$('#demo-date').textContent = 'Demo date: ' + fmtDate(DEMO_TODAY);
+render();
+</script>
